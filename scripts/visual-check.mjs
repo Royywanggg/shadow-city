@@ -16,12 +16,14 @@ const browser = await chromium.launch({
 })
 
 const issues = []
+const warnings = new Set()
 
 async function capture(name, url, viewport, interact = false) {
   const page = await browser.newPage({ viewport, deviceScaleFactor: 1 })
   page.on('pageerror', (error) => issues.push(`${name}: ${error.message}`))
   page.on('console', (message) => {
     if (message.type() === 'error') issues.push(`${name}: ${message.text()}`)
+    if (message.type() === 'warning') warnings.add(message.text())
   })
   await page.goto(url, { waitUntil: 'networkidle' })
   await page.waitForTimeout(1800)
@@ -56,7 +58,7 @@ try {
   await capture('narrow-390x844', base, { width: 390, height: 844 })
   await capture('alternate-seed-a', `${base}?seed=shadow-city-variation-a`, { width: 1440, height: 900 })
   await capture('alternate-seed-b', `${base}?seed=shadow-city-variation-b`, { width: 1440, height: 900 })
-  console.log(JSON.stringify({ outputDirectory, screenshots: 7, heroDiagnostics, issues }, null, 2))
+  console.log(JSON.stringify({ outputDirectory, screenshots: 7, heroDiagnostics, warnings: [...warnings], issues }, null, 2))
   if (issues.length) process.exitCode = 1
 } finally {
   await browser.close()

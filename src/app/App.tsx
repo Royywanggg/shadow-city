@@ -15,7 +15,7 @@ export function App() {
         orthographic
         camera={{ position: [188, 168, 188], near: 0.1, far: 1000, zoom: 1 }}
         dpr={[1, 1.7]}
-        shadows
+        shadows="percentage"
         frameloop="demand"
         gl={{ antialias: true, powerPreference: 'high-performance' }}
         fallback={<div className="canvas-fallback">This city needs a browser with WebGL support.</div>}
