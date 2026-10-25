@@ -34,6 +34,7 @@ Use a small family of repeatable building types with varied proportions, not unr
 | Mid-rise blocks | Broader footprints, clear base/middle/top, setbacks, rhythmic window bands | Main streets and most of the central mass |
 | Slender towers | Tapered or stepped crowns, distinct silhouette, controlled facade rhythm | A few skyline anchors near the focal cluster |
 | Service and industrial forms | Long roofs, loading bays, vents, restrained utility details | Visual relief at district edges |
+| Civic hall | Low, broad mass, visible portico, and a modest roof crown | Frames the central square without overpowering it |
 
 Give street corners deliberate treatment: chamfered or rounded masses, a taller corner bay, or a distinct roof cap. Align entries and facades to the street. Vary parcel widths, building depths, roof heights, and setbacks within each family. Use rooftop plant rooms, parapets, vents, mechanical housings, and occasional terraces for silhouette variety. The reference image demonstrates how layered rooftop forms enrich a small building; use that principle at city scale. Keep towers sparse; a handful of peaks should set the skyline while lower masses make those peaks meaningful.
 

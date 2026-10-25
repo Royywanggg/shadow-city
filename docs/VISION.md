@@ -10,7 +10,7 @@ The project is a model, not a claim that a simulated city predicts any real plac
 
 The main experience is a living, cinematic city viewed as an architectural miniature at night. Users should eventually be able to observe the city, adjust model parameters, compare strategies, and inspect how incomplete information affects decisions. Visual quality is a product requirement because the city is the primary way people will understand the system.
 
-The first release, **v0.1**, contains only the visual city: procedural roads and blocks, varied buildings, a nighttime scene, an isometric orthographic view, and smooth pan and zoom. It establishes a scene worth looking at before adding simulation features. Its art direction and review criteria live in `VISUAL_DIRECTION.md`.
+The first release, **v0.1**, contains only the visual city: procedural roads and blocks, varied buildings, a central public square, a nighttime scene, an isometric orthographic view, and smooth pan and zoom. It establishes a scene worth looking at before adding simulation features. Its art direction and review criteria live in `VISUAL_DIRECTION.md`.
 
 ## Architectural principles
 

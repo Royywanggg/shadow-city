@@ -1,5 +1,5 @@
 export type RoadKind = 'avenue' | 'street'
-export type BuildingKind = 'terrace' | 'midrise' | 'tower' | 'industrial'
+export type BuildingKind = 'terrace' | 'midrise' | 'tower' | 'industrial' | 'civic'
 export type DistrictKind = 'civic' | 'core' | 'residential' | 'works'
 
 export interface RoadNode {
@@ -31,6 +31,7 @@ export interface CityBlock {
   depth: number
   district: DistrictKind
   isPlaza: boolean
+  isPark: boolean
 }
 
 export interface Parcel {

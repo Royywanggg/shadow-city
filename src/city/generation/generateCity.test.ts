@@ -31,11 +31,12 @@ describe('generateCity', () => {
     const city = generateCity(HERO_SEED)
     const parcels = new Map(city.parcels.map((parcel) => [parcel.id, parcel]))
     const plazaBlock = city.blocks.find((block) => block.isPlaza)!
-    expect(city.buildings.length).toBeGreaterThan(100)
-    expect(new Set(city.buildings.map((building) => building.kind)).size).toBe(4)
+    expect(city.buildings.length).toBeGreaterThan(40)
+    expect(new Set(city.buildings.map((building) => building.kind)).size).toBe(5)
     for (const building of city.buildings) {
       const parcel = parcels.get(building.parcelId)!
       expect(parcel.blockId).not.toBe(plazaBlock.id)
+      expect(city.blocks.find((block) => block.id === parcel.blockId)?.isPark).toBe(false)
       expect(Math.abs(building.x - parcel.x) + building.width / 2).toBeLessThan(parcel.width / 2)
       expect(Math.abs(building.z - parcel.z) + building.depth / 2).toBeLessThan(parcel.depth / 2)
     }

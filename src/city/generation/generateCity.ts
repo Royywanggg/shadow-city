@@ -12,16 +12,16 @@ import { between, createRandom } from './random'
 
 export const HERO_SEED = 'shadow-city-hero-01'
 
-const baseCoordinates = [-96, -70, -43, -17, 17, 43, 70, 96]
+const baseCoordinates = [-100, -76, -51, -27, 27, 51, 76, 100]
 const plazaIndex = 3
-const tileSize = 204
+const tileSize = 212
 
 function roadWidth(index: number): number {
-  return index === 3 || index === 4 ? 7.2 : index === 1 || index === 6 ? 5.2 : 4.2
+  return index === 3 || index === 4 ? 8.8 : index === 1 || index === 6 ? 5.5 : 4.5
 }
 
 function districtFor(column: number, row: number): DistrictKind {
-  if (column === plazaIndex && row === plazaIndex) return 'civic'
+  if (column === plazaIndex && (row === plazaIndex || row === plazaIndex - 1)) return 'civic'
   if ((column <= 1 && row >= 4) || (column >= 5 && row <= 1)) return 'works'
   if (Math.abs(column - 3) + Math.abs(row - 3) <= 4) return 'core'
   return 'residential'
@@ -38,7 +38,7 @@ function makeWindowPattern(
   const count = floors * (baysX + baysZ)
   for (let index = 0; index < count; index += 1) {
     const roll = random()
-    const litRate = kind === 'industrial' ? 0.18 : kind === 'tower' ? 0.36 : 0.28
+    const litRate = kind === 'industrial' ? 0.18 : kind === 'tower' ? 0.36 : kind === 'civic' ? 0.2 : 0.28
     pattern.push(roll < litRate * 0.77 ? 1 : roll < litRate ? 2 : 0)
   }
   return pattern
@@ -50,6 +50,7 @@ function buildingKind(
   column: number,
   row: number,
 ): BuildingKind {
+  if (district === 'civic') return 'civic'
   const anchor = (column === 1 && row === 2) || (column === 2 && row === 1) || (column === 4 && row === 2)
   if (anchor && random() < 0.64) return 'tower'
   if (district === 'works') return random() < 0.7 ? 'industrial' : 'midrise'
@@ -64,10 +65,12 @@ function buildingHeight(
   row: number,
 ): number {
   const foreground = column >= 4 && row >= 4
+  if (kind === 'civic') return 16
   if (kind === 'tower') return between(random, 34, 56)
-  if (kind === 'industrial') return between(random, 6, 12)
-  if (kind === 'terrace') return between(random, 8, foreground ? 14 : 17)
-  return between(random, 16, foreground ? 23 : 30)
+  if (kind === 'industrial') return between(random, 5.5, 10)
+  if (kind === 'terrace') return between(random, 6.5, foreground ? 10.5 : 13)
+  const nearSquare = Math.abs(column - 3) + Math.abs(row - 3) <= 1
+  return between(random, 14, nearSquare ? 21 : foreground ? 19 : 27)
 }
 
 function makeBuilding(
@@ -81,7 +84,7 @@ function makeBuilding(
   const insetX = between(random, 0.55, 1.35)
   const insetZ = between(random, 0.55, 1.35)
   const height = buildingHeight(random, kind, column, row)
-  const floors = Math.max(2, Math.round(height / (kind === 'industrial' ? 4.2 : 3.35)))
+  const floors = Math.max(2, Math.round(height / (kind === 'industrial' || kind === 'civic' ? 4.2 : 3.35)))
   const width = Math.max(4, parcel.width - insetX * 2)
   const depth = Math.max(4, parcel.depth - insetZ * 2)
   const baysX = Math.max(2, Math.min(6, Math.round(width / 3.2)))
@@ -157,6 +160,7 @@ export function generateCity(seed = HERO_SEED): CityModel {
       const id = `block-${column}-${row}`
       const district = districtFor(column, row)
       const isPlaza = column === plazaIndex && row === plazaIndex
+      const isPark = (column === 4 && row === 4) || (column === 1 && row === 5)
       const block: CityBlock = {
         id,
         column,
@@ -167,14 +171,14 @@ export function generateCity(seed = HERO_SEED): CityModel {
         depth: maxZ - minZ,
         district,
         isPlaza,
+        isPark,
       }
       blocks.push(block)
-      if (isPlaza) continue
+      if (isPlaza || isPark) continue
 
-      const foreground = column >= 4 && row >= 4
-      const columns = block.width > 22 && !foreground ? 3 : 2
-      const rows = block.depth > 22 && district === 'core' ? 3 : 2
-      const gap = district === 'works' ? 1.8 : 1.1
+      const columns = district === 'civic' ? 1 : block.width > 25 ? 2 : 1
+      const rows = district === 'civic' ? 1 : block.depth > 25 ? 2 : 1
+      const gap = district === 'works' ? 1.7 : 1.25
       for (let parcelRow = 0; parcelRow < rows; parcelRow += 1) {
         for (let parcelColumn = 0; parcelColumn < columns; parcelColumn += 1) {
           const parcelWidth = block.width / columns - gap

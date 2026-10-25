@@ -11,7 +11,7 @@ This roadmap is milestone-based, not date-based. Each milestone should leave a u
 1. Set up the React, TypeScript, Vite, Three.js, React Three Fiber, and limited Drei application when implementation begins.
 2. Define static `CityModel` data and a seeded generator. Use one consistent coordinate system and stable identifiers.
 3. Generate a connected road network as abstract nodes and edges. Derive visible roads, intersections, blocks, and parcels from that network. Preserve graph information for later movement; do not implement pathfinding.
-4. Generate varied building descriptors and render a limited architectural vocabulary, coherent skyline, roads, sidewalks, nighttime materials, lighting, and atmosphere.
+4. Generate varied building descriptors and render a central public square with a civic edge, a limited architectural vocabulary, coherent skyline, roads, sidewalks, nighttime materials, lighting, and atmosphere.
 5. Provide an orthographic hero camera with smooth bounded pan and zoom, plus a clean full-screen presentation.
 6. Profile and refine the scene, then inspect it in a browser against the visual gates in `VISUAL_DIRECTION.md`.
 
