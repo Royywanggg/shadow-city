@@ -4,7 +4,7 @@ Shadow City v0.1 is an interactive, procedurally generated nighttime city. It is
 
 ## Run locally
 
-Use a recent Node.js version compatible with the installed Vite release, then run:
+Use Node.js 22.12 or newer, then run:
 
 ```bash
 npm install
@@ -21,7 +21,7 @@ npm test
 npm run build
 ```
 
-With the development server running, `npm run visual:check` opens the actual application in a headless browser and saves the hero, narrow, alternate-seed, pan, zoom, and reset screenshots in `.visual/`. The script uses Google Chrome on macOS when present, or Playwright's installed Chromium. Set `SHADOW_CITY_CHROME` to a browser executable path if needed. Inspect the images; passing commands alone do not establish visual quality.
+With the development server running, `npm run visual:check` opens the actual application in a headless browser and saves the hero, narrow, alternate-seed, pan, zoom, and reset screenshots in `.visual/`. The script uses Google Chrome on macOS when present, or Playwright's installed Chromium. If neither is available, run `npx playwright install chromium` first. Set `SHADOW_CITY_CHROME` to a browser executable path if needed. Inspect the images; passing commands alone do not establish visual quality.
 
 The reviewed 1440 × 900 hero capture and its metadata are in [docs/screenshots](docs/screenshots/README.md). The visual source of truth is [docs/VISUAL_DIRECTION.md](docs/VISUAL_DIRECTION.md).
 
