@@ -1,5 +1,14 @@
 export type RoadKind = 'avenue' | 'street'
-export type BuildingKind = 'terrace' | 'midrise' | 'tower' | 'industrial' | 'civic'
+export type BuildingKind =
+  | 'residential'
+  | 'apartment'
+  | 'commercial'
+  | 'office'
+  | 'tower'
+  | 'industrial'
+  | 'civic'
+  | 'corner'
+  | 'landmark'
 export type DistrictKind = 'civic' | 'core' | 'residential' | 'works'
 
 export interface RoadNode {
@@ -56,11 +65,29 @@ export interface Building {
   facadeTone: number
   roofTone: number
   accentTone: number
-  baysX: number
-  baysZ: number
-  /** 0 = dark, 1 = warm, 2 = cool. Positive X face, then positive Z face. */
-  windowPattern: number[]
+  masses: BuildingMass[]
+  windows: BuildingWindow[]
   roofDetail: number
+}
+
+export interface BuildingMass {
+  role: 'base' | 'body' | 'upper' | 'crown' | 'wing'
+  offsetX: number
+  offsetZ: number
+  baseY: number
+  width: number
+  depth: number
+  height: number
+}
+
+export interface BuildingWindow {
+  offsetX: number
+  offsetZ: number
+  y: number
+  width: number
+  height: number
+  face: 'x' | 'z'
+  light: 0 | 1 | 2
 }
 
 export interface Plaza {
@@ -68,6 +95,15 @@ export interface Plaza {
   z: number
   width: number
   depth: number
+}
+
+export interface StreetFeature {
+  id: string
+  kind: 'lamp' | 'tree' | 'bench' | 'planter' | 'busStop'
+  x: number
+  z: number
+  rotationY: number
+  scale: number
 }
 
 export interface CityModel {
@@ -78,4 +114,5 @@ export interface CityModel {
   parcels: Parcel[]
   buildings: Building[]
   plaza: Plaza
+  streetFeatures: StreetFeature[]
 }

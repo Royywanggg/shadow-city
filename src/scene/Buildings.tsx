@@ -1,264 +1,218 @@
 import { useMemo } from 'react'
-import type { Building, CityModel } from '../city/model'
+import type { Building, BuildingKind, CityModel } from '../city/model'
 import { InstancedBoxes, type BoxInstance } from './InstancedBoxes'
 import { RoofPrisms } from './RoofPrisms'
 
-const facadeColors = ['#4a6075', '#536c80', '#5e7387', '#44596e', '#6a7889']
-const roofColors = ['#2b3e51', '#32485c', '#3c5063', '#46596a']
-const trimColors = ['#7a91a0', '#8b9da9', '#6f8a9d']
+const facades: Record<BuildingKind, string[]> = {
+  residential: ['#5e6974', '#667078', '#6e6d70'],
+  apartment: ['#566c7d', '#607487', '#53667a'],
+  commercial: ['#405a69', '#4c6572', '#556c74'],
+  office: ['#4b6679', '#536e80', '#5b7281'],
+  tower: ['#455f72', '#4f687a', '#587283'],
+  industrial: ['#59636b', '#666568', '#586a70'],
+  civic: ['#7a858a', '#879092', '#75828a'],
+  corner: ['#5c6772', '#68727c', '#596e7b'],
+  landmark: ['#526b7b', '#5d7584', '#657b89'],
+}
+const roofs = ['#293c4d', '#344959', '#3d5160', '#465866']
+const trim = ['#607889', '#718897', '#586f80']
 
 interface BuildingGeometry {
-  bodies: BoxInstance[]
-  plinths: BoxInstance[]
-  cornices: BoxInstance[]
-  roofs: BoxInstance[]
-  roofPrisms: BoxInstance[]
-  rooftop: BoxInstance[]
-  facadeDetails: BoxInstance[]
+  shells: BoxInstance[]
+  ledges: BoxInstance[]
   parapets: BoxInstance[]
-  roofPanels: BoxInstance[]
+  roofPrisms: BoxInstance[]
+  roofEquipment: BoxInstance[]
+  facadeRibs: BoxInstance[]
+  balconySlabs: BoxInstance[]
+  balconyRails: BoxInstance[]
   entries: BoxInstance[]
-  civicColumns: BoxInstance[]
+  windowFrames: BoxInstance[]
   darkWindows: BoxInstance[]
   warmWindows: BoxInstance[]
   coolWindows: BoxInstance[]
-  accents: BoxInstance[]
-  signs: BoxInstance[]
+  storefronts: BoxInstance[]
+  warmSigns: BoxInstance[]
+  coolAccents: BoxInstance[]
+}
+
+function box(position: [number, number, number], scale: [number, number, number], color?: string): BoxInstance {
+  return { position, scale, color }
+}
+
+function addMassing(building: Building, geometry: BuildingGeometry) {
+  const wallColor = facades[building.kind][building.facadeTone % 3]
+  const roofColor = roofs[building.roofTone]
+  const trimColor = trim[building.accentTone]
+  const pitched = building.kind === 'residential' || building.kind === 'industrial'
+
+  building.masses.forEach((part, index) => {
+    const px = building.x + part.offsetX
+    const pz = building.z + part.offsetZ
+    const top = part.baseY + part.height
+    const color = part.role === 'base' ? '#354a5a' : part.role === 'crown' ? '#6c8290' : wallColor
+    geometry.shells.push(box([px, part.baseY + part.height / 2, pz], [part.width, part.height, part.depth],
+      building.kind === 'civic' && index === 0 ? '#77858b' : color))
+
+    const cap = pitched && index === building.masses.length - 1 ? 0.18 : 0.3
+    geometry.ledges.push(box([px, top + cap / 2, pz], [part.width + 0.55, cap, part.depth + 0.55], roofColor))
+    if (!pitched && part.role !== 'crown') {
+      for (const sign of [-1, 1]) {
+        geometry.parapets.push(box([px, top + 0.44, pz + sign * part.depth / 2], [part.width + 0.55, 0.53, 0.22], trimColor))
+        geometry.parapets.push(box([px + sign * part.width / 2, top + 0.44, pz], [0.22, 0.53, part.depth + 0.55], trimColor))
+      }
+    }
+  })
+
+  const topPart = building.masses[building.masses.length - 1]
+  const roofX = building.x + topPart.offsetX
+  const roofZ = building.z + topPart.offsetZ
+  const roofY = topPart.baseY + topPart.height
+  if (pitched) {
+    if (building.kind === 'industrial') {
+      for (const lane of [-1, 0, 1]) {
+        geometry.roofPrisms.push(box([
+          roofX + lane * topPart.width * 0.31, roofY + 0.2, roofZ,
+        ], [topPart.width * 0.3, 2.25, topPart.depth * 0.92], roofColor))
+      }
+    } else {
+      geometry.roofPrisms.push(box([roofX, roofY + 0.2, roofZ], [topPart.width * 0.95, 2.5, topPart.depth * 0.92], roofColor))
+    }
+  }
+  if (building.kind === 'civic') {
+    geometry.roofPrisms.push(box([roofX, roofY + 0.18, roofZ], [topPart.width * 0.98, 1.8, topPart.depth * 0.95], '#889ca2'))
+  }
+  if (building.kind !== 'residential') {
+    const equipmentBase = building.kind === 'civic' ? building.masses[0] : topPart
+    const ey = equipmentBase.baseY + equipmentBase.height + 0.75
+    if (building.roofDetail !== 0) {
+      const side = building.roofDetail % 2 === 0 ? 1 : -1
+      geometry.roofEquipment.push(box([
+        building.x + equipmentBase.offsetX + side * equipmentBase.width * 0.18,
+        ey,
+        building.z + equipmentBase.offsetZ - equipmentBase.depth * 0.13,
+      ], [Math.min(3.2, equipmentBase.width * 0.27), 1.2, Math.min(3.4, equipmentBase.depth * 0.31)], '#7c8c93'))
+      if (building.roofDetail === 3) {
+        geometry.roofEquipment.push(box([
+          building.x + equipmentBase.offsetX - equipmentBase.width * 0.18,
+          ey - 0.2,
+          building.z + equipmentBase.offsetZ + equipmentBase.depth * 0.15,
+        ], [1.1, 0.8, 1.35], '#98a4a6'))
+      }
+    }
+  }
+  if (building.kind === 'tower' || building.kind === 'landmark') {
+    geometry.roofEquipment.push(box([roofX, roofY + 2.2, roofZ], [0.15, 3.8, 0.15], '#a4b7bb'))
+    geometry.coolAccents.push(box([roofX, roofY + 4.16, roofZ], [0.42, 0.24, 0.42]))
+    if (building.kind === 'landmark') {
+      const edgeY = roofY - topPart.height * 0.28
+      for (const side of [-1, 1]) {
+        geometry.coolAccents.push(box([roofX, edgeY, roofZ + side * topPart.depth * 0.5], [topPart.width, 0.18, 0.13]))
+        geometry.coolAccents.push(box([roofX + side * topPart.width * 0.5, edgeY, roofZ], [0.13, 0.18, topPart.depth]))
+      }
+    }
+  }
+}
+
+function addWindows(building: Building, geometry: BuildingGeometry) {
+  for (const window of building.windows) {
+    const px = building.x + window.offsetX
+    const pz = building.z + window.offsetZ
+    const paneScale: [number, number, number] = window.face === 'x'
+      ? [0.055, window.height, window.width]
+      : [window.width, window.height, 0.055]
+    const frameScale: [number, number, number] = window.face === 'x'
+      ? [0.085, window.height + 0.16, window.width + 0.15]
+      : [window.width + 0.15, window.height + 0.16, 0.085]
+    geometry.windowFrames.push(box([px, window.y, pz], frameScale,
+      building.kind === 'civic' ? '#9ba9aa' : '#536e7e'))
+    const panePosition: [number, number, number] = window.face === 'x'
+      ? [px + 0.025, window.y, pz]
+      : [px, window.y, pz + 0.025]
+    const target = window.light === 1 ? geometry.warmWindows : window.light === 2 ? geometry.coolWindows : geometry.darkWindows
+    target.push(box(panePosition, paneScale))
+  }
+}
+
+function addStreetFront(building: Building, geometry: BuildingGeometry) {
+  const front = building.masses[0]
+  const fx = building.x + front.offsetX
+  const fz = building.z + front.offsetZ + front.depth / 2
+  const right = building.x + front.offsetX + front.width / 2
+  const shop = building.kind === 'commercial' || building.kind === 'corner' || building.kind === 'tower'
+  if (shop) {
+    geometry.storefronts.push(box([fx, 3.0, fz + 0.11], [front.width * 0.78, 3.25, 0.12], '#274c5a'))
+    geometry.storefronts.push(box([right + 0.11, 3.0, building.z + front.offsetZ], [0.12, 3.25, front.depth * 0.7], '#274c5a'))
+    geometry.ledges.push(box([fx, 4.75, fz + 0.52], [front.width * 0.89, 0.29, 1.05], '#879aa2'))
+    geometry.warmSigns.push(box([fx, 4.29, fz + 0.2], [Math.min(4.8, front.width * 0.44), 0.24, 0.12]))
+  } else if (building.kind === 'industrial') {
+    geometry.entries.push(box([fx, 2.95, fz + 0.1], [Math.min(5, front.width * 0.52), 3.6, 0.11], '#2b4856'))
+    geometry.ledges.push(box([fx, 5.0, fz + 0.28], [Math.min(5.5, front.width * 0.57), 0.3, 0.55], '#8b9699'))
+  } else if (building.kind === 'civic') {
+    const count = Math.max(5, Math.min(11, Math.round(front.width / 4.2)))
+    for (let index = 0; index < count; index += 1) {
+      const x = fx - front.width * 0.43 + (index * front.width * 0.86) / (count - 1)
+      geometry.facadeRibs.push(box([x, 4.0, fz + 0.9], [0.65, 6.0, 0.65], '#bcc7c4'))
+    }
+    geometry.ledges.push(box([fx, 7.12, fz + 0.95], [front.width * 0.94, 0.58, 1.9], '#acb9b8'))
+    geometry.entries.push(box([fx, 2.65, fz + 0.35], [Math.min(4.6, front.width * 0.17), 3.3, 0.2], '#1e3542'))
+  } else {
+    geometry.entries.push(box([fx + front.width * 0.18, 1.9, fz + 0.09], [1.65, 2.15, 0.12], '#243b4a'))
+    geometry.ledges.push(box([fx + front.width * 0.18, 3.15, fz + 0.42], [2.1, 0.18, 0.86], '#8b9ca5'))
+  }
+}
+
+function addFacadeFeatures(building: Building, geometry: BuildingGeometry) {
+  const kind = building.kind
+  const main = building.masses.find((part) => part.role === 'body') ?? building.masses[0]
+  const px = building.x + main.offsetX
+  const pz = building.z + main.offsetZ
+  const front = pz + main.depth / 2
+  const side = px + main.width / 2
+  const contrast = trim[building.accentTone]
+
+  if (kind === 'office' || kind === 'tower' || kind === 'landmark') {
+    for (const fraction of [-0.33, 0, 0.33]) {
+      geometry.facadeRibs.push(box([px + main.width * fraction, main.baseY + main.height / 2, front + 0.11],
+        [0.2, main.height * 0.96, 0.23], contrast))
+      geometry.facadeRibs.push(box([side + 0.11, main.baseY + main.height / 2, pz + main.depth * fraction],
+        [0.23, main.height * 0.96, 0.2], contrast))
+    }
+  }
+  if (kind === 'apartment') {
+    const floors = Math.max(3, Math.round(main.height / 3.3))
+    for (let floor = 1; floor < floors; floor += 2) {
+      const y = main.baseY + (floor * main.height) / floors
+      geometry.balconySlabs.push(box([px, y, front + 0.48], [main.width * 0.82, 0.16, 1.0], '#8398a4'))
+      geometry.balconyRails.push(box([px, y + 0.62, front + 0.94], [main.width * 0.82, 0.72, 0.06], '#718a96'))
+    }
+  }
+  if (kind === 'residential') {
+    const roofY = main.baseY + main.height
+    for (const sign of [-1, 1]) {
+      geometry.roofEquipment.push(box([px + sign * main.width * 0.22, roofY + 1.0, front - 0.72], [1.25, 1.0, 1.1], '#7a8c95'))
+    }
+  }
+  if (kind === 'landmark') {
+    geometry.coolAccents.push(box([side + 0.16, main.baseY + main.height * 0.72, pz], [0.12, main.height * 0.38, 0.32]))
+  } else if (kind === 'tower') {
+    geometry.coolAccents.push(box([side + 0.13, main.baseY + main.height * 0.8, pz], [0.12, 0.28, main.depth * 0.58]))
+  }
 }
 
 function addBuilding(building: Building, geometry: BuildingGeometry) {
-  const { x, z, width, depth, height } = building
-  const facadeColor = facadeColors[building.facadeTone]
-  const roofColor = roofColors[building.roofTone]
-  const trimColor = trimColors[building.accentTone]
-  const isTower = building.kind === 'tower'
-  const isIndustrial = building.kind === 'industrial'
-  const isCivic = building.kind === 'civic'
-
-  geometry.plinths.push({
-    position: [x, 0.48, z],
-    scale: [width + 0.45, 0.92, depth + 0.45],
-    color: '#273b4d',
-  })
-  geometry.bodies.push({
-    position: [x, 0.95 + height / 2, z],
-    scale: [width, height, depth],
-    color: isCivic ? '#657988' : facadeColor,
-  })
-
-  const bandHeight = isIndustrial ? 0.3 : 0.42
-  geometry.cornices.push({
-    position: [x, 1.26, z],
-    scale: [width + 0.4, bandHeight, depth + 0.4],
-    color: trimColor,
-  })
-  geometry.cornices.push({
-    position: [x, 0.95 + height - 0.24, z],
-    scale: [width + 0.5, 0.36, depth + 0.5],
-    color: trimColor,
-  })
-  if (height > 17 && !isIndustrial) {
-    geometry.cornices.push({
-      position: [x, 0.95 + height * 0.62, z],
-      scale: [width + 0.18, 0.18, depth + 0.18],
-      color: trimColor,
-    })
-  }
-
-  if (building.kind === 'midrise' || isTower) {
-    const ribColor = trimColors[(building.accentTone + 1) % trimColors.length]
-    for (const side of [-1, 1]) {
-      geometry.facadeDetails.push({
-        position: [x + side * (width / 2 - 0.42), 0.95 + height / 2, z + depth / 2 + 0.08],
-        scale: [0.26, height * 0.95, 0.22],
-        color: ribColor,
-      })
-      geometry.facadeDetails.push({
-        position: [x + width / 2 + 0.08, 0.95 + height / 2, z + side * (depth / 2 - 0.42)],
-        scale: [0.22, height * 0.95, 0.26],
-        color: ribColor,
-      })
-    }
-    for (let floor = 3; floor < building.floors; floor += 3) {
-      const bandY = 0.95 + (floor * height) / building.floors
-      geometry.facadeDetails.push({
-        position: [x, bandY, z + depth / 2 + 0.055],
-        scale: [width + 0.12, 0.11, 0.14],
-        color: ribColor,
-      })
-      geometry.facadeDetails.push({
-        position: [x + width / 2 + 0.055, bandY, z],
-        scale: [0.14, 0.11, depth + 0.12],
-        color: ribColor,
-      })
-    }
-  }
-
-  geometry.entries.push({
-    position: [x, 2.0, z + depth / 2 + 0.09],
-    scale: [Math.min(width * (isIndustrial ? 0.46 : 0.25), 3.8), 2.25, 0.09],
-    color: isIndustrial ? '#243d4e' : '#182c3c',
-  })
-
-  if (isCivic) {
-    const columns = Math.max(5, Math.floor(width / 4.4))
-    for (let index = 0; index < columns; index += 1) {
-      geometry.civicColumns.push({
-        position: [x - width * 0.43 + (index * width * 0.86) / (columns - 1), 3.9, z + depth / 2 + 0.65],
-        scale: [0.64, 5.5, 0.64],
-        color: '#b0b7b1',
-      })
-    }
-    geometry.cornices.push({
-      position: [x, 6.7, z + depth / 2 + 0.78],
-      scale: [width * 0.93, 0.52, 1.65],
-      color: '#aeb9b6',
-    })
-    geometry.roofs.push({
-      position: [x, height + 2.2, z],
-      scale: [width * 0.2, 2.5, depth * 0.5],
-      color: '#617b88',
-    })
-    geometry.roofPrisms.push({
-      position: [x, height + 3.5, z],
-      scale: [width * 0.2, 1.7, depth * 0.5],
-      color: '#85979c',
-    })
-  }
-  geometry.entries.push({
-    position: [x, 3.15, z + depth / 2 + 0.45],
-    scale: [Math.min(width * (isIndustrial ? 0.54 : 0.31), 4.3), 0.16, 0.9],
-    color: trimColor,
-  })
-
-  geometry.roofs.push({
-    position: [x, 1.08 + height, z],
-    scale: [width + 0.56, 0.33, depth + 0.56],
-    color: roofColor,
-  })
-  if (!isIndustrial && building.kind !== 'terrace') {
-    const parapetY = height + 1.52
-    for (const sign of [-1, 1]) {
-      geometry.parapets.push({
-        position: [x, parapetY, z + sign * (depth / 2 + 0.15)],
-        scale: [width + 0.55, 0.56, 0.24],
-        color: trimColor,
-      })
-      geometry.parapets.push({
-        position: [x + sign * (width / 2 + 0.15), parapetY, z],
-        scale: [0.24, 0.56, depth + 0.55],
-        color: trimColor,
-      })
-    }
-    geometry.roofPanels.push({
-      position: [x - width * 0.18, height + 1.3, z + depth * 0.16],
-      scale: [Math.max(1.5, width * 0.24), 0.04, Math.max(1.2, depth * 0.22)],
-      color: '#537583',
-    })
-  }
-  if (isTower) {
-    geometry.roofs.push({
-      position: [x, 1.8 + height, z],
-      scale: [width * 0.76, 1.25, depth * 0.78],
-      color: facadeColor,
-    })
-    geometry.cornices.push({
-      position: [x, 2.57 + height, z],
-      scale: [width * 0.83, 0.34, depth * 0.85],
-      color: trimColor,
-    })
-  } else if (building.kind === 'midrise') {
-    geometry.roofs.push({
-      position: [x - width * 0.08, 1.65 + height, z - depth * 0.06],
-      scale: [width * 0.64, 0.94, depth * 0.58],
-      color: roofColor,
-    })
-  } else if (building.kind === 'terrace' || isIndustrial) {
-    geometry.roofPrisms.push({
-      position: [x, 1.25 + height, z],
-      scale: [width * 0.94, isIndustrial ? 1.4 : 2.2, depth * 0.92],
-      color: roofColor,
-    })
-  }
-
-  const detailX = x + width * (building.roofDetail % 2 === 0 ? 0.19 : -0.16)
-  const detailZ = z + depth * (building.roofDetail > 1 ? 0.16 : -0.19)
-  geometry.rooftop.push({
-    position: [detailX, height + 1.7 + (isTower ? 1.4 : 0), detailZ],
-    scale: [Math.min(width * 0.29, 3.3), 1.15, Math.min(depth * 0.3, 3.5)],
-    color: '#758692',
-  })
-  if (height > 18) {
-    geometry.rooftop.push({
-      position: [x - width * 0.25, height + 1.55, z + depth * 0.23],
-      scale: [1.1, 0.85, 1.35],
-      color: '#8a98a0',
-    })
-  }
-  if (isTower) {
-    geometry.rooftop.push({
-      position: [x + width * 0.12, height + 4.15, z - depth * 0.11],
-      scale: [0.16, 3.1, 0.16],
-      color: '#92a6ab',
-    })
-  }
-
-  const floorHeight = height / building.floors
-  for (let floor = 0; floor < building.floors; floor += 1) {
-    const y = 0.95 + (floor + 0.53) * floorHeight
-    const windowHeight = Math.min(1.48, floorHeight * 0.47)
-    for (let bay = 0; bay < building.baysZ; bay += 1) {
-      const lit = building.windowPattern[floor * (building.baysZ + building.baysX) + bay]
-      const target = lit === 1 ? geometry.warmWindows : lit === 2 ? geometry.coolWindows : geometry.darkWindows
-      target.push({
-        position: [x + width / 2 + 0.034, y, z - depth / 2 + ((bay + 0.5) * depth) / building.baysZ],
-        scale: [0.055, windowHeight, Math.min(1.15, depth / building.baysZ * 0.48)],
-      })
-    }
-    for (let bay = 0; bay < building.baysX; bay += 1) {
-      const lit = building.windowPattern[floor * (building.baysZ + building.baysX) + building.baysZ + bay]
-      const target = lit === 1 ? geometry.warmWindows : lit === 2 ? geometry.coolWindows : geometry.darkWindows
-      target.push({
-        position: [x - width / 2 + ((bay + 0.5) * width) / building.baysX, y, z + depth / 2 + 0.034],
-        scale: [Math.min(1.15, width / building.baysX * 0.48), windowHeight, 0.055],
-      })
-    }
-  }
-
-  if (isTower || (building.kind === 'midrise' && building.accentTone === 1)) {
-    geometry.accents.push({
-      position: [x + width / 2 + 0.09, height * 0.84, z],
-      scale: [0.1, isTower ? 0.32 : 0.14, depth * 0.58],
-      color: isTower ? '#6cc3ba' : '#ad8b68',
-    })
-  }
-  if (building.accentTone === 2 && height > 15) {
-    geometry.signs.push({
-      position: [x, 4.15, z + depth / 2 + 0.12],
-      scale: [Math.min(width * 0.48, 4.2), 0.28, 0.12],
-    })
-  }
+  addMassing(building, geometry)
+  addWindows(building, geometry)
+  addStreetFront(building, geometry)
+  addFacadeFeatures(building, geometry)
 }
 
 export function Buildings({ city }: { city: CityModel }) {
   const geometry = useMemo(() => {
     const result: BuildingGeometry = {
-      bodies: [],
-      plinths: [],
-      cornices: [],
-      roofs: [],
-      roofPrisms: [],
-      rooftop: [],
-      facadeDetails: [],
-      parapets: [],
-      roofPanels: [],
-      entries: [],
-      civicColumns: [],
-      darkWindows: [],
-      warmWindows: [],
-      coolWindows: [],
-      accents: [],
-      signs: [],
+      shells: [], ledges: [], parapets: [], roofPrisms: [], roofEquipment: [], facadeRibs: [],
+      balconySlabs: [], balconyRails: [], entries: [], windowFrames: [], darkWindows: [],
+      warmWindows: [], coolWindows: [], storefronts: [], warmSigns: [], coolAccents: [],
     }
     city.buildings.forEach((building) => addBuilding(building, result))
     return result
@@ -266,22 +220,22 @@ export function Buildings({ city }: { city: CityModel }) {
 
   return (
     <>
-      <InstancedBoxes items={geometry.plinths} castShadow receiveShadow roughness={0.91} />
-      <InstancedBoxes items={geometry.bodies} castShadow receiveShadow roughness={0.79} metalness={0.12} />
-      <InstancedBoxes items={geometry.cornices} castShadow roughness={0.7} metalness={0.2} />
-      <InstancedBoxes items={geometry.facadeDetails} castShadow roughness={0.68} metalness={0.16} />
-      <InstancedBoxes items={geometry.entries} roughness={0.59} metalness={0.2} />
-      <InstancedBoxes items={geometry.civicColumns} castShadow roughness={0.7} metalness={0.08} />
-      <InstancedBoxes items={geometry.roofs} castShadow roughness={0.85} />
-      <InstancedBoxes items={geometry.parapets} castShadow roughness={0.77} />
-      <InstancedBoxes items={geometry.roofPanels} roughness={0.35} metalness={0.42} />
+      <InstancedBoxes items={geometry.shells} castShadow receiveShadow roughness={0.82} metalness={0.13} />
+      <InstancedBoxes items={geometry.ledges} castShadow roughness={0.74} metalness={0.21} />
+      <InstancedBoxes items={geometry.parapets} castShadow roughness={0.8} />
       <RoofPrisms items={geometry.roofPrisms} />
-      <InstancedBoxes items={geometry.rooftop} castShadow roughness={0.68} metalness={0.35} />
-      <InstancedBoxes items={geometry.darkWindows} color="#22364a" roughness={0.45} metalness={0.35} />
-      <InstancedBoxes items={geometry.warmWindows} color="#f4b878" emissive="#ef9b4a" emissiveIntensity={1.8} roughness={0.35} />
-      <InstancedBoxes items={geometry.coolWindows} color="#8acbd0" emissive="#54bfc4" emissiveIntensity={1.4} roughness={0.35} />
-      <InstancedBoxes items={geometry.accents} emissive="#42c9be" emissiveIntensity={1.25} roughness={0.4} />
-      <InstancedBoxes items={geometry.signs} color="#d6a06c" emissive="#e18a4c" emissiveIntensity={1.4} roughness={0.4} />
+      <InstancedBoxes items={geometry.roofEquipment} castShadow roughness={0.62} metalness={0.32} />
+      <InstancedBoxes items={geometry.facadeRibs} castShadow roughness={0.73} metalness={0.15} />
+      <InstancedBoxes items={geometry.balconySlabs} castShadow roughness={0.72} />
+      <InstancedBoxes items={geometry.balconyRails} roughness={0.52} metalness={0.35} />
+      <InstancedBoxes items={geometry.entries} roughness={0.58} metalness={0.23} />
+      <InstancedBoxes items={geometry.windowFrames} roughness={0.56} metalness={0.25} />
+      <InstancedBoxes items={geometry.darkWindows} color="#182c3d" roughness={0.4} metalness={0.37} />
+      <InstancedBoxes items={geometry.warmWindows} color="#ebb881" emissive="#d99051" emissiveIntensity={1.25} roughness={0.36} />
+      <InstancedBoxes items={geometry.coolWindows} color="#9cbcc2" emissive="#65aeb8" emissiveIntensity={0.95} roughness={0.36} />
+      <InstancedBoxes items={geometry.storefronts} roughness={0.32} metalness={0.45} />
+      <InstancedBoxes items={geometry.warmSigns} color="#e6ab73" emissive="#dd8e4f" emissiveIntensity={1.45} />
+      <InstancedBoxes items={geometry.coolAccents} color="#9ed8d3" emissive="#4bb3ad" emissiveIntensity={1.15} />
     </>
   )
 }

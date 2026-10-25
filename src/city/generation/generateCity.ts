@@ -1,14 +1,7 @@
-import type {
-  Building,
-  BuildingKind,
-  CityBlock,
-  CityModel,
-  DistrictKind,
-  Parcel,
-  RoadEdge,
-  RoadNode,
-} from '../model'
+import type { Building, CityBlock, CityModel, DistrictKind, Parcel, RoadEdge, RoadNode } from '../model'
 import { between, createRandom } from './random'
+import { createBuilding } from './buildings'
+import { generateStreetFeatures } from './streetFeatures'
 
 export const HERO_SEED = 'shadow-city-hero-01'
 
@@ -25,89 +18,6 @@ function districtFor(column: number, row: number): DistrictKind {
   if ((column <= 1 && row >= 4) || (column >= 5 && row <= 1)) return 'works'
   if (Math.abs(column - 3) + Math.abs(row - 3) <= 4) return 'core'
   return 'residential'
-}
-
-function makeWindowPattern(
-  random: () => number,
-  floors: number,
-  baysX: number,
-  baysZ: number,
-  kind: BuildingKind,
-): number[] {
-  const pattern: number[] = []
-  const count = floors * (baysX + baysZ)
-  for (let index = 0; index < count; index += 1) {
-    const roll = random()
-    const litRate = kind === 'industrial' ? 0.18 : kind === 'tower' ? 0.36 : kind === 'civic' ? 0.2 : 0.28
-    pattern.push(roll < litRate * 0.77 ? 1 : roll < litRate ? 2 : 0)
-  }
-  return pattern
-}
-
-function buildingKind(
-  random: () => number,
-  district: DistrictKind,
-  column: number,
-  row: number,
-): BuildingKind {
-  if (district === 'civic') return 'civic'
-  const anchor = (column === 1 && row === 2) || (column === 2 && row === 1) || (column === 4 && row === 2)
-  if (anchor && random() < 0.64) return 'tower'
-  if (district === 'works') return random() < 0.7 ? 'industrial' : 'midrise'
-  if (district === 'core') return random() < 0.62 ? 'midrise' : 'terrace'
-  return random() < 0.75 ? 'terrace' : 'midrise'
-}
-
-function buildingHeight(
-  random: () => number,
-  kind: BuildingKind,
-  column: number,
-  row: number,
-): number {
-  const foreground = column >= 4 && row >= 4
-  if (kind === 'civic') return 16
-  if (kind === 'tower') return between(random, 34, 56)
-  if (kind === 'industrial') return between(random, 5.5, 10)
-  if (kind === 'terrace') return between(random, 6.5, foreground ? 10.5 : 13)
-  const nearSquare = Math.abs(column - 3) + Math.abs(row - 3) <= 1
-  return between(random, 14, nearSquare ? 21 : foreground ? 19 : 27)
-}
-
-function makeBuilding(
-  parcel: Parcel,
-  district: DistrictKind,
-  column: number,
-  row: number,
-  random: () => number,
-): Building {
-  const kind = buildingKind(random, district, column, row)
-  const insetX = between(random, 0.55, 1.35)
-  const insetZ = between(random, 0.55, 1.35)
-  const height = buildingHeight(random, kind, column, row)
-  const floors = Math.max(2, Math.round(height / (kind === 'industrial' || kind === 'civic' ? 4.2 : 3.35)))
-  const width = Math.max(4, parcel.width - insetX * 2)
-  const depth = Math.max(4, parcel.depth - insetZ * 2)
-  const baysX = Math.max(2, Math.min(6, Math.round(width / 3.2)))
-  const baysZ = Math.max(2, Math.min(6, Math.round(depth / 3.2)))
-
-  return {
-    id: `building-${parcel.id}`,
-    parcelId: parcel.id,
-    kind,
-    x: parcel.x + between(random, -0.18, 0.18),
-    z: parcel.z + between(random, -0.18, 0.18),
-    width,
-    depth,
-    height,
-    floors,
-    facadeTone: Math.floor(random() * 5),
-    roofTone: Math.floor(random() * 4),
-    accentTone: Math.floor(random() * 3),
-    baysX,
-    baysZ,
-    windowPattern: makeWindowPattern(random, floors, baysX, baysZ, kind),
-    roofDetail: Math.floor(random() * 4),
-  }
 }
 
 export function generateCity(seed = HERO_SEED): CityModel {
@@ -192,9 +102,7 @@ export function generateCity(seed = HERO_SEED): CityModel {
             depth: parcelDepth,
           }
           parcels.push(parcel)
-          if (district === 'residential' && random() < 0.08) continue
-          if (district === 'works' && random() < 0.14) continue
-          buildings.push(makeBuilding(parcel, district, column, row, random))
+          buildings.push(createBuilding(parcel, district, column, row, createRandom(`${seed}:${parcel.id}`)))
         }
       }
     }
@@ -214,5 +122,6 @@ export function generateCity(seed = HERO_SEED): CityModel {
       width: centralBlock.width,
       depth: centralBlock.depth,
     },
+    streetFeatures: generateStreetFeatures(seed, { nodes, edges }, blocks, centralBlock),
   }
 }
