@@ -99,3 +99,7 @@ The v0.1.1 pass uses nine related building archetypes: low residential forms, ap
 Use the supplied reference for its layered massing, rich rooftops, and selective light. Keep the wider city's road hierarchy and public square visible. At the fixed hero scale, prioritize the civic focal point and taller rear cluster over small details that only read after zooming. Window light should form occupied room or floor clusters, with warm activity more common than cyan accents. Never increase bloom to conceal weak geometry or lighting.
 
 The preserved `docs/screenshots/hero-1440x900.png` is the v0.1 baseline. Compare the separately captured v0.1.1 hero image under the same browser, seed, viewport, and device pixel ratio. A more layered skyline is progress; repeated facades, a visible square grid, and distant props that vanish at hero scale remain visual issues to call out if present.
+
+## v0.1.2 review focus
+
+The v0.1.2 pass keeps the nine building families and connected road graph. Larger parcel groupings near the square and in selected work blocks, split apartment masses, asymmetric offices, deeper facade ribs, and more varied roofs should be judged in the default hero view. The fixed screenshot is a review candidate, not visual approval. The regular road lattice remains visible, and local light changes should only be retained when they produce a clear improvement in the browser image.

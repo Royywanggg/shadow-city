@@ -25,3 +25,16 @@ Development renderer telemetry during the headless browser pass recorded about 1
 - Browser checks: hero and closer detail screenshots, pan, zoom, reset, 390 × 844 viewport, and two alternate seeds; no page errors were reported
 
 The final headless renderer reported 131 draw calls and 92,033 triangles. Its active frame interval came from only four sampled frames and is not a reliable frame-rate result. The geometry increase comes from layered building masses, facades, and street furniture. The new image has a stronger rear skyline, lower foreground, and civic focus; its regular grid and many boxlike mid-rise buildings remain visible. These limitations should inform further art review rather than be hidden behind the passing technical checks.
+
+## v0.1.2 comparison capture
+
+`hero-v0.1.2-1440x900.png` is the current static visual refinement candidate. The v0.1.1 screenshot remains unchanged for direct comparison.
+
+- Date: 2026-10-25 (Europe/London)
+- Browser: Google Chrome 155.0.8059.85, headless, macOS
+- Viewport: 1440 × 900 CSS pixels; device pixel ratio: 1
+- Seed: `shadow-city-hero-01`
+- Capture command: `SHADOW_CITY_URL=http://127.0.0.1:5175/ npm run visual:check` with the local Vite server running
+- Browser checks: hero and close view, pan, zoom, reset, 390 × 844 viewport, and two alternate seeds; no page errors were reported
+
+The final headless pass reported 131 draw calls and 84,529 triangles. Its active frame interval used only four sampled frames, so it is not a reliable frame-rate benchmark. Compared with v0.1.1, the plaza edges, asymmetric offices, and varied rooflines read more clearly at hero scale. The regular street lattice and many boxlike buildings remain visible; local illumination still has limited contrast. User visual approval remains pending.

@@ -39,6 +39,14 @@ This roadmap is milestone-based, not date-based. Each milestone should leave a u
 - Distinct archetypes differ by footprint or massing, silhouette, facade, and roof treatment; the civic building and plaza remain legible; street details respect the city layout; night values remain readable without indiscriminate glow.
 - Seeded static data and road connectivity tests, type checking, and the production build pass. Report browser diagnostics with their sampling limits.
 
+## v0.1.2 — Focused static visual refinement
+
+**Goal:** Make the existing building families and block composition more distinct in the fixed hero view without expanding the product or changing the road graph.
+
+**Scope:** Vary massing, rooflines, podiums, and facade depth within the nine existing archetypes; vary parcel grouping and setbacks around the square and work districts; review local light and shadow changes in browser screenshots. Preserve the v0.1.1 screenshot and capture v0.1.2 separately.
+
+**Review gate:** Type checking, tests, build, road connectivity, camera interaction, and browser error checks must pass. Compare both fixed-seed 1440 × 900 screenshots and record visible gains and remaining repetition. The user decides whether the art direction is accepted and whether v0.2 can begin.
+
 ## v0.2 — Deterministic simulation foundation
 
 **Goal:** Introduce a simulation loop without changing the static city contract.
