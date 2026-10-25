@@ -41,6 +41,9 @@ async function capture(name, url, viewport, interact = false) {
     await page.mouse.wheel(0, -520)
     await page.waitForTimeout(650)
     await page.screenshot({ path: resolve(outputDirectory, `${name}-zoomed.png`) })
+    await page.mouse.wheel(0, -700)
+    await page.waitForTimeout(650)
+    await page.screenshot({ path: resolve(outputDirectory, `${name}-detail.png`) })
     const diagnostics = await page.evaluate(() => window.__shadowCityDiagnostics ?? null)
     await page.getByRole('button', { name: 'RESET VIEW' }).click()
     await page.waitForTimeout(650)
@@ -53,12 +56,12 @@ async function capture(name, url, viewport, interact = false) {
 }
 
 try {
-  const base = 'http://127.0.0.1:5173/'
+  const base = process.env.SHADOW_CITY_URL ?? 'http://127.0.0.1:5173/'
   const heroDiagnostics = await capture('hero-1440x900', base, { width: 1440, height: 900 }, true)
   await capture('narrow-390x844', base, { width: 390, height: 844 })
   await capture('alternate-seed-a', `${base}?seed=shadow-city-variation-a`, { width: 1440, height: 900 })
   await capture('alternate-seed-b', `${base}?seed=shadow-city-variation-b`, { width: 1440, height: 900 })
-  console.log(JSON.stringify({ outputDirectory, screenshots: 7, heroDiagnostics, warnings: [...warnings], issues }, null, 2))
+  console.log(JSON.stringify({ outputDirectory, screenshots: 8, heroDiagnostics, warnings: [...warnings], issues }, null, 2))
   if (issues.length) process.exitCode = 1
 } finally {
   await browser.close()

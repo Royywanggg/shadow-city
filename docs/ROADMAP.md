@@ -24,6 +24,21 @@ This roadmap is milestone-based, not date-based. Each milestone should leave a u
 - At least two other seeds and a narrow viewport are inspected for major layout or framing failures. Panning and zooming are tested in the browser.
 - Type checking, production build, and focused tests for seeded generation and spatial invariants pass. Browser, viewport, device pixel ratio, seed, and measured rendering performance on the reference device are recorded. Performance problems affecting smooth camera interaction are resolved before release.
 
+## v0.1.1 — Visual refinement
+
+**Goal:** Raise the v0.1 miniature's architectural variety, city composition, street detail, and nighttime depth before simulation work begins.
+
+**In scope:** Distinct procedural building archetypes with varied massing, roofs, frontage, and setbacks; a stronger skyline and civic square; street furniture derived from static city space; clustered window lighting and restrained warm/cool accents; fixed hero camera review. Keep the connected road graph, static `CityModel`, deterministic seed, and existing controls.
+
+**Out of scope:** Simulation, agents, routing, backend services, and a city generator rewrite.
+
+**Exit criteria:**
+
+- The fixed `shadow-city-hero-01` city at 1440 × 900 is visually compared with the preserved v0.1 screenshot and the supplied reference. Save a separate v0.1.1 hero screenshot. Record observed improvements and remaining gaps honestly.
+- Inspect the app in a browser after architecture/composition, materials/lighting, and environmental detail passes. Check the default and closer zoom, pan and reset, a narrow viewport, and two alternate seeds. Do not substitute a passing build for visual inspection.
+- Distinct archetypes differ by footprint or massing, silhouette, facade, and roof treatment; the civic building and plaza remain legible; street details respect the city layout; night values remain readable without indiscriminate glow.
+- Seeded static data and road connectivity tests, type checking, and the production build pass. Report browser diagnostics with their sampling limits.
+
 ## v0.2 — Deterministic simulation foundation
 
 **Goal:** Introduce a simulation loop without changing the static city contract.

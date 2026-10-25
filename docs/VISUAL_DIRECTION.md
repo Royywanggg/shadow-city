@@ -91,3 +91,11 @@ Save the seed, viewport, browser, device pixel ratio, and date with screenshot e
 - Fictional modern city with selective European urban cues, not a replica of a real place.
 - Central public square or small park as the primary open-space focal point; no river, bridge, or complex terrain for v0.1.
 - Stylized realism and a clear, dry night. Architectural proportions, facade layering, roof detail, and controlled light take priority over photoreal materials or weather effects.
+
+## v0.1.1 refinement notes
+
+The v0.1.1 pass uses nine related building archetypes: low residential forms, apartments with upper setbacks and balconies, commercial frontages, stepped offices, towers with podiums, industrial roofs, a porticoed civic hall, L-shaped corners, and a tiered landmark. Their shared palette should keep the city coherent, while their distinct massing and rooflines prevent a field of identical boxes. Street furniture is generated as static spatial data from avenue edges, parks, and the plaza; it does not alter road connectivity.
+
+Use the supplied reference for its layered massing, rich rooftops, and selective light. Keep the wider city's road hierarchy and public square visible. At the fixed hero scale, prioritize the civic focal point and taller rear cluster over small details that only read after zooming. Window light should form occupied room or floor clusters, with warm activity more common than cyan accents. Never increase bloom to conceal weak geometry or lighting.
+
+The preserved `docs/screenshots/hero-1440x900.png` is the v0.1 baseline. Compare the separately captured v0.1.1 hero image under the same browser, seed, viewport, and device pixel ratio. A more layered skyline is progress; repeated facades, a visible square grid, and distant props that vanish at hero scale remain visual issues to call out if present.
