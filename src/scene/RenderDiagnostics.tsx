@@ -1,0 +1,43 @@
+import { useFrame, useThree } from '@react-three/fiber'
+import { useEffect, useRef } from 'react'
+
+declare global {
+  interface Window {
+    __shadowCityDiagnostics?: {
+      drawCalls: number
+      triangles: number
+      medianActiveFrameMs: number | null
+      sampledFrames: number
+    }
+  }
+}
+
+export function RenderDiagnostics() {
+  const gl = useThree((state) => state.gl)
+  const activeIntervals = useRef<number[]>([])
+
+  useEffect(() => {
+    const previous = gl.info.autoReset
+    gl.info.autoReset = false
+    return () => { gl.info.autoReset = previous }
+  }, [gl])
+
+  useFrame((_, delta) => {
+    gl.info.reset()
+    const interval = delta * 1000
+    if (interval > 0 && interval < 100) {
+      activeIntervals.current.push(interval)
+      if (activeIntervals.current.length > 120) activeIntervals.current.shift()
+    }
+    const sorted = [...activeIntervals.current].sort((a, b) => a - b)
+    queueMicrotask(() => {
+      window.__shadowCityDiagnostics = {
+        drawCalls: gl.info.render.calls,
+        triangles: gl.info.render.triangles,
+        medianActiveFrameMs: sorted.length ? sorted[Math.floor(sorted.length / 2)] : null,
+        sampledFrames: sorted.length,
+      }
+    })
+  }, -100)
+  return null
+}

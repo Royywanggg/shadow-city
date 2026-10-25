@@ -3,10 +3,11 @@ import { useThree } from '@react-three/fiber'
 import { useLayoutEffect, useRef } from 'react'
 import type { MapControls as MapControlsType } from 'three-stdlib'
 
-export function CameraRig() {
+export function CameraRig({ resetToken }: { resetToken: number }) {
   const { camera, size, invalidate } = useThree()
   const controlsRef = useRef<MapControlsType>(null)
   const previousBaseZoom = useRef(0)
+  const previousResetToken = useRef(resetToken)
   const baseZoom = Math.min(size.width / 325, size.height / 235)
 
   useLayoutEffect(() => {
@@ -18,6 +19,20 @@ export function CameraRig() {
     previousBaseZoom.current = baseZoom
     invalidate()
   }, [baseZoom, camera, invalidate])
+
+  useLayoutEffect(() => {
+    if (previousResetToken.current === resetToken) return
+    previousResetToken.current = resetToken
+    const controls = controlsRef.current
+    if (!controls) return
+    controls.target.set(0, 0, 0)
+    camera.position.set(188, 168, 188)
+    camera.zoom = baseZoom
+    camera.lookAt(0, 0, 0)
+    camera.updateProjectionMatrix()
+    controls.update()
+    invalidate()
+  }, [baseZoom, camera, invalidate, resetToken])
 
   const keepCityInView = () => {
     const controls = controlsRef.current

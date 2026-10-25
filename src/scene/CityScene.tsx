@@ -4,9 +4,10 @@ import { Buildings } from './Buildings'
 import { CameraRig } from './CameraRig'
 import { InstancedBoxes } from './InstancedBoxes'
 import { Plaza } from './Plaza'
+import { RenderDiagnostics } from './RenderDiagnostics'
 import { Roads } from './Roads'
 
-export function CityScene({ city }: { city: CityModel }) {
+export function CityScene({ city, resetToken }: { city: CityModel; resetToken: number }) {
   const half = city.size / 2
   return (
     <>
@@ -55,7 +56,8 @@ export function CityScene({ city }: { city: CityModel }) {
       <EffectComposer multisampling={0}>
         <Bloom intensity={0.28} luminanceThreshold={1.15} luminanceSmoothing={0.2} mipmapBlur />
       </EffectComposer>
-      <CameraRig />
+      <CameraRig resetToken={resetToken} />
+      {import.meta.env.DEV && <RenderDiagnostics />}
     </>
   )
 }
