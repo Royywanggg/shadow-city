@@ -29,6 +29,7 @@ export function CityScene({ city, resetToken }: { city: CityModel; resetToken: n
         shadow-camera-near={0.1}
         shadow-camera-far={380}
         shadow-bias={-0.0005}
+        shadow-radius={2.4}
       />
 
       <mesh position={[0, -3.25, 0]} receiveShadow>

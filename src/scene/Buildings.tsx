@@ -42,7 +42,7 @@ function box(position: [number, number, number], scale: [number, number, number]
 
 function addMassing(building: Building, geometry: BuildingGeometry) {
   const wallColor = facades[building.kind][building.facadeTone % 3]
-  const roofColor = roofs[building.roofTone]
+  const roofColor = building.kind === 'residential' ? '#4c5964' : roofs[building.roofTone]
   const trimColor = trim[building.accentTone]
   const pitched = building.kind === 'residential' || building.kind === 'industrial'
 
@@ -54,9 +54,11 @@ function addMassing(building: Building, geometry: BuildingGeometry) {
     geometry.shells.push(box([px, part.baseY + part.height / 2, pz], [part.width, part.height, part.depth],
       building.kind === 'civic' && index === 0 ? '#77858b' : color))
 
-    const cap = pitched && index === building.masses.length - 1 ? 0.18 : 0.3
+    const cap = pitched ? 0.18 : 0.24
     geometry.ledges.push(box([px, top + cap / 2, pz], [part.width + 0.55, cap, part.depth + 0.55], roofColor))
-    if (!pitched && part.role !== 'crown') {
+    const needsParapet = index === building.masses.length - 1
+      || (part.role === 'base' && (building.kind === 'office' || building.kind === 'tower' || building.kind === 'landmark'))
+    if (!pitched && part.role !== 'crown' && needsParapet) {
       for (const sign of [-1, 1]) {
         geometry.parapets.push(box([px, top + 0.44, pz + sign * part.depth / 2], [part.width + 0.55, 0.53, 0.22], trimColor))
         geometry.parapets.push(box([px + sign * part.width / 2, top + 0.44, pz], [0.22, 0.53, part.depth + 0.55], trimColor))
@@ -76,11 +78,23 @@ function addMassing(building: Building, geometry: BuildingGeometry) {
         ], [topPart.width * 0.3, 2.25, topPart.depth * 0.92], roofColor))
       }
     } else {
-      geometry.roofPrisms.push(box([roofX, roofY + 0.2, roofZ], [topPart.width * 0.95, 2.5, topPart.depth * 0.92], roofColor))
+      for (const part of building.masses) {
+        geometry.roofPrisms.push(box([
+          building.x + part.offsetX, part.baseY + part.height + 0.2, building.z + part.offsetZ,
+        ], [part.width * 0.95, part.role === 'wing' ? 1.8 : 2.7, part.depth * 0.92], roofColor))
+      }
     }
   }
   if (building.kind === 'civic') {
     geometry.roofPrisms.push(box([roofX, roofY + 0.18, roofZ], [topPart.width * 0.98, 1.8, topPart.depth * 0.95], '#889ca2'))
+  }
+  if (building.kind === 'apartment' && building.roofDetail === 1) {
+    geometry.roofPrisms.push(box([roofX, roofY + 0.21, roofZ],
+      [topPart.width * 0.91, 3.1, topPart.depth * 0.89], '#4d606b'))
+  }
+  if (building.kind === 'commercial' && building.roofDetail % 2 === 1) {
+    geometry.roofEquipment.push(box([roofX, roofY + 1.35, roofZ - topPart.depth * 0.1],
+      [topPart.width * 0.38, 2.5, topPart.depth * 0.55], '#657b85'))
   }
   if (building.kind !== 'residential') {
     const equipmentBase = building.kind === 'civic' ? building.masses[0] : topPart
@@ -109,6 +123,8 @@ function addMassing(building: Building, geometry: BuildingGeometry) {
       for (const side of [-1, 1]) {
         geometry.coolAccents.push(box([roofX, edgeY, roofZ + side * topPart.depth * 0.5], [topPart.width, 0.18, 0.13]))
         geometry.coolAccents.push(box([roofX + side * topPart.width * 0.5, edgeY, roofZ], [0.13, 0.18, topPart.depth]))
+        geometry.roofEquipment.push(box([roofX + side * topPart.width * 0.62, roofY + 2.7, roofZ],
+          [0.34, 5.4, 0.72], '#8aabb0'))
       }
     }
   }
@@ -173,10 +189,10 @@ function addFacadeFeatures(building: Building, geometry: BuildingGeometry) {
 
   if (kind === 'office' || kind === 'tower' || kind === 'landmark') {
     for (const fraction of [-0.33, 0, 0.33]) {
-      geometry.facadeRibs.push(box([px + main.width * fraction, main.baseY + main.height / 2, front + 0.11],
-        [0.2, main.height * 0.96, 0.23], contrast))
-      geometry.facadeRibs.push(box([side + 0.11, main.baseY + main.height / 2, pz + main.depth * fraction],
-        [0.23, main.height * 0.96, 0.2], contrast))
+      geometry.facadeRibs.push(box([px + main.width * fraction, main.baseY + main.height / 2, front + 0.22],
+        [0.3, main.height * 0.96, 0.42], contrast))
+      geometry.facadeRibs.push(box([side + 0.22, main.baseY + main.height / 2, pz + main.depth * fraction],
+        [0.42, main.height * 0.96, 0.3], contrast))
     }
   }
   if (kind === 'apartment') {

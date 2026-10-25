@@ -27,6 +27,14 @@ describe('generateCity', () => {
     expect(seen.size).toBe(roads.nodes.length)
   })
 
+  it('preserves road topology across visual seeds', () => {
+    const topology = (seed: string) => generateCity(seed).roads.edges.map((edge) => (
+      [edge.id, edge.from, edge.to, edge.kind, edge.width]
+    ))
+    expect(topology('shadow-city-variation-a')).toEqual(topology(HERO_SEED))
+    expect(topology('shadow-city-variation-b')).toEqual(topology(HERO_SEED))
+  })
+
   it('keeps buildings inside parcels and leaves the civic square open', () => {
     const city = generateCity(HERO_SEED)
     const parcels = new Map(city.parcels.map((parcel) => [parcel.id, parcel]))

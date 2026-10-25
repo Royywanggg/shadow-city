@@ -7,6 +7,8 @@ function chooseKind(random: () => number, district: DistrictKind, column: number
   if (column === 4 && row === 2) return 'tower'
   if ((column === 2 && row === 4) || (column === 4 && row === 3)) return 'corner'
   if (column === 1 && row === 2) return 'office'
+  if (column === 3 && row === 4) return 'commercial'
+  if (column === 2 && row === 3) return 'apartment'
 
   const choice = random()
   if (district === 'works') return choice < 0.62 ? 'industrial' : 'commercial'
@@ -58,11 +60,20 @@ function mass(
 function createMassing(kind: BuildingKind, width: number, depth: number, height: number, variant: number): BuildingMass[] {
   switch (kind) {
     case 'residential':
+      if (variant >= 2) return [
+        mass('body', width, depth, 0, height, 0.65, 0.9, -0.15),
+        mass('wing', width, depth, 0, height * 0.7, 0.28, 0.62, 0.32, 0.12),
+      ]
       return [mass('body', width, depth, 0, height, 0.93, 0.84)]
     case 'apartment':
+      if (depth > width * 1.8) return [
+        mass('base', width, depth, 0, 3.5, 0.94, 0.9),
+        mass('body', width, depth, 3.5, height - 3.5, 0.82, 0.38, -0.02, -0.27),
+        mass('wing', width, depth, 3.5, (height - 3.5) * 0.7, 0.8, 0.31, 0.02, 0.3),
+      ]
       if (variant >= 2) return [
         mass('base', width, depth, 0, 3.5, 0.94, 0.9),
-        mass('wing', width, depth, 3.5, height - 3.5, 0.39, 0.78, -0.26, 0.04),
+        mass('wing', width, depth, 3.5, (height - 3.5) * 0.65, 0.39, 0.78, -0.26, 0.04),
         mass('body', width, depth, 3.5, height - 3.5, 0.39, 0.78, 0.26, 0.04),
       ]
       return [
@@ -70,15 +81,21 @@ function createMassing(kind: BuildingKind, width: number, depth: number, height:
         mass('upper', width, depth, height * 0.72, height * 0.28, 0.7, 0.7, -0.06, -0.05),
       ]
     case 'commercial':
-      if (variant === 2) return [
+      if (variant >= 2) return [
         mass('base', width, depth, 0, 4.5, 0.97, 0.95),
-        mass('upper', width, depth, 4.5, height - 4.5, 0.7, 0.82, 0.09, -0.04),
+        mass('wing', width, depth, 4.5, height - 4.5, 0.43, 0.82, -0.25, -0.04),
+        mass('upper', width, depth, 4.5, (height - 4.5) * 0.72, 0.29, 0.66, 0.31, 0.02),
       ]
       return [
         mass('base', width, depth, 0, 4.5, 0.97, 0.95),
         mass('upper', width, depth, 4.5, height - 4.5, 0.79, 0.78, -0.04, -0.06),
       ]
     case 'office':
+      if (variant >= 2) return [
+        mass('base', width, depth, 0, height * 0.19, 0.97, 0.95),
+        mass('body', width, depth, height * 0.19, height * 0.67, 0.52, 0.72, -0.18, 0.02),
+        mass('upper', width, depth, height * 0.86, height * 0.14, 0.42, 0.55, -0.18, 0.02),
+      ]
       return [
         mass('base', width, depth, 0, height * 0.2, 0.97, 0.95),
         mass('body', width, depth, height * 0.2, height * 0.55, 0.82, 0.78, 0.03, -0.02),
@@ -127,7 +144,7 @@ function createWindows(random: () => number, kind: BuildingKind, masses: Buildin
       const bays = Math.max(2, Math.min(10, Math.round(span / targetBayWidth)))
       let clusterStart = Math.floor(random() * bays)
       let activeFloor = random() < (officeLike ? 0.48 : 0.35)
-      const lightColor: 1 | 2 = officeLike && random() < 0.72 ? 2 : 1
+      const lightColor: 1 | 2 = officeLike && random() < 0.3 ? 2 : 1
       for (let floor = 0; floor < floors; floor += 1) {
         if (random() < 0.18) activeFloor = !activeFloor
         if (random() < 0.18) clusterStart = Math.floor(random() * bays)
@@ -168,8 +185,10 @@ export function createBuilding(
   random: () => number,
 ): Building {
   const kind = chooseKind(random, district, column, row)
-  const insetX = between(random, 0.72, 1.5)
-  const insetZ = between(random, 0.72, 1.5)
+  const plazaEdge = Math.abs(column - 3) + Math.abs(row - 3) === 1
+  const frontageSetback = plazaEdge && kind !== 'civic' ? 1.15 : 0
+  const insetX = between(random, 0.72, 1.5) + frontageSetback
+  const insetZ = between(random, 0.72, 1.5) + frontageSetback
   const width = parcel.width - insetX * 2
   const depth = parcel.depth - insetZ * 2
   const height = targetHeight(random, kind, column, row)

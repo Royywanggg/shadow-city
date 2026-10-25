@@ -86,8 +86,10 @@ export function generateCity(seed = HERO_SEED): CityModel {
       blocks.push(block)
       if (isPlaza || isPark) continue
 
-      const columns = district === 'civic' ? 1 : block.width > 25 ? 2 : 1
-      const rows = district === 'civic' ? 1 : block.depth > 25 ? 2 : 1
+      const plazaEdge = Math.abs(column - plazaIndex) + Math.abs(row - plazaIndex) === 1
+      const broadWorksBlock = district === 'works' && (column + row) % 2 === 0
+      const columns = district === 'civic' || plazaEdge || broadWorksBlock ? 1 : block.width > 25 ? 2 : 1
+      const rows = district === 'civic' || plazaEdge || broadWorksBlock ? 1 : block.depth > 25 ? 2 : 1
       const gap = district === 'works' ? 1.7 : 1.25
       for (let parcelRow = 0; parcelRow < rows; parcelRow += 1) {
         for (let parcelColumn = 0; parcelColumn < columns; parcelColumn += 1) {
