@@ -6,19 +6,20 @@ import { InstancedBoxes } from './InstancedBoxes'
 import { Plaza } from './Plaza'
 import { RenderDiagnostics } from './RenderDiagnostics'
 import { Roads } from './Roads'
+import { StreetFurniture } from './StreetFurniture'
 
 export function CityScene({ city, resetToken }: { city: CityModel; resetToken: number }) {
   const half = city.size / 2
   return (
     <>
       <color attach="background" args={['#08111f']} />
-      <fogExp2 attach="fog" args={['#08111f', 0.0022]} />
-      <ambientLight color="#adc5d7" intensity={1.08} />
-      <hemisphereLight args={['#b8d0dd', '#1d2b3b', 1.45]} />
+      <fogExp2 attach="fog" args={['#08111f', 0.00255]} />
+      <ambientLight color="#9db5cc" intensity={0.9} />
+      <hemisphereLight args={['#adc5d8', '#172331', 1.18]} />
       <directionalLight
         position={[-85, 145, 65]}
         color="#c9d9e9"
-        intensity={2.5}
+        intensity={2.7}
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-camera-left={-145}
@@ -53,8 +54,9 @@ export function CityScene({ city, resetToken }: { city: CityModel; resetToken: n
       <Roads city={city} />
       <Plaza city={city} />
       <Buildings city={city} />
+      <StreetFurniture city={city} />
       <EffectComposer multisampling={0}>
-        <Bloom intensity={0.28} luminanceThreshold={1.15} luminanceSmoothing={0.2} mipmapBlur />
+        <Bloom intensity={0.23} luminanceThreshold={1.2} luminanceSmoothing={0.2} mipmapBlur />
       </EffectComposer>
       <CameraRig resetToken={resetToken} />
       {import.meta.env.DEV && <RenderDiagnostics />}

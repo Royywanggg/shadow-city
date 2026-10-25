@@ -96,10 +96,10 @@ export function Plaza({ city }: { city: CityModel }) {
             <sphereGeometry args={[0.24, 10, 8]} />
             <meshStandardMaterial color="#ffd9a0" emissive="#e6a461" emissiveIntensity={2.7} />
           </mesh>
-          <pointLight position={[0, 4.1, 0]} color="#efb578" intensity={4.5} distance={18} decay={2} />
+          <pointLight position={[0, 4.1, 0]} color="#efb578" intensity={20} distance={20} decay={2} />
         </group>
       ))}
-      <pointLight position={[x, 8, z]} color="#f0ba77" intensity={14} distance={35} decay={2} />
+      <pointLight position={[x, 8, z]} color="#f0ba77" intensity={28} distance={36} decay={2} />
     </group>
   )
 }

@@ -22,7 +22,7 @@ export function Roads({ city }: { city: CityModel }) {
     const nodes = new Map(city.roads.nodes.map((node) => [node.id, node]))
     const nodeWidths = new Map<string, number>()
 
-    for (const edge of city.roads.edges) {
+    city.roads.edges.forEach((edge, edgeIndex) => {
       const from = nodes.get(edge.from)!
       const to = nodes.get(edge.to)!
       roads.push(roadBox(from, to, edge.width, 0.025, 0.08))
@@ -32,6 +32,23 @@ export function Roads({ city }: { city: CityModel }) {
       if (edge.kind === 'avenue') {
         const length = Math.hypot(to.x - from.x, to.z - from.z)
         const count = Math.max(2, Math.floor(length / 5))
+        const directionX = (to.x - from.x) / length
+        const directionZ = (to.z - from.z) / length
+        const crossingNearPlaza = Math.abs(from.x) < 30 && Math.abs(from.z) < 30
+        if (edgeIndex % 5 === 0 && !crossingNearPlaza && length > 17) {
+          const crossingDistance = Math.min(7.2, length * 0.28)
+          const crossX = from.x + directionX * crossingDistance
+          const crossZ = from.z + directionZ * crossingDistance
+          const stripeCount = Math.max(5, Math.floor(edge.width / 1.05))
+          for (let stripe = 0; stripe < stripeCount; stripe += 1) {
+            const across = (stripe - (stripeCount - 1) / 2) * 1.05
+            crosswalks.push({
+              position: [crossX - directionZ * across, 0.084, crossZ + directionX * across],
+              scale: [0.68, 0.012, 1.65],
+              rotationY: Math.atan2(to.x - from.x, to.z - from.z),
+            })
+          }
+        }
         for (let index = 0; index < count; index += 1) {
           const t = (index + 0.5) / count
           const x = from.x + (to.x - from.x) * t
@@ -44,7 +61,7 @@ export function Roads({ city }: { city: CityModel }) {
           })
         }
       }
-    }
+    })
 
     for (const node of city.roads.nodes) {
       const width = nodeWidths.get(node.id) ?? 4.5
