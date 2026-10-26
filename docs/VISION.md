@@ -14,7 +14,7 @@ The first release, **v0.1**, contains only the visual city: procedural roads and
 
 ## Architectural principles
 
-The city has a static spatial model and, in later milestones, separate dynamic state:
+The city has a static spatial model and separate dynamic state:
 
 ```text
 seed + generation configuration
@@ -26,7 +26,7 @@ seed + generation configuration
        CityModel (static)
         /           \
        v             v
-   Renderer     SimulationEngine (future)
+   Renderer     SimulationEngine
        ^             |
        |             v
        +---- SimulationState (dynamic agents and events)
@@ -34,7 +34,7 @@ seed + generation configuration
 
 `CityModel` contains stable spatial facts such as districts, blocks, parcels, building descriptors, and a road network. The road network is both a graph of connected nodes and edges and the source of visible street geometry. This preserves a future movement interface without implementing pathfinding in v0.1. A shared coordinate convention and stable identifiers let rendering and simulation refer to the same places.
 
-The future `SimulationEngine` reads static city data and produces dynamic agent and event state. The renderer consumes `CityModel` and dynamic state separately. Simulation does not use mutation of the city's static geometry as its primary interface. A later observation process will turn selected ground-truth events into reports or other partial observations; it must preserve the distinction between what happened and what is known.
+The `SimulationEngine` reads static city data and produces dynamic agent and event state. The renderer consumes `CityModel` and dynamic state separately. Simulation does not use mutation of the city's static geometry as its primary interface. The v0.4 observation process turns some ground-truth incidents into delayed reports. Researcher and observer read models make what happened and what is known separate data views; future strategy logic must receive only its permitted view.
 
 Generation must be reproducible from a seed and configuration. The rendering layer should not make random layout decisions. Add complexity only when a milestone needs it and it improves the result.
 

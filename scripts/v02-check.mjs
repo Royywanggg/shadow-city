@@ -17,7 +17,9 @@ const browser = await chromium.launch({
 const issues = []
 const warnings = new Set()
 const screenshots = []
-const base = process.env.SHADOW_CITY_URL ?? 'http://127.0.0.1:5173/'
+const baseUrl = new URL(process.env.SHADOW_CITY_URL ?? 'http://127.0.0.1:5173/')
+baseUrl.searchParams.set('model', 'v2')
+const base = baseUrl.toString()
 
 async function screenshot(page, name) {
   await page.screenshot({ path: resolve(outputDirectory, `${name}.png`) })

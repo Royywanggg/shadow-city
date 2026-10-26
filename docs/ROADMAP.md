@@ -79,11 +79,18 @@ This roadmap is milestone-based, not date-based. Each milestone should leave a u
 
 ## v0.4 — Ground truth and observation
 
-**Goal:** Establish the core scientific distinction between events and knowledge of events.
+**Goal:** Make information asymmetry measurable: preserve what happened, model whether and when it is reported, and expose only available reports to an observer.
 
-**In scope:** Ground-truth event records, a separate reporting/observation process, and explicit data views for truth versus observed information. Document the reporting assumptions.
+**In scope:** A versioned synthetic incident process driven by fixed-tick citizen presence, time, and static districts; a separate deterministic reporting probability and delay model; private report-to-incident provenance; GroundTruthView and ObservedWorldView read models; fixed observation scenarios for counterfactual comparison; concise Ground Truth, Observed, and Comparison layers in the existing city scene. Keep v0.3 citizen movement, camera, and replay behavior.
 
-**Exit criteria:** Every observed record can be traced to a defined process; missing or delayed reports are represented without changing ground truth; experiments can compare truth and observation reproducibly.
+**Out of scope:** Police agents and strategies, investigation, arrests, offender decision-making, real-world crime prediction, backend services, and database persistence.
+
+**Exit criteria:**
+
+- The same city, world config, seed, and command log reproduce identical citizen states and ground-truth incidents under reporting-only scenario changes. A higher reporting probability with the same sampling seed yields a superset of privately linked reported incident IDs. Reports and delivery delays are deterministic logical-tick outcomes.
+- Incidents remain in ground truth when not reported. Pending reports appear only after their availability tick. Observer read models and UI expose no hidden incident ID, true-only position/type, pending count, future report, or internal provenance; the researcher can inspect complete truth and outcomes.
+- Tick 500 Replay, historical inspection, Reset, Pause, Step, speed, and camera isolation preserve the same incident, report, and citizen facts. Tests cover zero/one reporting probability, delay boundaries, counterfactual invariance, information isolation, event ordering, spatial legality, and zero-denominator metrics. Type checking and production build pass.
+- At `shadow-city-hero-01`, 1440 × 900 CSS pixels and DPR 1, inspect browser screenshots at Tick 0, 100, and 500 for all three modes, a close marker view, cardinal bearings, and a narrow viewport. Use documented synthetic scenario parameters that produce real events; do not insert presentation-only incidents. Record browser errors, tick/replay cost, event growth, draw calls, triangles, FPS/frame-time samples, and software-versus-hardware rendering limits.
 
 ## v0.5 — Policing strategies
 

@@ -1,0 +1,127 @@
+{
+  "browserInfo": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36",
+    "devicePixelRatio": 1,
+    "webglRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (LLVM 10.0.0) (0x0000C0DE)), SwiftShader driver)"
+  },
+  "citySeed": "shadow-city-hero-01",
+  "simulationSeed": "shadow-city-sim-01",
+  "observationSeed": "shadow-city-observation-01",
+  "reviewScenario": true,
+  "viewport": "1440x900",
+  "closeZoomRatio": 1.8506,
+  "selectedCitizen": "citizen-0003",
+  "screenshots": [
+    "v04-observed-tick000-1440x900",
+    "v04-truth-tick000-1440x900",
+    "v04-comparison-tick000-1440x900",
+    "v04-observed-tick100-1440x900",
+    "v04-truth-tick100-1440x900",
+    "v04-comparison-tick100-1440x900",
+    "v04-selected-citizen-tick100",
+    "v04-bearing-000-tick100",
+    "v04-bearing-090-tick100",
+    "v04-bearing-180-tick100",
+    "v04-bearing-270-tick100",
+    "v04-comparison-tick500-1440x900",
+    "v04-close-markers-tick500",
+    "v04-observed-tick500-1440x900",
+    "v04-truth-tick500-1440x900",
+    "v04-replay-tick500-1440x900",
+    "v04-scenario-a-observed-tick500",
+    "v04-scenario-c-observed-tick500",
+    "v04-narrow-observed-tick100-390x844",
+    "v04-narrow-comparison-tick100-390x844",
+    "v04-hundred-comparison-tick500-1440x900"
+  ],
+  "tick100": {
+    "truth": {
+      "truth": 10,
+      "available": 2,
+      "pending": 1,
+      "unreported": 7
+    },
+    "observedReports": 2
+  },
+  "tick500": {
+    "truth": {
+      "truth": 43,
+      "available": 24,
+      "pending": 1,
+      "unreported": 18
+    },
+    "scenarioCounts": {
+      "B": {
+        "truth": 43,
+        "available": 24,
+        "pending": 1,
+        "unreported": 18
+      },
+      "A": {
+        "truth": 43,
+        "available": 15,
+        "pending": 1,
+        "unreported": 27
+      },
+      "C": {
+        "truth": 43,
+        "available": 39,
+        "pending": 2,
+        "unreported": 2
+      }
+    },
+    "hundredAgents": {
+      "truth": 54,
+      "available": 31,
+      "pending": 1,
+      "unreported": 22
+    }
+  },
+  "tickDurationsMs": {
+    "population80": {
+      "p50": 0.10000000149011612,
+      "p95": 0.5
+    },
+    "population100": {
+      "p50": 0.19999999925494194,
+      "p95": 0.5
+    }
+  },
+  "replay500Ms": {
+    "population80": 64.70000000111759,
+    "population100": 80.09999999962747
+  },
+  "heroDiagnostics": {
+    "drawCalls": 136,
+    "triangles": 104533,
+    "medianActiveFrameMs": 66.90000000037253,
+    "p50ActiveFrameMs": 66.90000000037253,
+    "p95ActiveFrameMs": 99.5,
+    "sampledFrames": 9,
+    "renderedFrames": 59
+  },
+  "hundredDiagnostics": {
+    "drawCalls": 137,
+    "triangles": 107189,
+    "medianActiveFrameMs": 76.5,
+    "p50ActiveFrameMs": 76.5,
+    "p95ActiveFrameMs": 76.5,
+    "sampledFrames": 1,
+    "renderedFrames": 3
+  },
+  "hundredActiveDrag": {
+    "renderedFrames": 36,
+    "seconds": 12.815599999999627,
+    "fps": 2.809076438091158,
+    "advancedTicks": 127,
+    "frameTimeP50Ms": 76.5,
+    "frameTimeP95Ms": 97.90000000037253,
+    "sampledFrames": 3
+  },
+  "warnings": [
+    "THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.",
+    "[.WebGL-0x13c000e0a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[.WebGL-0x13c000e0a00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+  ],
+  "issues": []
+}
