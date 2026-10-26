@@ -302,7 +302,8 @@ export function PopulationSidebar({
               <p className="population-profile-cue">DRAG TO TURN · SCROLL FOR PROFILE DATA ↓</p>
               <div className="population-portrait" role="group" aria-label="Selected citizen 3D portrait">
                 <CharacterPortrait appearance={selected.identity.appearance} activity={selected.state.activity}
-                  logicalTimeSeconds={session.getSnapshot().state.logicalTimeSeconds} />
+                  logicalTimeSeconds={session.getSnapshot().state.logicalTimeSeconds}
+                  agentId={selected.identity.id} playback={playback} session={session} />
               </div>
               <dl>
               <div><dt>HOME</dt><dd>{anchorNames.get(selected.profile.homeAnchorId) ?? selected.profile.homeAnchorId}</dd></div>

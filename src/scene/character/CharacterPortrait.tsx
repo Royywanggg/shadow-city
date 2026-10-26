@@ -1,19 +1,28 @@
-import { Canvas, useThree } from '@react-three/fiber'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useRef, useState, type PointerEvent } from 'react'
+import type { PlaybackController } from '../../playback/PlaybackController'
 import type { CitizenAppearance } from '../../simulation/population'
+import type { SimulationSession } from '../../simulation/session'
+import { getCitizenSimulationState } from '../../simulation/types'
 import { CharacterManager, loadCharacterAssets } from './CharacterManager'
 
 interface CharacterPortraitProps {
   readonly appearance: CitizenAppearance
   readonly activity: string
   readonly logicalTimeSeconds: number
+  readonly agentId: string
+  readonly playback: PlaybackController
+  readonly session: SimulationSession
 }
 
-function PortraitScene({ manager, appearance, activity, logicalTimeSeconds, rotationY }: CharacterPortraitProps & {
+function PortraitScene({ manager, appearance, activity, logicalTimeSeconds, rotationY, agentId, playback, session }: CharacterPortraitProps & {
   readonly manager: CharacterManager
   readonly rotationY: number
 }) {
   const { camera, invalidate } = useThree()
+  const lastTick = useRef<number | null>(null)
+  const lastPlaying = useRef(false)
+  const interpolateTick = useRef(false)
 
   useEffect(() => {
     camera.position.set(2.1, 1.45, 3.6)
@@ -22,16 +31,41 @@ function PortraitScene({ manager, appearance, activity, logicalTimeSeconds, rota
     invalidate()
   }, [camera, invalidate])
 
+  useEffect(() => { invalidate() }, [activity, appearance, invalidate, logicalTimeSeconds, manager])
+  useEffect(() => playback.subscribe(invalidate), [invalidate, playback])
+
   useEffect(() => {
+    lastTick.current = null
+    interpolateTick.current = false
+  }, [agentId, session])
+
+  useFrame(() => {
+    const snapshot = session.getSnapshot()
+    const current = getCitizenSimulationState(snapshot.state)
+    if (!current) return
+    const playing = playback.getSnapshot().status === 'playing' && !snapshot.isInspecting
+    const previousState = session.getPreviousLiveState()
+    const previous = previousState ? getCitizenSimulationState(previousState) : null
+    if (lastTick.current !== current.tick) {
+      interpolateTick.current = playing && lastPlaying.current && lastTick.current !== null &&
+        current.tick === lastTick.current + 1 && previous?.tick === current.tick - 1
+      lastTick.current = current.tick
+    }
+    const alpha = playing && interpolateTick.current ? playback.getInterpolationAlpha() : 1
+    const priorActivity = previous?.citizens.find((citizen) => citizen.id === agentId)?.activity
+    const selectedActivity = current.citizens.find((citizen) => citizen.id === agentId)?.activity ?? activity
+    const time = playing && interpolateTick.current && previous
+      ? previous.logicalTimeSeconds + (current.logicalTimeSeconds - previous.logicalTimeSeconds) * alpha
+      : current.logicalTimeSeconds
     manager.update([{
-      id: 'selected-portrait',
-      appearance,
-      activity,
-      pose: { x: 0, y: 0, z: 0, yaw: 0, visible: true },
-      pixelHeight: 160,
-    }], 'selected-portrait', logicalTimeSeconds)
-    invalidate()
-  }, [activity, appearance, invalidate, logicalTimeSeconds, manager])
+      id: 'selected-portrait', appearance, activity: selectedActivity,
+      previousActivity: playing && interpolateTick.current ? priorActivity : undefined,
+      transitionProgress: alpha,
+      pose: { x: 0, y: 0, z: 0, yaw: 0, visible: true }, pixelHeight: 160,
+    }], 'selected-portrait', time)
+    lastPlaying.current = playing
+    if (playing) invalidate()
+  })
 
   useEffect(() => { invalidate() }, [invalidate, rotationY])
 
@@ -48,7 +82,7 @@ function PortraitScene({ manager, appearance, activity, logicalTimeSeconds, rota
 }
 
 /** A selected-only turntable, independent of city occlusion and simulation movement. */
-export function CharacterPortrait({ appearance, activity, logicalTimeSeconds }: CharacterPortraitProps) {
+export function CharacterPortrait({ appearance, activity, logicalTimeSeconds, agentId, playback, session }: CharacterPortraitProps) {
   const [manager, setManager] = useState<CharacterManager | null>(null)
   const [error, setError] = useState(false)
   const [rotationY, setRotationY] = useState(0)
@@ -92,7 +126,8 @@ export function CharacterPortrait({ appearance, activity, logicalTimeSeconds }: 
         dpr={[1, 1.3]} frameloop="demand" gl={{ alpha: true, antialias: true, powerPreference: 'low-power' }}
         style={{ width: '100%', height: '100%' }}>
         <PortraitScene manager={manager} appearance={appearance} activity={activity}
-          logicalTimeSeconds={logicalTimeSeconds} rotationY={rotationY} />
+          logicalTimeSeconds={logicalTimeSeconds} rotationY={rotationY}
+          agentId={agentId} playback={playback} session={session} />
       </Canvas> : <span style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center',
         color: '#8ca9ae', fontSize: 10, letterSpacing: 1.2 }}>
         {error ? '3D PREVIEW UNAVAILABLE' : 'LOADING CHARACTER…'}
