@@ -5,6 +5,7 @@ import { hashSeed } from '../../simulation/rng'
 import type { GroundPointMm, NavEdgeV2, SemanticPlace, WalkableSurface, WorldBox,
   WorldConfigV2, WorldModelV2, WorldPointMm } from '../model'
 import { WorldBuilder } from './WorldBuilder'
+import { expandOriginalCity, EXPANDED_CITY_SIZE } from './expandOriginalCity'
 
 const mm = (value: number) => Math.round(value * 1000)
 const point = (x: number, y: number, z: number): WorldPointMm => ({ x: mm(x), y: mm(y), z: mm(z) })
@@ -14,7 +15,8 @@ const rect = (x0: number, x1: number, z0: number, z1: number): readonly GroundPo
 ]
 
 export const INTEGRATED_WORLD_CONFIG_V2: WorldConfigV2 = Object.freeze({
-  version: 2, seed: HERO_SEED, extentMm: 212_000, generatorVersion: 'heritage-overlay-v1',
+  version: 2, seed: HERO_SEED, extentMm: EXPANDED_CITY_SIZE * 1000,
+  generatorVersion: 'heritage-extension-v2',
 })
 
 function surface(id: string, levelId: string, placeId: string | null,
@@ -52,9 +54,29 @@ function nearest(nodes: readonly PedestrianNode[], x: number, z: number): Pedest
   return ordered[0]
 }
 
+function curvedPath(waypoints: readonly WorldPointMm[], samplesPerSegment = 5): WorldPointMm[] {
+  const result: WorldPointMm[] = []
+  for (let segment = 0; segment < waypoints.length - 1; segment += 1) {
+    const a = waypoints[Math.max(0, segment - 1)]
+    const b = waypoints[segment]
+    const c = waypoints[segment + 1]
+    const d = waypoints[Math.min(waypoints.length - 1, segment + 2)]
+    for (let step = 0; step < samplesPerSegment; step += 1) {
+      const t = step / samplesPerSegment
+      const interpolate = (key: keyof WorldPointMm) => Math.round(0.5 * (
+        2 * b[key] + (-a[key] + c[key]) * t +
+        (2 * a[key] - 5 * b[key] + 4 * c[key] - d[key]) * t * t +
+        (-a[key] + 3 * b[key] - 3 * c[key] + d[key]) * t * t * t))
+      result.push({ x: interpolate('x'), y: interpolate('y'), z: interpolate('z') })
+    }
+  }
+  result.push(waypoints.at(-1)!)
+  return result
+}
+
 /** Adds multi-level places to the existing city's exact roads, blocks and pedestrian graph. */
 export function generateIntegratedWorld(seed = HERO_SEED): WorldModelV2 {
-  const original = generateCity(seed)
+  const original = expandOriginalCity(generateCity(seed))
   const mallBlock = original.blocks.find((block) => block.id === 'block-4-3')!
   const removedParcelIds = new Set(original.parcels.filter((parcel) =>
     parcel.blockId === mallBlock.id).map((parcel) => parcel.id))
@@ -169,11 +191,11 @@ export function generateIntegratedWorld(seed = HERO_SEED): WorldModelV2 {
   const bridgeWest = plazaEast - 0.5
   const bridgeEast = minX + 0.5
   builder.surface(surface('skybridge', 'L1', 'skybridge-walkway',
-    rect(bridgeWest - 0.5, bridgeEast + 0.5, -1.6, 1.6), 5_500))
+    rect(bridgeWest - 0.5, bridgeEast + 0.5, -2.4, 2.4), 5_500))
   builder.surface(surface('connector:west-stair', 'L0-L1', null,
-    rect(plazaEast - 12, bridgeWest + 1, -14, 2), 250))
+    rect(plazaEast - 20, bridgeWest + 1.5, -15, 2), 250))
   builder.surface(surface('connector:east-ramp', 'L0-L1', null,
-    rect(plazaEast - 13, bridgeWest + 1, -12, 18), 250))
+    rect(plazaEast - 20, bridgeWest + 1.5, -12, 19), 250))
   builder.surface(surface('connector:galleria-stair', 'L0-L1', mallId,
     rect(west - 1.7, west + 1.7, north - 1, south + 1), 250, true))
   builder.surface(surface('connector:galleria-escalator', 'L0-L1', mallId,
@@ -196,7 +218,12 @@ export function generateIntegratedWorld(seed = HERO_SEED): WorldModelV2 {
     'portal', { surfaceId: null, accessId: 'mall-entry' })
   builder.node('bridge:west', point(bridgeWest, 5.5, 0), 'skybridge')
   builder.node('bridge:east', point(bridgeEast, 5.5, 0), 'skybridge')
-  edge(builder, 'bridge:deck', 'bridge:west', 'bridge:east', 'walk', { surfaceId: 'skybridge' })
+  edge(builder, 'bridge:deck', 'bridge:west', 'bridge:east', 'walk', {
+    surfaceId: 'skybridge', path: curvedPath([
+      point(bridgeWest, 5.5, 0), point((bridgeWest + bridgeEast) / 2, 5.5, 0.72),
+      point(bridgeEast, 5.5, 0),
+    ], 8),
+  })
   edge(builder, 'portal:galleria-upper', 'bridge:east', l1West, 'portal',
     { surfaceId: null, accessId: 'mall-entry', accessIds: ['mall-entry', 'bridge-entry'] })
   const plazaNodes = retainedCity.pedestrian.nodes.filter((node) => node.id.startsWith('ped-place-block-3-3'))
@@ -204,15 +231,15 @@ export function generateIntegratedWorld(seed = HERO_SEED): WorldModelV2 {
   const rampLower = nearest(plazaNodes, bridgeWest - 10, 11)
   edge(builder, 'connector:west-stair', stairLower.id, 'bridge:west', 'stair', {
     surfaceId: null, connectorId: 'west-stair', accessId: 'bridge-entry',
-    path: [point(stairLower.x, 0.25, stairLower.z),
+    path: curvedPath([point(stairLower.x, 0.25, stairLower.z),
       point((stairLower.x + bridgeWest) / 2, 2.75, stairLower.z / 2),
-      point(bridgeWest, 5.5, 0)],
+      point(bridgeWest, 5.5, 0)], 7),
   })
   edge(builder, 'connector:east-ramp', rampLower.id, 'bridge:west', 'ramp', {
     surfaceId: null, connectorId: 'east-ramp', accessId: 'bridge-entry',
-    path: [point(rampLower.x, 0.25, rampLower.z),
-      point(bridgeWest - 8, 1.55, 14), point(bridgeWest - 3, 3.5, -7),
-      point(bridgeWest, 5.5, 0)],
+    path: curvedPath([point(rampLower.x, 0.25, rampLower.z),
+      point(bridgeWest - 2.3, 1.6, 14), point(bridgeWest - 2.3, 4.3, -8),
+      point(bridgeWest, 5.5, 0)], 8),
   })
   edge(builder, 'connector:galleria-stair', `galleria:l0:${west}:${south}`,
     `galleria:l1:${west}:${north}`, 'stair', {
@@ -246,7 +273,7 @@ export function generateIntegratedWorld(seed = HERO_SEED): WorldModelV2 {
     slotNodeIds: ring.flatMap(([x, z]) => [`galleria:l0:${x}:${z}`, `galleria:l1:${x}:${z}`]),
     activityTags: ['shop', 'eat', 'leisure'],
     openingHours: [{ openMinute: 480, closeMinute: 1320 }],
-    capacity: 12, attractiveness: 0.94, typicalVisitTicks: [35, 95] })
+    capacity: 12, attractiveness: 1.52, typicalVisitTicks: [35, 95] })
   for (const level of ['l0', 'l1'] as const) for (const [kind, z] of [['retail', north + 2],
     ['cafe', south - 2]] as const) {
     const y = level === 'l0' ? 0.25 : 5.5
@@ -269,7 +296,7 @@ export function generateIntegratedWorld(seed = HERO_SEED): WorldModelV2 {
       kind, districtId: mallBlock.id, surfaceIds: [surfaceId], accessNodeIds: [entryId],
       slotNodeIds: slots, activityTags: kind === 'cafe' ? ['eat', 'leisure'] : ['shop'],
       openingHours: [{ openMinute: 480, closeMinute: 1320 }], capacity: 3,
-      attractiveness: 0.8, typicalVisitTicks: [20, 60] })
+      attractiveness: 1.28, typicalVisitTicks: [20, 60] })
     builder.resources.push({ id: `resource:${id}`, placeId: id, surfaceId,
       position: point(mallBlock.x, y, z), kind: 'retailStock' })
   }
@@ -294,9 +321,17 @@ export function generateIntegratedWorld(seed = HERO_SEED): WorldModelV2 {
       { placeId: mallId, levelId: 'L1', surfaceId: 'galleria-l1' }))
   }
   for (const side of [-1, 1]) {
-    boxes.push(box(`galleria-wall-z:${side}`, 'building', mallBlock.x, 5.35,
+    boxes.push(box(`galleria-plinth-z:${side}`, 'building', mallBlock.x, 0.9,
       side < 0 ? minZ : maxZ,
-      maxX - minX, 10.7, 0.32, '#455b69', { placeId: mallId }))
+      maxX - minX, 1.8, 0.42, '#455b69', { placeId: mallId }))
+    boxes.push(box(`galleria-cornice-z:${side}`, 'trim', mallBlock.x, 10.55,
+      side < 0 ? minZ : maxZ,
+      maxX - minX, 0.85, 0.55, '#6b8592', { placeId: mallId }))
+    for (let index = 0; index <= 5; index += 1) {
+      const x = minX + (maxX - minX) * index / 5
+      boxes.push(box(`galleria-rib-z:${side}:${index}`, 'trim', x, 5.8,
+        side < 0 ? minZ : maxZ, 0.32, 9.4, 0.42, '#738c99', { placeId: mallId }))
+    }
     boxes.push(box(`galleria-atrium-rail-z:${side}`, 'rail', mallBlock.x, 6.18,
       side * 5.15, 5.8, 0.12, 0.12, '#a3b8bc',
       { placeId: mallId, levelId: 'L1' }))
@@ -305,6 +340,23 @@ export function generateIntegratedWorld(seed = HERO_SEED): WorldModelV2 {
   }
   boxes.push(box('galleria-wall-east', 'building', maxX, 5.35, 0,
     0.32, 10.7, maxZ - minZ, '#455b69', { placeId: mallId }))
+  for (const [id, z0, z1] of [['north', minZ, -3.2], ['south', 3.2, maxZ]] as const) {
+    boxes.push(box(`galleria-west-plinth-${id}`, 'building', minX, 0.9, (z0 + z1) / 2,
+      0.42, 1.8, z1 - z0, '#4b6474', { placeId: mallId }))
+    boxes.push(box(`galleria-west-cornice-${id}`, 'trim', minX, 10.55, (z0 + z1) / 2,
+      0.55, 0.85, z1 - z0, '#6b8592', { placeId: mallId }))
+    for (let index = 0; index <= 3; index += 1) boxes.push(box(`galleria-west-rib-${id}-${index}`,
+      'trim', minX, 5.8, z0 + (z1 - z0) * index / 3,
+      0.42, 9.4, 0.32, '#738c99', { placeId: mallId }))
+  }
+  for (const side of [-1, 1]) {
+    boxes.push(box(`galleria-portal-column-${side}`, 'trim', minX - 0.12, 4.2,
+      side * 2.85, 0.7, 8.4, 0.72, '#829ba3', { placeId: mallId }))
+    boxes.push(box(`galleria-portal-light-${side}`, 'accent', minX - 0.55, 7.8,
+      side * 2.85, 0.08, 0.6, 0.16, '#8bc7c7', { placeId: mallId }))
+  }
+  boxes.push(box('galleria-portal-lintel', 'trim', minX - 0.15, 8.35, 0,
+    0.9, 0.55, 6.4, '#91aab0', { placeId: mallId }))
   for (const [id, z0, z1] of [['north', minZ, -5.3], ['south', 5.3, maxZ]] as const) {
     boxes.push(box(`galleria-roof-${id}`, 'roof', mallBlock.x, 10.85, (z0 + z1) / 2,
       maxX - minX, 0.4, z1 - z0, '#34495b', { roofFor: mallId, levelId: 'L1' }))
@@ -331,33 +383,6 @@ export function generateIntegratedWorld(seed = HERO_SEED): WorldModelV2 {
       y + 0.6, z, 3.2, 1.1, 0.5, '#9aabb0',
       { placeId: `galleria-${kind}-${level}`, levelId: level.toUpperCase() }))
   }
-  boxes.push(box('bridge-deck', 'floor', (bridgeWest + bridgeEast) / 2, 5.3, 0,
-    bridgeEast - bridgeWest, 0.36, 2.9, '#738d9a', { levelId: 'L1', surfaceId: 'skybridge' }))
-  for (const side of [-1, 1]) boxes.push(box(`bridge-rail-${side}`, 'rail',
-    (bridgeWest + bridgeEast) / 2, 6.05, side * 1.42,
-    bridgeEast - bridgeWest, 1.2, 0.12, '#a4bdc2', { levelId: 'L1', surfaceId: 'skybridge' }))
-  for (let index = 0; index < 12; index += 1) {
-    const t = (index + 0.5) / 12
-    boxes.push(box(`bridge-stair-step-${index}`, 'step',
-      stairLower.x + (bridgeWest - stairLower.x) * t, 0.25 + 5.25 * t,
-      stairLower.z * (1 - t), 2.1, 0.16, 1.05, '#879daa',
-      { surfaceId: 'connector:west-stair' }))
-  }
-  const rampPath = [point(rampLower.x, 0.25, rampLower.z),
-    point(bridgeWest - 8, 1.55, 14), point(bridgeWest - 3, 3.5, -7),
-    point(bridgeWest, 5.5, 0)]
-  rampPath.slice(1).forEach((end, index) => {
-    const start = rampPath[index]
-    const dx = (end.x - start.x) / 1000
-    const dz = (end.z - start.z) / 1000
-    boxes.push(box(`bridge-ramp-${index}`, 'floor', (start.x + end.x) / 2000,
-      (start.y + end.y) / 2000 - 0.12, (start.z + end.z) / 2000,
-      2.3, 0.24, Math.hypot(dx, dz), '#7c929e',
-      { rotationY: Math.atan2(dx, dz),
-        rotationX: -Math.atan2((end.y - start.y) / 1000, Math.hypot(dx, dz)),
-        surfaceId: 'connector:east-ramp' }))
-  })
-
   builder.surfaces[0] = { ...builder.surfaces[0], blockedPolygonsXZ: blockedGround }
   builder.buildValidation()
   return { version: 2, config, baseCity: retainedCity,

@@ -11,7 +11,7 @@ export interface WorldConfigV2 {
   readonly version: 2
   readonly seed: string
   readonly extentMm: number
-  readonly generatorVersion: 'district-world-v1' | 'heritage-overlay-v1'
+  readonly generatorVersion: 'district-world-v1' | 'heritage-overlay-v1' | 'heritage-extension-v2'
 }
 
 export interface DistrictV2 {
