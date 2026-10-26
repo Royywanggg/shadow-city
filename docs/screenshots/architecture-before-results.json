@@ -1,0 +1,46 @@
+{
+  "browser": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+  "seed": "shadow-city-hero-01",
+  "viewport": "1440x900",
+  "dpr": 1,
+  "population": 200,
+  "comparisons": {
+    "high": {
+      "averageFps": 59.62862173832777,
+      "frameP50Ms": 16.600000001490116,
+      "frameP95Ms": 30.30000000447035,
+      "frameSamples": 148,
+      "rendering": {
+        "drawCalls": 278,
+        "triangles": 174517,
+        "geometries": 241,
+        "textures": 31,
+        "medianActiveFrameMs": 16.700000002980232,
+        "p50ActiveFrameMs": 16.69999999552965,
+        "p95ActiveFrameMs": 21.5,
+        "sampledFrames": 120,
+        "renderedFrames": 676
+      }
+    }
+  },
+  "captures": [
+    "high-hero-sidebar-tick100",
+    "high-hero-open-tick100",
+    "high-architecture-close-tick100",
+    "high-low-angle-tick100",
+    "high-close-bearing-0-tick100",
+    "high-close-bearing-90-tick100",
+    "high-close-bearing-180-tick100",
+    "high-close-bearing-270-tick100"
+  ],
+  "errors": [],
+  "gpuFrameTime": "unavailable: no validated timer-query capture",
+  "textureMemoryBytes": "unavailable",
+  "gpuTimerQueryAvailable": true,
+  "closeTarget": {
+    "id": "building-block-3-4-0-0",
+    "x": 0.01704306598752736,
+    "y": 4,
+    "z": 39.413687190255146
+  }
+}
