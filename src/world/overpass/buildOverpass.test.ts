@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { WorldBuilder } from '../generation/WorldBuilder'
 import type { WorldPointMm } from '../model'
-import { createWalkwayDeckGeometry, overpassDeckPath,
+import { createWalkwayDeckGeometry, overpassDeckPath, overpassEndCapPaths,
   overpassGuardPaths } from '../../scene/WalkwayStructures'
 import { buildOverpass } from './buildOverpass'
 
@@ -67,6 +67,7 @@ describe('reusable overpass', () => {
     expect(rotatedPath[0]).toEqual(at(40_000, 5_500, -1_250))
     expect(rotatedPath.at(-1)).toEqual(at(40_000, 5_500, 12_000))
     expect(overpassGuardPaths(second, edgeMap).stairSide).toHaveLength(1)
+    expect(overpassEndCapPaths(second, edgeMap)).toHaveLength(2)
     const rotatedDeck = createWalkwayDeckGeometry(rotatedPath, second.widthMm / 1000)
     rotatedDeck.computeBoundingBox()
     expect(rotatedDeck.boundingBox!.min.x).toBeCloseTo(38.75, 2)

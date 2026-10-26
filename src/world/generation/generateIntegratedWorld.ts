@@ -14,10 +14,16 @@ const rect = (x0: number, x1: number, z0: number, z1: number): readonly GroundPo
   { x: mm(x0), z: mm(z0) }, { x: mm(x1), z: mm(z0) },
   { x: mm(x1), z: mm(z1) }, { x: mm(x0), z: mm(z1) },
 ]
+const notchedFloor = (west: number, insetWest: number, east: number,
+  north: number, notchSouth: number, south: number): readonly GroundPointMm[] => [
+  { x: mm(insetWest), z: mm(north) }, { x: mm(east), z: mm(north) },
+  { x: mm(east), z: mm(south) }, { x: mm(west), z: mm(south) },
+  { x: mm(west), z: mm(notchSouth) }, { x: mm(insetWest), z: mm(notchSouth) },
+]
 
 export const INTEGRATED_WORLD_CONFIG_V2: WorldConfigV2 = Object.freeze({
   version: 2, seed: HERO_SEED, extentMm: EXPANDED_CITY_SIZE * 1000,
-  generatorVersion: 'heritage-extension-v5',
+  generatorVersion: 'heritage-extension-v6',
 })
 
 function surface(id: string, levelId: string, placeId: string | null,
@@ -169,6 +175,20 @@ export function generateIntegratedWorld(seed = HERO_SEED): WorldModelV2 {
   const plaza = retainedCity.blocks.find((block) => block.isPlaza)!
   const plazaEast = plaza.x + plaza.width / 2 + 0.72
   const mallWest = mallBlock.x - mallBlock.width / 2 - 0.72
+  const avenueCenter = original.roads.nodes.find((node) => node.id === 'node-4-3')!.x
+  const avenueWidth = original.roads.edges.find((road) => road.id === 'edge-z-4-3')!.width
+  const mallCurb = avenueCenter + avenueWidth / 2
+  const bridgeZ = plaza.z - plaza.depth * 0.24
+  const bridgeWest = plazaEast - 1.9
+  const bridgeEast = mallCurb + 0.5 + 1.375
+  const recessX = bridgeEast + 1.25 + 1.15
+  const pocketSouthZ = bridgeZ + 2.3
+  const westNorth = recessX + 1.15
+  const atriumCenterX = mallBlock.x + 1.7
+  const atriumHalfWidth = 2.0
+  const atriumWest = atriumCenterX - atriumHalfWidth
+  const atriumEast = atriumCenterX + atriumHalfWidth
+  const stairFootZ = bridgeZ - 9.1
   const plazaRing = retainedCity.pedestrian.nodes.filter((node) => node.id.startsWith('ped-block-3-3-') &&
     Math.abs(node.x - plazaEast) < 0.001)
   const mallRing = retainedCity.pedestrian.nodes.filter((node) => node.id.startsWith('ped-block-4-3-') &&
@@ -185,22 +205,19 @@ export function generateIntegratedWorld(seed = HERO_SEED): WorldModelV2 {
   edge(builder, 'crossing:plaza-galleria', 'plaza:east-mid', 'mall:west-mid', 'crossing')
 
   const mallId = 'central-galleria'
-  builder.surface(surface('galleria-l0', 'L0', mallId, rect(minX, maxX, minZ, maxZ), 250, true))
+  const floorPolygon = notchedFloor(minX, recessX, maxX, minZ, pocketSouthZ, maxZ)
+  builder.surface(surface('galleria-l0', 'L0', mallId, floorPolygon, 250, true))
   builder.surface({ ...surface('galleria-l1', 'L1', mallId,
-    rect(minX, maxX, minZ, maxZ), 5_500, true),
-    blockedPolygonsXZ: [rect(mallBlock.x - 2.8, mallBlock.x + 2.8, -5, 5)] })
-  const bridgeZ = plaza.z - plaza.depth * 0.24
-  const bridgeWest = plazaEast - 1.9
-  const bridgeEast = mallWest - 0.12
-  const stairFootZ = bridgeZ - 9.1
-  const rampA = minX + 1.25
-  const rampB = minX + 3.2
+    floorPolygon, 5_500, true),
+    blockedPolygonsXZ: [rect(atriumWest, atriumEast, -5, 5)] })
+  const rampA = recessX + 1.3
+  const rampB = atriumWest - 0.95
   builder.surface(surface('connector:east-ramp', 'L0-L1', mallId,
-    rect(minX + 0.3, minX + 4.1, north - 1, south + 1), 250, true))
+    rect(recessX + 0.1, atriumWest - 0.1, north - 1, south + 1), 250, true))
   builder.surface(surface('connector:galleria-escalator', 'L0-L1', mallId,
     rect(east - 1.7, east + 1.7, north - 1, south + 1), 250, true))
 
-  const ring = [[west, north], [east, north], [east, 0], [east, south],
+  const ring = [[westNorth, north], [east, north], [east, 0], [east, south],
     [west, south], [west, 0]] as const
   for (const level of ['l0', 'l1'] as const) {
     const y = level === 'l0' ? 0.25 : 5.5
@@ -209,12 +226,16 @@ export function generateIntegratedWorld(seed = HERO_SEED): WorldModelV2 {
     const pairs = [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 0]] as const
     for (const [a, b] of pairs) edge(builder, `galleria:${level}:ring:${a}:${b}`,
       `galleria:${level}:${ring[a][0]}:${ring[a][1]}`,
-      `galleria:${level}:${ring[b][0]}:${ring[b][1]}`, 'walk', { surfaceId })
+      `galleria:${level}:${ring[b][0]}:${ring[b][1]}`, 'walk', { surfaceId,
+        path: a === 5 && b === 0 ? [point(west, y, 0),
+          point(west, y, pocketSouthZ + 0.8),
+          point(westNorth, y, pocketSouthZ + 0.8),
+          point(westNorth, y, north)] : undefined })
   }
   const l0West = `galleria:l0:${west}:0`
   const l1West = 'galleria:l1:bridge-entry'
-  builder.node(l1West, point(west, 5.5, bridgeZ), 'galleria-l1')
-  edge(builder, 'galleria:l1:bridge-access', `galleria:l1:${west}:${north}`,
+  builder.node(l1West, point(westNorth, 5.5, bridgeZ), 'galleria-l1')
+  edge(builder, 'galleria:l1:bridge-access', `galleria:l1:${westNorth}:${north}`,
     l1West, 'walk', { surfaceId: 'galleria-l1' })
   edge(builder, 'portal:galleria-ground', 'mall:west-mid', l0West,
     'portal', { surfaceId: null, accessId: 'mall-entry' })
@@ -225,7 +246,7 @@ export function generateIntegratedWorld(seed = HERO_SEED): WorldModelV2 {
     groundApproachNodeIds: [nearest(plazaNodes, bridgeWest, stairFootZ).id,
       nearest(mallRing, bridgeEast, stairFootZ).id],
     districtIds: [plaza.id, mallBlock.id],
-    terminal: { point: point(minX, 5.5, bridgeZ), indoorNodeId: l1West,
+    terminal: { point: point(recessX, 5.5, bridgeZ), indoorNodeId: l1West,
       accessIds: ['mall-entry', 'bridge-entry'] },
   })
   const rampLower = 'galleria:l0:ramp-lower'
@@ -293,67 +314,94 @@ export function generateIntegratedWorld(seed = HERO_SEED): WorldModelV2 {
   const boxes = builder.boxes
   boxes.push(box('integrated-crosswalk', 'path', (plazaEast + mallWest) / 2, 0.095, 0,
     mallWest - plazaEast - 0.5, 0.02, 1.55, '#aab7af', { surfaceId: 'ground' }))
-  boxes.push(box('galleria-ground-floor', 'floor', mallBlock.x, 0.15, 0,
-    maxX - minX, 0.2, maxZ - minZ, '#4b6270',
+  const forecourtWest = mallCurb + 0.2
+  boxes.push(box('galleria-overpass-forecourt', 'path', (forecourtWest + recessX) / 2,
+    0.245, (minZ + 0.3 + pocketSouthZ - 0.15) / 2,
+    recessX - forecourtWest, 0.02, pocketSouthZ - minZ - 0.45,
+    '#5b7483', { placeId: 'overpass-east-access', levelId: 'L0', surfaceId: 'ground' }))
+  boxes.push(box('galleria-ground-floor', 'floor', (recessX + maxX) / 2, 0.15, 0,
+    maxX - recessX, 0.2, maxZ - minZ, '#4b6270',
     { placeId: mallId, levelId: 'L0', surfaceId: 'galleria-l0' }))
-  for (const [id, z0, z1] of [['north', minZ, -5], ['south', 5, maxZ]] as const) {
-    boxes.push(box(`galleria-upper-${id}`, 'floor', mallBlock.x, 5.38, (z0 + z1) / 2,
-      maxX - minX, 0.24, z1 - z0, '#607989',
+  boxes.push(box('galleria-ground-return', 'floor', (minX + recessX) / 2, 0.15,
+    (pocketSouthZ + maxZ) / 2, recessX - minX, 0.2, maxZ - pocketSouthZ,
+    '#4b6270', { placeId: mallId, levelId: 'L0', surfaceId: 'galleria-l0' }))
+  for (const [id, x0, x1, z0, z1] of [
+    ['north', recessX, maxX, minZ, -5],
+    ['north-return', minX, recessX, pocketSouthZ, -5],
+    ['south', minX, maxX, 5, maxZ],
+  ] as const) {
+    boxes.push(box(`galleria-upper-${id}`, 'floor', (x0 + x1) / 2, 5.38, (z0 + z1) / 2,
+      x1 - x0, 0.24, z1 - z0, '#607989',
       { placeId: mallId, levelId: 'L1', surfaceId: 'galleria-l1' }))
   }
-  for (const [id, x0, x1] of [['west', minX, mallBlock.x - 2.8],
-    ['east', mallBlock.x + 2.8, maxX]] as const) {
+  for (const [id, x0, x1] of [['west', minX, atriumWest],
+    ['east', atriumEast, maxX]] as const) {
     boxes.push(box(`galleria-upper-${id}`, 'floor', (x0 + x1) / 2, 5.38, 0,
       x1 - x0, 0.24, 10, '#607989',
       { placeId: mallId, levelId: 'L1', surfaceId: 'galleria-l1' }))
   }
   for (const side of [-1, 1]) {
-    boxes.push(box(`galleria-plinth-z:${side}`, 'building', mallBlock.x, 0.9,
+    const frontX = side < 0 ? recessX : minX
+    const frontCenterX = (frontX + maxX) / 2
+    boxes.push(box(`galleria-plinth-z:${side}`, 'building', frontCenterX, 0.9,
       side < 0 ? minZ : maxZ,
-      maxX - minX, 1.8, 0.42, '#455b69', { placeId: mallId }))
-    boxes.push(box(`galleria-cornice-z:${side}`, 'trim', mallBlock.x, 10.55,
+      maxX - frontX, 1.8, 0.42, '#455b69', { placeId: mallId }))
+    boxes.push(box(`galleria-cornice-z:${side}`, 'trim', frontCenterX, 10.55,
       side < 0 ? minZ : maxZ,
-      maxX - minX, 0.85, 0.55, '#6b8592', { placeId: mallId }))
+      maxX - frontX, 0.85, 0.55, '#6b8592', { placeId: mallId }))
     for (let index = 0; index <= 5; index += 1) {
-      const x = minX + (maxX - minX) * index / 5
+      const x = frontX + (maxX - frontX) * index / 5
       boxes.push(box(`galleria-rib-z:${side}:${index}`, 'trim', x, 5.8,
         side < 0 ? minZ : maxZ, 0.32, 9.4, 0.42, '#738c99', { placeId: mallId }))
     }
-    boxes.push(box(`galleria-atrium-rail-z:${side}`, 'rail', mallBlock.x, 6.18,
-      side * 5.15, 5.8, 0.12, 0.12, '#a3b8bc',
+    boxes.push(box(`galleria-atrium-rail-z:${side}`, 'rail', atriumCenterX, 6.18,
+      side * 5.15, atriumHalfWidth * 2 + 0.2, 0.12, 0.12, '#a3b8bc',
       { placeId: mallId, levelId: 'L1' }))
-    boxes.push(box(`galleria-atrium-rail-x:${side}`, 'rail', mallBlock.x + side * 2.9,
+    boxes.push(box(`galleria-atrium-rail-x:${side}`, 'rail',
+      atriumCenterX + side * (atriumHalfWidth + 0.1),
       6.18, 0, 0.12, 0.12, 10.3, '#a3b8bc', { placeId: mallId, levelId: 'L1' }))
   }
   boxes.push(box('galleria-wall-east', 'building', maxX, 5.35, 0,
     0.32, 10.7, maxZ - minZ, '#455b69', { placeId: mallId }))
-  for (const [id, z0, z1] of [['north', minZ, -3.2], ['south', 3.2, maxZ]] as const) {
-    boxes.push(box(`galleria-west-plinth-${id}`, 'building', minX, 0.9, (z0 + z1) / 2,
+  for (const [id, wallX, z0, z1] of [
+    ['north-inset', recessX, minZ, pocketSouthZ],
+    ['north-return', minX, pocketSouthZ, -3.2],
+    ['south', minX, 3.2, maxZ],
+  ] as const) {
+    boxes.push(box(`galleria-west-plinth-${id}`, 'building', wallX, 0.9, (z0 + z1) / 2,
       0.42, 1.8, z1 - z0, '#4b6474', { placeId: mallId }))
-    boxes.push(box(`galleria-west-cornice-${id}`, 'trim', minX, 10.55, (z0 + z1) / 2,
+    boxes.push(box(`galleria-west-cornice-${id}`, 'trim', wallX, 10.55, (z0 + z1) / 2,
       0.55, 0.85, z1 - z0, '#6b8592', { placeId: mallId }))
     for (let index = 0; index <= 5; index += 1) {
       const z = z0 + (z1 - z0) * index / 5
       if (Math.abs(z - bridgeZ) < 1.9) continue
       boxes.push(box(`galleria-west-rib-${id}-${index}`,
-        'trim', minX, 5.8, z, 0.42, 9.4, 0.32, '#738c99', { placeId: mallId }))
+        'trim', wallX, 5.8, z, 0.42, 9.4, 0.32, '#738c99', { placeId: mallId }))
     }
   }
+  boxes.push(box('galleria-notch-plinth', 'building', (minX + recessX) / 2,
+    0.9, pocketSouthZ, recessX - minX, 1.8, 0.42, '#4b6474', { placeId: mallId }))
+  boxes.push(box('galleria-notch-cornice', 'trim', (minX + recessX) / 2,
+    10.55, pocketSouthZ, recessX - minX, 0.85, 0.55, '#6b8592', { placeId: mallId }))
+  boxes.push(box('galleria-notch-glass', 'glass', (minX + recessX) / 2,
+    7.1, pocketSouthZ - 0.06, recessX - minX, 3.2, 0.08, '#55798b',
+    { placeId: mallId, levelId: 'L1' }))
   const portalHalfWidth = overpass.widthMm / 2_000 + 0.18
-  for (const [id, z0, z1] of [
-    ['bridge-north', minZ + 0.35, bridgeZ - portalHalfWidth],
-    ['bridge-south', bridgeZ + portalHalfWidth, -3.2],
-    ['ground-south', 3.2, maxZ - 0.35],
+  for (const [id, wallX, z0, z1] of [
+    ['bridge-north', recessX, minZ + 0.35, bridgeZ - portalHalfWidth],
+    ['bridge-south', recessX, bridgeZ + portalHalfWidth, pocketSouthZ],
+    ['return-north', minX, pocketSouthZ, -3.2],
+    ['ground-south', minX, 3.2, maxZ - 0.35],
   ] as const) {
     if (z1 - z0 < 0.3) continue
-    boxes.push(box(`galleria-west-glass-${id}`, 'glass', minX + 0.06, 7.1,
+    boxes.push(box(`galleria-west-glass-${id}`, 'glass', wallX + 0.06, 7.1,
       (z0 + z1) / 2, 0.08, 3.2, z1 - z0, '#55798b',
       { placeId: mallId, levelId: 'L1' }))
-    boxes.push(box(`galleria-west-transom-${id}`, 'trim', minX + 0.02, 8.72,
+    boxes.push(box(`galleria-west-transom-${id}`, 'trim', wallX + 0.02, 8.72,
       (z0 + z1) / 2, 0.18, 0.12, z1 - z0, '#7297a8',
       { placeId: mallId, levelId: 'L1' }))
   }
-  boxes.push(box('galleria-overpass-threshold', 'trim', minX, 5.505, bridgeZ,
+  boxes.push(box('galleria-overpass-threshold', 'trim', recessX, 5.505, bridgeZ,
     0.1, 0.03, overpass.widthMm / 1000, '#8fb9c8',
     { placeId: mallId, levelId: 'L1', surfaceId: 'galleria-l1' }))
   for (const side of [-1, 1]) {
@@ -364,9 +412,13 @@ export function generateIntegratedWorld(seed = HERO_SEED): WorldModelV2 {
   }
   boxes.push(box('galleria-portal-lintel', 'trim', minX - 0.15, 8.35, 0,
     0.9, 0.55, 6.4, '#91aab0', { placeId: mallId }))
-  for (const [id, z0, z1] of [['north', minZ, -5.3], ['south', 5.3, maxZ]] as const) {
-    boxes.push(box(`galleria-roof-${id}`, 'roof', mallBlock.x, 10.85, (z0 + z1) / 2,
-      maxX - minX, 0.4, z1 - z0, '#34495b', { roofFor: mallId, levelId: 'L1' }))
+  for (const [id, x0, x1, z0, z1] of [
+    ['north', recessX, maxX, minZ, -5.3],
+    ['north-return', minX, recessX, pocketSouthZ, -5.3],
+    ['south', minX, maxX, 5.3, maxZ],
+  ] as const) {
+    boxes.push(box(`galleria-roof-${id}`, 'roof', (x0 + x1) / 2, 10.85, (z0 + z1) / 2,
+      x1 - x0, 0.4, z1 - z0, '#34495b', { roofFor: mallId, levelId: 'L1' }))
   }
   boxes.push(box('galleria-escalator-tread', 'step', east, 2.7, 0, 1.9, 0.26,
     south - north, '#8497a1', { rotationX: Math.atan2(5.25, south - north),

@@ -3,7 +3,7 @@ import { generateCity, HERO_SEED } from '../../city/generation/generateCity'
 import { createEnvironmentV5, createInitialStateV5 } from '../../simulation/engineV5'
 import { DEFAULT_SIMULATION_CONFIG_V5 } from '../../simulation/v5Types'
 import { createNavigationIndexV2, findRouteV2 } from '../navigation/routeV2'
-import { createWalkwayDeckGeometry, overpassDeckPath,
+import { createWalkwayDeckGeometry, overpassDeckPath, overpassEndCapPaths,
   overpassGuardPaths } from '../../scene/WalkwayStructures'
 import { generateIntegratedWorld } from './generateIntegratedWorld'
 
@@ -22,6 +22,7 @@ describe('original-city v0.6 integration', () => {
       .filter((building) => !oldMallParcelIds.has(building.parcelId)).map((building) => building.id))
     expect(world.baseCity!.buildings.length).toBeGreaterThan(city.buildings.length + 20)
     expect(world.config.seed).toBe(HERO_SEED)
+    expect(world.config.generatorVersion).toBe('heritage-extension-v6')
     expect(world.config.extentMm).toBe(300_000)
     expect(world.baseCity?.size).toBe(300)
     expect(world.roadNodes.some((node) => node.id === 'node-8-8')).toBe(true)
@@ -88,6 +89,11 @@ describe('original-city v0.6 integration', () => {
     const atriumWest = Math.min(...world.surfaces.find((surface) =>
       surface.id === 'galleria-l1')!.blockedPolygonsXZ[0].map((point) => point.x))
     expect(Math.max(...ramp.path.map((point) => point.x)) + 800).toBeLessThan(atriumWest)
+    const insetRibs = world.boxes.filter((box) =>
+      box.id.startsWith('galleria-west-rib-north-inset'))
+    const furthestRibX = Math.max(...insetRibs.map((box) => box.center.x + box.size.x / 2))
+    expect(Math.min(...ramp.path.map((point) => point.x)) - 800)
+      .toBeGreaterThanOrEqual(furthestRibX + 100)
     const deck = createWalkwayDeckGeometry(bridge.path, 2.5)
     const vertices = deck.getAttribute('position')
     for (const [index, endpoint] of [[0, bridge.path[0]],
@@ -107,8 +113,11 @@ describe('original-city v0.6 integration', () => {
     expect(portal.path.at(-1)).toEqual(galleriaEntry)
     expect([...approach.path, ...portal.path].every((point) =>
       point.y === 5_500 && point.z === bridge.path[0].z)).toBe(true)
+    const northZ = Math.min(...galleria.polygonXZ.map((point) => point.z))
+    const recessedFacadeX = Math.min(...galleria.polygonXZ.filter((point) =>
+      point.z === northZ).map((point) => point.x))
     expect(world.navNodes.find((item) => item.id === 'overpass:east:foot')!.position.x + 1_250)
-      .toBeLessThanOrEqual(Math.min(...mallXs))
+      .toBeLessThan(recessedFacadeX)
     expect(upperFloors.some((box) => Math.abs(galleriaEntry.x - box.center.x) <=
       box.size.x / 2 && Math.abs(galleriaEntry.z - box.center.z) <= box.size.z / 2 &&
       Math.abs(box.center.y + box.size.y / 2 - galleriaEntry.y) < 100)).toBe(true)
@@ -162,13 +171,19 @@ describe('original-city v0.6 integration', () => {
     const deck = overpassDeckPath(bridge, edges)
     const guards = overpassGuardPaths(bridge, edges)
     const mall = world.surfaces.find((surface) => surface.id === 'galleria-l1')!
-    const facadeX = Math.min(...mall.polygonXZ.map((point) => point.x))
+    const northZ = Math.min(...mall.polygonXZ.map((point) => point.z))
+    const facadeX = Math.min(...mall.polygonXZ.filter((point) =>
+      point.z === northZ).map((point) => point.x))
     expect(bridge.terminalPoint!.x).toBe(facadeX)
     expect(deck.at(-1)!.x).toBe(facadeX)
     expect(deck.every((point) => point.x <= facadeX)).toBe(true)
     expect(guards.full.at(-1)!.x).toBe(facadeX)
     expect(guards.stairSide.at(-1)!.at(-1)!.x).toBe(facadeX)
     expect(guards.stairSide).toHaveLength(2)
+    const caps = overpassEndCapPaths(bridge, edges)
+    expect(caps).toHaveLength(1)
+    expect(caps[0].every((point) => point.x === deck[0].x)).toBe(true)
+    expect(Math.abs(caps[0][0].z - caps[0][1].z)).toBe(bridge.widthMm)
     const blue = createWalkwayDeckGeometry(deck, bridge.widthMm / 1000)
     blue.computeBoundingBox()
     expect(blue.boundingBox!.max.x).toBeCloseTo(facadeX / 1000, 3)
@@ -187,5 +202,45 @@ describe('original-city v0.6 integration', () => {
     const threshold = world.boxes.find((box) => box.id === 'galleria-overpass-threshold')!
     expect(threshold.center.x).toBe(facadeX)
     expect(Math.abs(threshold.center.y - bridge.terminalPoint!.y)).toBeLessThan(30)
+  })
+
+  it('keeps the Galleria stair and footpad outside the road and the recessed mall floors', () => {
+    const world = generateIntegratedWorld()
+    const roadNode = world.roadNodes.find((node) => node.id === 'node-4-3')!
+    const road = world.roadEdges.find((edge) => edge.id === 'edge-z-4-3')!
+    const curbX = roadNode.position.x + road.widthMm / 2
+    const stair = world.navEdges.find((edge) => edge.id === 'connector:east-stair')!
+    const footpad = world.boxes.find((box) => box.id === 'overpass-east-footpad')!
+    const footpadMinX = footpad.center.x - footpad.size.x / 2
+    const footpadMaxX = footpad.center.x + footpad.size.x / 2
+    expect(footpadMinX).toBeGreaterThanOrEqual(curbX + 500)
+    expect(Math.min(...stair.path.map((point) => point.x)) - 1_250)
+      .toBeGreaterThanOrEqual(curbX + 500)
+    const bridge = world.overpasses![0]
+    const facadeX = bridge.terminalPoint!.x
+    expect(facadeX - footpadMaxX).toBeGreaterThanOrEqual(1_000)
+    const overlappingXZ = (box: typeof footpad) =>
+      footpadMinX < box.center.x + box.size.x / 2 &&
+      footpadMaxX > box.center.x - box.size.x / 2 &&
+      footpad.center.z - footpad.size.z / 2 < box.center.z + box.size.z / 2 &&
+      footpad.center.z + footpad.size.z / 2 > box.center.z - box.size.z / 2
+    expect(world.boxes.filter((box) => box.id.startsWith('galleria-ground-') &&
+      box.kind === 'floor').some(overlappingXZ)).toBe(false)
+    const mall = world.surfaces.find((surface) => surface.id === 'galleria-l0')!
+    const mallWestX = Math.min(...mall.polygonXZ.map((point) => point.x))
+    const notchZ = Math.min(...mall.polygonXZ.filter((point) => point.x === mallWestX)
+      .map((point) => point.z))
+    expect(footpad.center.z + footpad.size.z / 2).toBeLessThan(notchZ)
+    const plinth = world.boxes.find((box) => box.id === 'galleria-west-plinth-north-inset')!
+    const wallFrontX = plinth.center.x - plinth.size.x / 2
+    const crosshead = world.boxes.find((box) => box.id === 'overpass-1-crosshead')!
+    for (const side of [-1, 1]) {
+      const footing = world.boxes.find((box) => box.id === `overpass-1-footing-${side}`)!
+      const pier = world.boxes.find((box) => box.id === `overpass-1-pier-${side}`)!
+      expect(footing.center.x + footing.size.x / 2).toBeLessThan(wallFrontX)
+      expect(pier.center.x + pier.size.x / 2).toBeLessThan(wallFrontX)
+      expect(crosshead.center.x - crosshead.size.x / 2)
+        .toBeLessThan(pier.center.x + pier.size.x / 2)
+    }
   })
 })

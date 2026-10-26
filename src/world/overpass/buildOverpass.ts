@@ -163,14 +163,17 @@ export function buildOverpass(builder: WorldBuilder, spec: OverpassSpec): Overpa
   }
   for (const [index, center] of [start, terminal].entries()) {
     for (const side of [-1, 1]) {
-      const post = offset(center, index === 0 ? 0 : -150, side * widthMm / 2, 2_600)
+      const post = offset(center, index === 0 ? 0 : spec.terminal ? -600 : -150,
+        side * widthMm / 2, 2_600)
       box(`overpass-${index}-pier-${side}`, 'trim', post,
         { x: 300, y: 5_200, z: 300 }, '#177ba8', { placeId: walkwayId })
       box(`overpass-${index}-footing-${side}`, 'trim', { ...post, y: 160 },
         { x: 650, y: 320, z: 650 }, '#3b6176', { placeId: walkwayId, levelId: 'L0' })
     }
-    box(`overpass-${index}-crosshead`, 'trim', { ...center, y: 5_100 },
-      { x: 420, y: 300, z: widthMm + 500 }, '#197fae',
+    box(`overpass-${index}-crosshead`, 'trim',
+      offset(center, index === 1 && spec.terminal ? -350 : 0, 0, 5_100),
+      { x: index === 1 && spec.terminal ? 850 : 420,
+        y: 300, z: widthMm + 500 }, '#197fae',
       { placeId: walkwayId, levelId: 'L1' })
   }
   if (spec.terminal) {

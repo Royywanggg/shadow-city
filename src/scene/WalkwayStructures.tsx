@@ -149,10 +149,11 @@ function StairFlight({ edge, width, onPick }: { edge: NavEdgeV2; width: number;
 
 function InteriorRamp({ edge, onPick }: { edge: NavEdgeV2;
   onPick: (surfaceId: string) => void }) {
-  const deck = useMemo(() => createWalkwayDeckGeometry(edge.path, 1.6), [edge.path])
+  const rampWidth = 1.5
+  const deck = useMemo(() => createWalkwayDeckGeometry(edge.path, rampWidth), [edge.path])
   const railPath = useMemo(() => edge.path.slice(0, -2), [edge.path])
   const rails = useMemo(() => [-1, 1].map((side) => new TubeGeometry(new CatmullRomCurve3(
-    sidePoints(railPath, 1.6, side, 0.9), false, 'centripetal'),
+    sidePoints(railPath, rampWidth, side, 0.9), false, 'centripetal'),
   Math.max(24, railPath.length * 2), 0.05, 5, false)), [railPath])
   return <group>
     <mesh geometry={deck} castShadow receiveShadow onClick={(event) => {
@@ -204,6 +205,24 @@ export function overpassGuardPaths(instance: OverpassInstance,
   return { full: path, stairSide: [middle, ...tail] }
 }
 
+/** Free deck ends need a transverse guard; a building terminal remains passable. */
+export function overpassEndCapPaths(instance: OverpassInstance,
+  edges: ReadonlyMap<string, NavEdgeV2>): WorldPointMm[][] {
+  const path = overpassDeckPath(instance, edges)
+  const cap = (point: WorldPointMm, next: WorldPointMm): WorldPointMm[] => {
+    const dx = next.x - point.x
+    const dz = next.z - point.z
+    const length = Math.hypot(dx, dz)
+    const nx = -dz / length * instance.widthMm / 2
+    const nz = dx / length * instance.widthMm / 2
+    return [{ x: Math.round(point.x + nx), y: point.y, z: Math.round(point.z + nz) },
+      { x: Math.round(point.x - nx), y: point.y, z: Math.round(point.z - nz) }]
+  }
+  const caps = [cap(path[0], path[1])]
+  if (!instance.terminalPoint) caps.push(cap(path.at(-1)!, path.at(-2)!))
+  return caps
+}
+
 function Overpass({ world, instance, onPick }: { world: WorldModelV2;
   instance: OverpassInstance;
   onPick: (surfaceId: string) => void }) {
@@ -211,6 +230,7 @@ function Overpass({ world, instance, onPick }: { world: WorldModelV2;
   const width = instance.widthMm / 1000
   const deckPath = useMemo(() => overpassDeckPath(instance, edges), [instance, edges])
   const guardPaths = useMemo(() => overpassGuardPaths(instance, edges), [instance, edges])
+  const endCaps = useMemo(() => overpassEndCapPaths(instance, edges), [instance, edges])
   const mainDeck = useMemo(() => createWalkwayDeckGeometry(deckPath, width), [deckPath, width])
   return <group>
     <mesh geometry={mainDeck} castShadow receiveShadow onClick={(event) => {
@@ -221,6 +241,7 @@ function Overpass({ world, instance, onPick }: { world: WorldModelV2;
     <Guard path={guardPaths.full} width={width} side={-instance.stairSide} />
     {guardPaths.stairSide.map((path, index) =>
       <Guard key={index} path={path} width={width} side={instance.stairSide} />)}
+    {endCaps.map((path, index) => <Guard key={`cap-${index}`} path={path} width={0} side={1} />)}
     {instance.stairEdgeIds.map((id) =>
       <StairFlight key={id} edge={edges.get(id)!} width={width} onPick={onPick} />)}
   </group>

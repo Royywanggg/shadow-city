@@ -93,7 +93,8 @@ export function WorldSceneV2({ world, level, cutaway, debugNavigation, onPickSur
   const groups = useMemo(() => {
     const candidates = [...(world.baseCity ? [] : roadBoxes(world)), ...world.boxes].filter((box) => {
       if (cutaway && (box.roofFor === 'central-galleria' ||
-        box.id.startsWith('galleria-west-glass'))) return false
+        box.id.startsWith('galleria-west-glass') ||
+        box.id === 'galleria-notch-glass')) return false
       if (level === 'L0' && box.levelId === 'L1' &&
         (box.placeId === 'central-galleria' || box.roofFor === 'central-galleria' ||
           box.placeId?.startsWith('overpass-') || world.overpasses?.some((bridge) =>
