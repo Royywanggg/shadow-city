@@ -10,7 +10,7 @@ import { reportIdForOffence } from '../simulation/offending/opportunityV5'
 import { CityStaticScene } from './CityScene'
 import { RenderDiagnostics } from './RenderDiagnostics'
 import { WalkwayStructures } from './WalkwayStructures'
-import { GalleriaCanopy, PavilionCanopy } from './GalleriaCanopy'
+import { GalleriaCanopy } from './GalleriaCanopy'
 
 function roadBoxes(world: WorldModelV2): WorldBox[] {
   const nodes = new Map(world.roadNodes.map((node) => [node.id, node]))
@@ -89,11 +89,10 @@ export function WorldSceneV2({ world, level, cutaway, debugNavigation, onPickSur
 }) {
   const groups = useMemo(() => {
     const candidates = [...(world.baseCity ? [] : roadBoxes(world)), ...world.boxes].filter((box) => {
-      if (cutaway && (box.roofFor === 'central-galleria' ||
-        box.roofFor === 'civic-bridge-pavilion')) return false
+      if (cutaway && box.roofFor === 'central-galleria') return false
       if (level === 'L0' && box.levelId === 'L1' &&
         (box.placeId === 'central-galleria' || box.roofFor === 'central-galleria' ||
-          box.placeId === 'civic-bridge-pavilion' || box.roofFor === 'civic-bridge-pavilion')) return false
+          box.placeId?.startsWith('overpass-') || box.placeId === 'skybridge-walkway')) return false
       return true
     })
     const map = new Map<WorldBox['kind'], WorldBox[]>()
@@ -146,7 +145,6 @@ export function WorldSceneV2({ world, level, cutaway, debugNavigation, onPickSur
     {groups.map(([kind, boxes]) => <InstancedWorldBoxes key={kind} boxes={boxes} onPick={pick} />)}
     <WalkwayStructures world={world} onPickSurface={onPickSurface} />
     <GalleriaCanopy world={world} visible={!cutaway && level !== 'L0'} />
-    <PavilionCanopy world={world} visible={!cutaway && level !== 'L0'} />
     {debugNavigation && debugEdges.map((edge) => <Line key={edge.id}
       points={edge.path.map((point) => metres(point))} color={edge.kind === 'portal' ? '#e0ab75' :
         edge.kind === 'stair' ? '#ffca72' : edge.kind === 'ramp' ? '#7bd6b8' : '#80bbd3'}
