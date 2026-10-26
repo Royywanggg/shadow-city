@@ -5,11 +5,19 @@ import { createInitialStateV4, createSimulationEnvironmentV4, stepSimulationV4, 
 import { createSimulationEnvironment, validateCitizenConfig } from './environment'
 import { selectGroundTruthView, selectObservedWorldView } from './observation'
 import { deriveGroundTruthMetricsV4, selectObservedWorldViewV4 } from './observation/v4'
+import {
+  createCitizenIdentityCatalog,
+  DEFAULT_APPEARANCE_SEED,
+  DEFAULT_IDENTITY_SEED,
+  POPULATION_IDENTITY_VERSION,
+  PopulationHistoryIndex,
+} from './population'
 import { replayToTick } from './replay'
 import { DEFAULT_SIMULATION_CONFIG } from './types'
 import type {
   CommandEnvelope,
   ReplayResult,
+  CitizenActivity,
   SimulationCommand,
   SimulationConfig,
   SimulationEvent,
@@ -18,6 +26,8 @@ import type {
   SimulationState,
   StaticCity,
 } from './types'
+import { getCitizenSimulationState } from './types'
+import type { PopulationIdentityConfig, PopulationResearchPort, PopulationResearchView } from './population'
 import type { GroundTruthView, IncidentOccurredEvent, ObservedWorldView, ObserverPort, ReportAvailableEvent } from './v3Types'
 import type { GroundTruthViewV4, ObservedWorldViewV4, ObserverPortV4, OffenceOccurredEvent, ReportAvailableEventV4, SimulationStateV4 } from './v4Types'
 
@@ -124,6 +134,8 @@ export class SimulationSession {
   private observationEventHistory: (ReportAvailableEvent | ReportAvailableEventV4)[] = []
   private inspected: ReplayResult | null = null
   private truthViewV4Cache: { readonly state: SimulationStateV4; readonly view: GroundTruthViewV4 } | null = null
+  private readonly populationHistoryIndex = new PopulationHistoryIndex()
+  private readonly initialCitizenActivities: ReadonlyMap<string, CitizenActivity>
   private snapshot: SimulationSnapshot
   private listeners = new Set<() => void>()
 
@@ -149,6 +161,8 @@ export class SimulationSession {
       : this.config.version === 2
         ? createInitialCitizenState(this.environment!, this.config)
         : createInitialState(this.config))
+    const initialCitizens = getCitizenSimulationState(this.liveState)?.citizens ?? []
+    this.initialCitizenActivities = new Map(initialCitizens.map((citizen) => [citizen.id, citizen.activity]))
     this.snapshot = this.buildSnapshot()
   }
 
@@ -173,6 +187,61 @@ export class SimulationSession {
 
   getLiveEventHistory(): readonly SimulationEvent[] {
     return [...this.eventHistory]
+  }
+
+  /** Researcher-only population capability, independent of observation display modes. */
+  createPopulationResearchPort(config?: PopulationIdentityConfig): PopulationResearchPort {
+    if (!this.environment) throw new Error('Population research requires a citizen simulation')
+    const identityCatalog = Object.freeze({
+      version: POPULATION_IDENTITY_VERSION,
+      identitySeed: config?.identitySeed ?? DEFAULT_IDENTITY_SEED,
+      appearanceSeed: config?.appearanceSeed ?? DEFAULT_APPEARANCE_SEED,
+    })
+    const identities = createCitizenIdentityCatalog(this.environment.profiles, identityCatalog)
+    const profiles = new Map(this.environment.profiles.map((profile) => [profile.id, profile]))
+    const offendingProfiles = new Map(this.environmentV4?.profiles.map((profile) =>
+      [profile.agentId, profile]) ?? [])
+    let cachedState: SimulationState | null = null
+    let cachedView: PopulationResearchView | null = null
+    const historyCache = new Map<string, {
+      readonly state: SimulationState
+      readonly history: ReturnType<PopulationResearchPort['getAgentHistory']>
+    }>()
+    const getView = (): PopulationResearchView => {
+      const state = this.snapshot.state
+      if (cachedState === state && cachedView) return cachedView
+      const citizenState = getCitizenSimulationState(state)
+      if (!citizenState) throw new Error('Population research requires citizen state')
+      const citizens = citizenState.citizens.map((citizen) => {
+        const profile = profiles.get(citizen.id)
+        const identity = identities.get(citizen.id)
+        if (!profile || !identity) throw new Error(`Missing population profile for ${citizen.id}`)
+        return Object.freeze({
+          id: citizen.id,
+          identity,
+          profile,
+          state: citizen,
+          offendingProfile: offendingProfiles.get(citizen.id) ?? null,
+        })
+      })
+      cachedState = state
+      cachedView = Object.freeze({ asOfTick: state.tick, identityCatalog, citizens: Object.freeze(citizens) })
+      return cachedView
+    }
+    return Object.freeze({
+      getView,
+      getAgentHistory: (agentId: string) => {
+        const initialActivity = this.initialCitizenActivities.get(agentId)
+        if (!initialActivity) return null
+        const state = this.snapshot.state
+        const cached = historyCache.get(agentId)
+        if (cached?.state === state) return cached.history
+        const history = this.populationHistoryIndex.getAgentHistory(agentId, this.snapshot.tick, initialActivity)
+        historyCache.set(agentId, { state, history })
+        return history
+      },
+      subscribe: (listener: () => void) => this.subscribe(listener),
+    })
   }
 
   /** Researcher capability. Never pass the session itself to observer-only consumers. */
@@ -314,9 +383,12 @@ export class SimulationSession {
           transition.state.reporting.records.length > this.limits.maxReports) {
         throw new Error('Simulation history limit reached; reset simulation to continue')
       }
+      const previousOffenceCount = this.liveState.offences.length
       this.previousLiveState = this.liveState
       this.liveState = freezeState(transition.state)
       this.eventHistory.push(...transition.citizenEvents.map((event) => Object.freeze(event)))
+      this.populationHistoryIndex.addEvents(transition.citizenEvents)
+      this.populationHistoryIndex.addOffences(transition.state.offences.slice(previousOffenceCount))
       this.truthEventHistory.push(...transition.truthEvents.map((event) => Object.freeze(event)))
       this.observationEventHistory.push(...transition.observationEvents.map((event) => Object.freeze(event)))
       this.publish()
@@ -333,6 +405,7 @@ export class SimulationSession {
       this.previousLiveState = this.liveState
       this.liveState = freezeState(transition.state)
       this.eventHistory.push(...transition.citizenEvents.map((event) => Object.freeze(event)))
+      this.populationHistoryIndex.addEvents(transition.citizenEvents)
       this.truthEventHistory.push(...transition.truthEvents.map((event) => Object.freeze(event)))
       this.observationEventHistory.push(...transition.observationEvents.map((event) => Object.freeze(event)))
       this.publish()
@@ -350,6 +423,7 @@ export class SimulationSession {
     this.previousLiveState = this.liveState
     this.liveState = freezeState(transition.state)
     this.eventHistory.push(...transition.events.map((event) => Object.freeze(event)))
+    this.populationHistoryIndex.addEvents(transition.events)
     this.publish()
   }
 
@@ -389,6 +463,7 @@ export class SimulationSession {
     this.eventHistory = []
     this.truthEventHistory = []
     this.observationEventHistory = []
+    this.populationHistoryIndex.clear()
     this.inspected = null
     this.publish()
   }
