@@ -240,4 +240,57 @@ describe('constructed encounter crime and witness path', () => {
     expect(JSON.stringify(observer)).not.toContain(chain!.offence.id)
     expect(replayV5(world, session.exportReplay())).toEqual(state)
   })
+
+  it('finds a separate later encounter after interaction, cooldown and subjective reporting', () => {
+    const world = generateIntegratedWorld()
+    const scenario = { ...DEFAULT_ENCOUNTER_SCENARIO_V1,
+      offenceCompletionProbability: 1,
+      social: { ...DEFAULT_ENCOUNTER_SCENARIO_V1.social,
+        greetingWillingness: 0.7, conversationWillingness: 0.85 },
+      offending: { ...DEFAULT_ENCOUNTER_SCENARIO_V1.offending,
+        baseOddsPerEligibleAgentHour: { minor: 12, serious: 2.8 } },
+      witness: { ...DEFAULT_ENCOUNTER_SCENARIO_V1.witness,
+        eventPerceptionProbability: 1, victimPerceptionProbability: 1 } }
+    const session = new SimulationSessionV5(world, { ...DEFAULT_SIMULATION_CONFIG_V5,
+      populationSize: 120, offendingSeed: 'shadow-city-reencounter-4',
+      reportingProbability: 1, encounter: scenario })
+    for (let tick = 0; tick < 573; tick += 1) session.advanceOneTick()
+    const state = session.getSnapshot().state
+    const social = state.social!
+    const episodes = [...social.encounters.active, ...social.encounters.completed]
+    const reportIds = new Set(projectObserverViewV5(state).reports.map((report) => report.id))
+    const globalSecond = (tick: number, second: number) => (tick - 1) * 6 + second
+    const chain = state.offences.flatMap((offence) => {
+      if (offence.target.kind !== 'citizen' ||
+        !offence.opportunity.socialContext?.offenderPerceivedTarget ||
+        offence.opportunity.socialContext.directedFamiliarity <= 0) return []
+      const later = episodes.find((item) => item.id === offence.encounterId)
+      if (!later) return []
+      const earlier = episodes.find((item) => item.pairKey === later.pairKey &&
+        item.id !== later.id && item.endedTick !== null && item.endedSecond !== null &&
+        globalSecond(later.startedTick, later.startedSecond) -
+          globalSecond(item.endedTick, item.endedSecond) >=
+          scenario.lifecycle.cooldownSeconds &&
+        social.interactions.some((interaction) => interaction.encounterId === item.id &&
+          interaction.status === 'completed' && interaction.endTick! < later.startedTick))
+      const interaction = social.interactions.find((item) => item.encounterId === earlier?.id &&
+        item.status === 'completed' && item.endTick! < later.startedTick)
+      const witnessed = social.witnessObservations.some((item) => item.offenceId === offence.id)
+      const reported = social.reportLinks.some((item) =>
+        item.offenceId === offence.id && reportIds.has(item.reportId))
+      return earlier && interaction && witnessed && reported ?
+        [{ earlier, later, interaction, offence }] : []
+    })[0]
+    expect(chain).toBeDefined()
+    expect(chain!.earlier.status).toBe('ended')
+    expect(chain!.earlier.interactionIds).toContain(chain!.interaction.id)
+    expect(chain!.later.id).not.toBe(chain!.earlier.id)
+    expect(chain!.offence.opportunity.socialContext!.directedFamiliarity).toBeGreaterThan(0)
+    const atInteraction = session.inspectTick(chain!.interaction.endTick!)
+    expect(atInteraction.social!.memories.filter((item) =>
+      item.provenanceId === chain!.interaction.id)).toHaveLength(2)
+    const observer = projectObserverViewV5(state)
+    expect(JSON.stringify(observer)).not.toContain(chain!.offence.offenderAgentId)
+    expect(JSON.stringify(observer)).not.toContain(chain!.offence.id)
+  }, 20_000)
 })

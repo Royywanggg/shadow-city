@@ -1,0 +1,525 @@
+{
+  "title": "v0.6.1 bounded distinct-episode natural chain search",
+  "citySeed": "shadow-city-hero-01",
+  "generatorVersion": "heritage-extension-v6",
+  "selectionProcess": "Ascending offender seeds 0–7; stop at first match; no target-specific injection.",
+  "globalOverrides": {
+    "populationSize": 120,
+    "ticks": 600,
+    "greetingWillingness": 0.7,
+    "conversationWillingness": 0.85,
+    "baseOddsPerEligibleAgentHour": {
+      "minor": 12,
+      "serious": 2.8
+    },
+    "offenceCompletionProbability": 1,
+    "eventPerceptionProbability": 1,
+    "victimPerceptionProbability": 1,
+    "reportingProbability": 1
+  },
+  "criterion": "Earlier completed interaction; earlier episode ended and cooldown elapsed; independent later episode; offender perceived target with positive directed familiarity; later truth offence; subjective witness; delivered report.",
+  "attempts": [
+    {
+      "offendingSeed": "shadow-city-reencounter-0",
+      "episodeCount": 970,
+      "reencountersAfterInteraction": 52,
+      "interactions": 108,
+      "offences": 63,
+      "witnessObservations": 93,
+      "deliveredReports": 93,
+      "matched": false
+    },
+    {
+      "offendingSeed": "shadow-city-reencounter-1",
+      "episodeCount": 970,
+      "reencountersAfterInteraction": 52,
+      "interactions": 108,
+      "offences": 67,
+      "witnessObservations": 81,
+      "deliveredReports": 81,
+      "matched": false
+    },
+    {
+      "offendingSeed": "shadow-city-reencounter-2",
+      "episodeCount": 970,
+      "reencountersAfterInteraction": 52,
+      "interactions": 108,
+      "offences": 59,
+      "witnessObservations": 80,
+      "deliveredReports": 80,
+      "matched": false
+    },
+    {
+      "offendingSeed": "shadow-city-reencounter-3",
+      "episodeCount": 970,
+      "reencountersAfterInteraction": 52,
+      "interactions": 108,
+      "offences": 60,
+      "witnessObservations": 100,
+      "deliveredReports": 98,
+      "matched": false
+    },
+    {
+      "offendingSeed": "shadow-city-reencounter-4",
+      "episodeCount": 970,
+      "reencountersAfterInteraction": 52,
+      "interactions": 108,
+      "offences": 65,
+      "witnessObservations": 71,
+      "deliveredReports": 71,
+      "matched": true
+    }
+  ],
+  "found": {
+    "config": {
+      "version": 5,
+      "simulationSeed": "shadow-city-sim-01",
+      "offendingSeed": "shadow-city-reencounter-4",
+      "observationSeed": "shadow-city-observation-01",
+      "populationSize": 120,
+      "logicalSecondsPerTick": 6,
+      "startHour": 8,
+      "reportingProbability": 1,
+      "initialAccessModes": {
+        "bridge-entry": "open",
+        "mall-entry": "open",
+        "galleria-escalator": "open"
+      },
+      "encounter": {
+        "version": "encounter-v1",
+        "offenceMode": "encounterAware",
+        "interactionsEnabled": true,
+        "offenceCompletionProbability": 1,
+        "socialRestraintWeight": 0.12,
+        "social": {
+          "version": "social-v1",
+          "seed": "shadow-city-social-01",
+          "greetingWillingness": 0.7,
+          "conversationWillingness": 0.85,
+          "nameExchangeProbability": 0.55,
+          "conversationDurationTicks": [
+            2,
+            5
+          ],
+          "minimumDwellSlackTicks": 3,
+          "minimumStationaryContactSeconds": 2,
+          "memoryCapacity": 24,
+          "knowledgeCapacity": 32,
+          "memoryHalfLifeTicks": 1200,
+          "familiarityEncounterGain": 0.008,
+          "familiarityGreetingGain": 0.08,
+          "familiarityConversationGain": 0.18,
+          "familiarityDecayPer100Ticks": 0.985,
+          "diagnosticTraces": false,
+          "diagnosticTraceCapacity": 512
+        },
+        "lifecycle": {
+          "enterDistanceMm": 2400,
+          "exitDistanceMm": 3200,
+          "minContactSeconds": 2,
+          "exitGraceSeconds": 12,
+          "cooldownSeconds": 12
+        },
+        "perception": {
+          "fieldOfViewDegrees": 220,
+          "travellingAttention": 0.52,
+          "stationaryAttention": 0.82,
+          "closeAwarenessMm": 900
+        },
+        "offending": {
+          "version": "offender-choice-v1",
+          "groupShares": {
+            "minorSpecialist": 0.4,
+            "seriousSpecialist": 0.2,
+            "generalist": 0.4
+          },
+          "groupMeanLogPropensity": {
+            "minorSpecialist": {
+              "minor": 0.45,
+              "serious": -1.1
+            },
+            "seriousSpecialist": {
+              "minor": -1.1,
+              "serious": 0.7
+            },
+            "generalist": {
+              "minor": 0.05,
+              "serious": -0.1
+            }
+          },
+          "propensitySd": {
+            "minor": 0.65,
+            "serious": 0.65
+          },
+          "propensityCorrelation": 0.1,
+          "sensitivitySpread": 0.4,
+          "baseOddsPerEligibleAgentHour": {
+            "minor": 12,
+            "serious": 2.8
+          },
+          "districtExposure": {
+            "civic": {
+              "minor": 0.72,
+              "serious": 0.55
+            },
+            "core": {
+              "minor": 0.9,
+              "serious": 0.72
+            },
+            "residential": {
+              "minor": 0.66,
+              "serious": 0.48
+            },
+            "works": {
+              "minor": 0.62,
+              "serious": 0.55
+            }
+          },
+          "timeBandExposure": {
+            "day": {
+              "minor": 0.7,
+              "serious": 0.55
+            },
+            "evening": {
+              "minor": 1,
+              "serious": 0.9
+            },
+            "night": {
+              "minor": 0.85,
+              "serious": 0.8
+            }
+          },
+          "publicSpaceExposureMultiplier": 1.08,
+          "minorCrowdFloor": 0.55,
+          "seriousMinimumNearby": 1,
+          "nearbySaturation": 4,
+          "nearbyRadius": 12,
+          "rewardByDistrict": {
+            "civic": 0.35,
+            "core": 0.75,
+            "residential": 0.5,
+            "works": 0.6
+          },
+          "perceivedRiskByDistrict": {
+            "civic": 0.7,
+            "core": 0.5,
+            "residential": 0.55,
+            "works": 0.45
+          },
+          "rewardWeight": {
+            "minor": 0.4,
+            "serious": 0.5
+          },
+          "riskWeight": {
+            "minor": 0.55,
+            "serious": 0.75
+          },
+          "cooldownTicks": 20
+        },
+        "witness": {
+          "witnessRadiusMm": 12000,
+          "eventPerceptionProbability": 1,
+          "victimPerceptionProbability": 1,
+          "reportDelayTicks": 2,
+          "locationResolutionMm": 2000,
+          "levelRecallProbability": 0.8,
+          "placeRecallProbability": 0.72,
+          "severityAccuracyProbability": 0.9,
+          "identityConfidenceThreshold": 0.6
+        }
+      }
+    },
+    "fingerprint": "world-v2:heritage-extension-v6:b2d75275:sim-v5:c5c0e76",
+    "tick": 600,
+    "researcherOnly": {
+      "earlierEncounter": {
+        "id": "social-encounter:[\"citizen-0013\",\"citizen-0061\"]:488",
+        "pairKey": "[\"citizen-0013\",\"citizen-0061\"]",
+        "participantIds": [
+          "citizen-0013",
+          "citizen-0061"
+        ],
+        "startedTick": 82,
+        "startedSecond": 2,
+        "endedTick": 151,
+        "endedSecond": 1,
+        "status": "ended",
+        "contactSeconds": 396,
+        "proximityDurationTicks": 68,
+        "lastContactGlobalSecond": 889,
+        "minDistanceMm": 1123,
+        "surfaceId": "interior:building-block-7-0-0-0",
+        "placeId": "building:building-block-7-0-0-0",
+        "perceivedBy": [
+          "citizen-0013",
+          "citizen-0061"
+        ],
+        "interactionIds": [
+          "social-interaction:social-encounter:[\"citizen-0013\",\"citizen-0061\"]:488:initial"
+        ]
+      },
+      "laterEncounter": {
+        "id": "social-encounter:[\"citizen-0013\",\"citizen-0061\"]:3421",
+        "pairKey": "[\"citizen-0013\",\"citizen-0061\"]",
+        "participantIds": [
+          "citizen-0013",
+          "citizen-0061"
+        ],
+        "startedTick": 571,
+        "startedSecond": 1,
+        "endedTick": null,
+        "endedSecond": null,
+        "status": "active",
+        "contactSeconds": 180,
+        "proximityDurationTicks": 30,
+        "lastContactGlobalSecond": 3600,
+        "minDistanceMm": 1311,
+        "surfaceId": "interior:building-block-7-0-0-0",
+        "placeId": "building:building-block-7-0-0-0",
+        "perceivedBy": [
+          "citizen-0013",
+          "citizen-0061"
+        ],
+        "interactionIds": [
+          "social-interaction:social-encounter:[\"citizen-0013\",\"citizen-0061\"]:3421:initial"
+        ]
+      },
+      "interaction": {
+        "id": "social-interaction:social-encounter:[\"citizen-0013\",\"citizen-0061\"]:488:initial",
+        "encounterId": "social-encounter:[\"citizen-0013\",\"citizen-0061\"]:488",
+        "participantIds": [
+          "citizen-0013",
+          "citizen-0061"
+        ],
+        "type": "greeting",
+        "status": "completed",
+        "decisionTick": 82,
+        "startTick": 82,
+        "plannedEndTick": 82,
+        "endTick": 82,
+        "placeId": "building:building-block-7-0-0-0",
+        "surfaceId": "interior:building-block-7-0-0-0"
+      },
+      "interactionMemoriesAtCompletion": [
+        {
+          "id": "memory:social-interaction:social-encounter:[\"citizen-0013\",\"citizen-0061\"]:488:initial:citizen-0013",
+          "ownerAgentId": "citizen-0013",
+          "category": "interaction",
+          "subjectToken": "person-f050f729e15f1c99",
+          "placeId": "building:building-block-7-0-0-0",
+          "surfaceId": "interior:building-block-7-0-0-0",
+          "createdTick": 82,
+          "lastUpdatedTick": 82,
+          "source": "interaction",
+          "provenanceId": "social-interaction:social-encounter:[\"citizen-0013\",\"citizen-0061\"]:488:initial",
+          "observationCode": "greeting",
+          "confidence": 0.8880802859272808,
+          "salience": 0.4
+        },
+        {
+          "id": "memory:social-interaction:social-encounter:[\"citizen-0013\",\"citizen-0061\"]:488:initial:citizen-0061",
+          "ownerAgentId": "citizen-0061",
+          "category": "interaction",
+          "subjectToken": "person-e0be523b559615f3",
+          "placeId": "building:building-block-7-0-0-0",
+          "surfaceId": "interior:building-block-7-0-0-0",
+          "createdTick": 82,
+          "lastUpdatedTick": 82,
+          "source": "interaction",
+          "provenanceId": "social-interaction:social-encounter:[\"citizen-0013\",\"citizen-0061\"]:488:initial",
+          "observationCode": "greeting",
+          "confidence": 0.7205165007337928,
+          "salience": 0.4
+        }
+      ],
+      "offenderRelationshipAtFinalTick": {
+        "ownerAgentId": "citizen-0061",
+        "referentAgentId": "citizen-0013",
+        "subjectToken": "person-e0be523b559615f3",
+        "familiarity": 0.17012750303696053,
+        "recognitionStrength": 0.20278994582465798,
+        "trust": 0.5,
+        "encounterCount": 3,
+        "greetingCount": 2,
+        "conversationCount": 0,
+        "lastEncounterTick": 571,
+        "lastUpdatedTick": 600,
+        "believedIdentity": null
+      },
+      "destinationEvents": [
+        {
+          "id": "v5:14:citizen-0013:TripStarted",
+          "tick": 14,
+          "agentId": "citizen-0013",
+          "type": "TripStarted",
+          "placeId": "building:building-block-7-0-0-0"
+        },
+        {
+          "id": "v5:16:citizen-0061:TripStarted",
+          "tick": 16,
+          "agentId": "citizen-0061",
+          "type": "TripStarted",
+          "placeId": "building:building-block-7-0-0-0"
+        },
+        {
+          "id": "v5:40:citizen-0013:DestinationReached",
+          "tick": 40,
+          "agentId": "citizen-0013",
+          "type": "DestinationReached",
+          "placeId": "building:building-block-7-0-0-0"
+        },
+        {
+          "id": "v5:48:citizen-0061:DestinationReached",
+          "tick": 48,
+          "agentId": "citizen-0061",
+          "type": "DestinationReached",
+          "placeId": "building:building-block-7-0-0-0"
+        },
+        {
+          "id": "v5:81:citizen-0061:TripStarted",
+          "tick": 81,
+          "agentId": "citizen-0061",
+          "type": "TripStarted",
+          "placeId": "building:building-block-7-0-0-0"
+        },
+        {
+          "id": "v5:82:citizen-0061:DestinationReached",
+          "tick": 82,
+          "agentId": "citizen-0061",
+          "type": "DestinationReached",
+          "placeId": "building:building-block-7-0-0-0"
+        }
+      ],
+      "offence": {
+        "id": "offence:citizen-0061:citizen:citizen-0013:571@interior:building-block-7-0-0-0",
+        "incidentId": "incident:offence:citizen-0061:citizen:citizen-0013:571@interior:building-block-7-0-0-0",
+        "tick": 571,
+        "second": 3,
+        "offenderAgentId": "citizen-0061",
+        "target": {
+          "kind": "citizen",
+          "id": "citizen-0013"
+        },
+        "severity": "minor",
+        "position": {
+          "x": 111976,
+          "y": 250,
+          "z": -88273
+        },
+        "surfaceId": "interior:building-block-7-0-0-0",
+        "levelId": "L0",
+        "placeId": "building:building-block-7-0-0-0",
+        "encounterId": "social-encounter:[\"citizen-0013\",\"citizen-0061\"]:3421",
+        "opportunity": {
+          "id": "opportunity:citizen-0061:citizen:citizen-0013:571@interior:building-block-7-0-0-0",
+          "offenderAgentId": "citizen-0061",
+          "target": {
+            "kind": "citizen",
+            "id": "citizen-0013"
+          },
+          "surfaceId": "interior:building-block-7-0-0-0",
+          "levelId": "L0",
+          "placeId": "building:building-block-7-0-0-0",
+          "position": {
+            "x": 111976,
+            "y": 250,
+            "z": -88273
+          },
+          "exposureSeconds": 3,
+          "guardianship": 7,
+          "perceivedRisk": 0.8603357202608926,
+          "socialContext": {
+            "encounterId": "social-encounter:[\"citizen-0013\",\"citizen-0061\"]:3421",
+            "contactSeconds": 3,
+            "offenderPerceivedTarget": true,
+            "directedFamiliarity": 0.08613100217410463
+          }
+        }
+      },
+      "witnessObservations": [
+        {
+          "id": "witness-observation:offence:citizen-0061:citizen:citizen-0013:571@interior:building-block-7-0-0-0:citizen-0013",
+          "ownerAgentId": "citizen-0013",
+          "source": "victim",
+          "offenceId": "offence:citizen-0061:citizen:citizen-0013:571@interior:building-block-7-0-0-0",
+          "observedTick": 571,
+          "observedSecond": 3,
+          "perceivedPosition": {
+            "x": 112000,
+            "y": 0,
+            "z": -88000
+          },
+          "perceivedLevelId": "L0",
+          "perceivedPlaceId": "building:building-block-7-0-0-0",
+          "perceivedSeverity": "serious",
+          "subjectToken": "person-f050f729e15f1c99",
+          "believedIdentity": null,
+          "recognitionKnowledgeId": "recognition:citizen-0013:person-f050f729e15f1c99",
+          "confidence": 0.45
+        },
+        {
+          "id": "witness-observation:offence:citizen-0061:citizen:citizen-0013:571@interior:building-block-7-0-0-0:citizen-0063",
+          "ownerAgentId": "citizen-0063",
+          "source": "witness",
+          "offenceId": "offence:citizen-0061:citizen:citizen-0013:571@interior:building-block-7-0-0-0",
+          "observedTick": 571,
+          "observedSecond": 3,
+          "perceivedPosition": {
+            "x": 112000,
+            "y": 0,
+            "z": -88000
+          },
+          "perceivedLevelId": "L0",
+          "perceivedPlaceId": null,
+          "perceivedSeverity": "minor",
+          "subjectToken": null,
+          "believedIdentity": null,
+          "recognitionKnowledgeId": null,
+          "confidence": 0.45
+        }
+      ]
+    },
+    "observerReports": [
+      {
+        "id": "report:778f8ba634f35339",
+        "availableTick": 573,
+        "reportedOccurrenceTick": 571,
+        "reportedPosition": {
+          "x": 112000,
+          "y": 0,
+          "z": -88000
+        },
+        "reportedLevelId": "L0",
+        "reportedPlaceId": null,
+        "reportedSeverity": "minor",
+        "suspect": {
+          "status": "unknown"
+        },
+        "source": "witness"
+      },
+      {
+        "id": "report:ff92a0551c866a0e",
+        "availableTick": 573,
+        "reportedOccurrenceTick": 571,
+        "reportedPosition": {
+          "x": 112000,
+          "y": 0,
+          "z": -88000
+        },
+        "reportedLevelId": "L0",
+        "reportedPlaceId": "building:building-block-7-0-0-0",
+        "reportedSeverity": "serious",
+        "suspect": {
+          "status": "unknown"
+        },
+        "source": "victim"
+      }
+    ],
+    "reportDelayTicks": [
+      2,
+      2
+    ],
+    "replayEqual": true,
+    "verificationScope": "Simulation and replay state only; browser visual checks are recorded separately."
+  }
+}
