@@ -40,6 +40,10 @@ The researcher has a global God View of the synthetic population. A Population I
 
 Generation must be reproducible from a seed and configuration. The rendering layer should not make random layout decisions. Add complexity only when a milestone needs it and it improves the result.
 
+From v0.6 onward, `WorldModelV2` is the static spatial authority for the larger default city. Its millimetre coordinates, walkable surfaces, semantic levels, portals, places, resources, and three-dimensional navigation graph are shared by simulation and rendering. `surfaceId` determines spatial membership; identical X/Z coordinates do not imply co-location across floors. `SimulationStateV5` holds citizens, reservations, access changes, encounters, offences, and reports separately. `generateCity()` and the earlier v2–v4 replay path remain available through the explicit legacy world selector. An experiment fingerprint includes the world generator and structure, model settings, and ordered commands; a changed fingerprint is a replay error.
+
+The Galleria, bridge, public spaces, opening times, and place attractions create **opportunities**, not scripted outcomes. Destination choice, routes, contact, offending, and reporting each have separate deterministic inputs. A reported event is a limited observation of a ground-truth event. The researcher Population Inspector keeps complete truth at the selected Tick; future police observers require their own restricted read model.
+
 ## Scope boundaries
 
-There is no backend, authentication, cloud infrastructure, or database requirement for v0.1. Agent behavior, policing, crime reporting, and experiment comparison belong to later milestones described in `ROADMAP.md`.
+There is no backend, authentication, cloud infrastructure, or database requirement for v0.6. Policing strategies and experiment comparison follow the multi-level world milestone in `ROADMAP.md`. Synthetic schedules, guardianship and offence parameters are not calibrated against real-world evidence and must not be interpreted as real-city causal estimates.

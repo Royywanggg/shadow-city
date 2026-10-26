@@ -134,7 +134,25 @@ This roadmap is milestone-based, not date-based. Each milestone should leave a u
 
 **Exit criteria:** With fixed city and simulation seeds, 200 citizens remain distinct at Tick 0/100/500 and replay. Every occupied slot is unique, reachable, and on a legal pedestrian surface; several citizens can occupy one site at separate slots. Capacity exhaustion produces a visible waiting state or event. No outdoor citizen is silently omitted by LOD. Selection, Focus, Follow, portrait, event-mode changes, bearing/pitch, Pause/Step, and replay still work. Report fixed-view and narrow screenshots, the renderer and frame sampling method, instance and GPU resource counts, simulation tick cost, tests, type checking, and build results. State remaining close-view and moving-crowd limitations explicitly.
 
-## v0.6 — Policing strategy design and implementation
+## v0.6 — Multi-level urban world and emergent opportunities
+
+**Goal:** Expand the fictional city into a navigable, multi-level 320 × 320 m urban world. Let visits, encounters, and offences follow explicit spatial and behavioural rules rather than a prescribed bridge itinerary or scripted crime location. The v0.5.2 world remains accessible through `?world=legacy`; v2–v4 replay formats remain separate.
+
+The v0.6 implementation is split into reviewable gates:
+
+| Gate | Deliverable | Exit evidence |
+| --- | --- | --- |
+| **A — Static world and proof** | Versioned `WorldModelV2`, district-local generation, connected roads, semantic places, and an independent L0/L1 bridge fixture. | Same X/Z on distinct surfaces is not conflated; 3D stair/ramp routes are continuous; the old city generator's golden data is unchanged. |
+| **B — Accessible Galleria** | Upper and lower walkable floors, corridors, indoor retail/cafés, portals, atrium, stairs, ramp, escalator and ground alternative. | Every generated node and surface edge is legal; closed entries reject new arrivals, occupied connectors can finish, and indoor residents can exit. Browser near views check slab/rail/door alignment. |
+| **C — Activity and routes** | `SimulationStateV5`, deterministic profile needs and location utility, bounded activity slots, personal integer-cost routes, dynamic access commands, waiting, and safe-node replanning. | 200 identities stay separate, reservations do not overlap, route and command histories replay, and Tick 0/100/500 and long-range states agree. |
+| **D — Spatial opportunity** | Second-resolution same-surface encounters, real citizen or named place-resource targets, episode hazard/cooldowns, truth incidents and separate reports. | Zero opportunity gives zero offence; different floors do not co-occupy; an episode produces at most one offence; changing reporting only preserves citizen and truth trajectories; observer reports expose only observed fields. |
+| **E — God View and visual review** | Default v0.6 scene with legacy entry, floor filter, cutaway, surface pick, route/nav overlays, cross-floor camera focus/follow, and character LOD. | Real 1440 × 900 DPR 1 browser screenshots at fixed seed, bridge and Galleria close views, cardinal bearings, narrow view, selection and replay; hardware GPU performance is measured against the limits below. |
+
+**Reference performance target:** 200 citizens on Chrome hardware GPU at 1440 × 900, DPR 1: average ≥50 FPS, p95 frame interval ≤33 ms, simulation Tick p95 ≤5 ms, and deterministic Tick 500 recomputation ≤2 seconds. Record renderer, draw calls, triangles, geometry/texture counts, and available JS memory separately. These are machine-specific review targets, not cross-device guarantees.
+
+**Out of scope:** police investigation, SSP/HSP, elevator dispatch, a production NavMesh, a 1,000-citizen acceptance claim, empirical calibration, backend services, and database persistence. The bridge, Galleria, operating hours and place attractiveness may change outcomes through reproducible interventions; no route or offence is guaranteed by config. See `V06_ARCHITECTURE.md` for data flow, evidence and remaining limits. If visual or hardware inspection is unavailable, leave the relevant gate pending.
+
+## v0.7 — Policing strategy design and implementation
 
 **Goal:** Compare explicit police decision strategies under transparent model assumptions.
 
@@ -142,7 +160,7 @@ This roadmap is milestone-based, not date-based. Each milestone should leave a u
 
 **Exit criteria:** Strategies consume only permitted knowledge, use reproducible decisions, and report detection and cost metrics only when corresponding mechanisms exist.
 
-## v0.7 — Experiment comparison
+## v0.8 — Experiment comparison
 
 **Goal:** Make repeated experiments understandable and shareable.
 
