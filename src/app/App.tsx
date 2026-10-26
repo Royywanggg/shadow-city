@@ -1,7 +1,7 @@
 import { Canvas } from '@react-three/fiber'
 import { useEffect, useMemo, useState } from 'react'
 import { CameraControls } from './CameraControls'
-import { AgentInspector } from './AgentInspector'
+import { PopulationSidebar } from './PopulationSidebar'
 import {
   ObservedExperimentPanel,
   ObservedIncidentScene,
@@ -111,6 +111,7 @@ export function App() {
     [modelV3, simulationSession])
   const observerPortV4 = useMemo(() => modelV4 ? simulationSession.createObserverPortV4() : null,
     [modelV4, simulationSession])
+  const populationPort = useMemo(() => simulationSession.createPopulationResearchPort(), [simulationSession])
 
   useEffect(() => playbackController.connect(), [playbackController])
 
@@ -220,15 +221,10 @@ export function App() {
   const changeScenario = (next: ReportingScenarioId) => {
     if (next === scenario) return
     playbackController.pause()
-    agentSelection.select(null)
     setScenario(next)
   }
 
   const changeObservationMode = (next: ObservationMode) => {
-    if (next === 'observed') {
-      agentSelection.select(null)
-      if (modelV4 && import.meta.env.DEV) delete window.__shadowCityAgentDiagnostics
-    }
     setObservationMode(next)
   }
 
@@ -249,7 +245,7 @@ export function App() {
           playback={playbackController}
           selection={agentSelection}
           graph={city.pedestrian}
-          interactive={!modelV4 || observationMode !== 'observed'}
+          interactive
         />
         {observerPortV3 && (observationMode === 'observed'
           ? <ObservedIncidentScene port={observerPortV3} />
@@ -267,9 +263,8 @@ export function App() {
       <CameraControls controller={cameraController} />
       <SimulationControls controller={playbackController} populationSize={populationSize}
         observerPort={observerPortV4 ?? observerPortV3 ?? undefined} />
-      {(!modelV4 || observationMode !== 'observed') &&
-        <AgentInspector session={simulationSession} selection={agentSelection} graph={city.pedestrian}
-          researcherV4={modelV4} />}
+      <PopulationSidebar port={populationPort} session={simulationSession} playback={playbackController}
+        selection={agentSelection} cameraController={cameraController} graph={city.pedestrian} />
       {observerPortV3 && (observationMode === 'observed'
         ? <ObservedExperimentPanel port={observerPortV3} scenario={scenario}
             onModeChange={changeObservationMode} onScenarioChange={changeScenario} />
