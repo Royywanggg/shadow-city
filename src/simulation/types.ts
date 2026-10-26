@@ -1,5 +1,12 @@
 import type { CityModel, PedestrianNetwork } from '../city/model'
 import type { NavigationIndex } from './navigation'
+import type {
+  IncidentOccurredEvent,
+  ReportAvailableEvent,
+  SimulationConfigV3,
+  SimulationStateV3,
+  SimulationTransitionV3,
+} from './v3Types'
 
 export type DeepReadonly<T> = T extends (...args: never[]) => unknown
   ? T
@@ -25,7 +32,7 @@ export interface SimulationConfigV2 {
   readonly behaviorModel: 'synthetic-v1'
 }
 
-export type SimulationConfig = SimulationConfigV1 | SimulationConfigV2
+export type SimulationConfig = SimulationConfigV1 | SimulationConfigV2 | SimulationConfigV3
 
 export const DEFAULT_SIMULATION_CONFIG: SimulationConfigV2 = Object.freeze({
   version: 2,
@@ -119,10 +126,14 @@ export interface SimulationStateV2 extends SimulationStateBase {
   readonly citizens: readonly CitizenState[]
 }
 
-export type SimulationState = SimulationStateV1 | SimulationStateV2
+export type SimulationState = SimulationStateV1 | SimulationStateV2 | SimulationStateV3
 
 export function isCitizenSimulationState(state: SimulationState): state is SimulationStateV2 {
   return state.version === 2
+}
+
+export function getCitizenSimulationState(state: SimulationState): SimulationStateV2 | null {
+  return state.version === 2 ? state : state.version === 3 ? state.citizen : null
 }
 
 export interface SimulationEnvironment {
@@ -200,11 +211,13 @@ export interface SimulationTransitionV2 {
   readonly events: readonly SimulationEvent[]
 }
 
-export type SimulationTransition = SimulationTransitionV1 | SimulationTransitionV2
+export type SimulationTransition = SimulationTransitionV1 | SimulationTransitionV2 | SimulationTransitionV3
 
 export interface ReplayResult {
   readonly state: SimulationState
   readonly events: readonly SimulationEvent[]
+  readonly truthEvents?: readonly IncidentOccurredEvent[]
+  readonly observationEvents?: readonly ReportAvailableEvent[]
 }
 
 export interface SimulationSnapshot {
