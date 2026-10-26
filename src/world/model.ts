@@ -1,3 +1,5 @@
+import type { CityModel } from '../city/model'
+
 export type WorldPointMm = Readonly<{ x: number; y: number; z: number }>
 export type GroundPointMm = Readonly<{ x: number; z: number }>
 export type DistrictKindV2 = 'residential' | 'commercial' | 'mixedUse' | 'transport' | 'public'
@@ -9,7 +11,7 @@ export interface WorldConfigV2 {
   readonly version: 2
   readonly seed: string
   readonly extentMm: number
-  readonly generatorVersion: 'district-world-v1'
+  readonly generatorVersion: 'district-world-v1' | 'heritage-overlay-v1'
 }
 
 export interface DistrictV2 {
@@ -104,6 +106,7 @@ export interface WorldBox {
 export interface WorldModelV2 {
   readonly version: 2
   readonly config: WorldConfigV2
+  readonly baseCity?: CityModel
   readonly bounds: Readonly<{ minX: number; maxX: number; minZ: number; maxZ: number; maxY: number }>
   readonly districts: readonly DistrictV2[]
   readonly roadNodes: readonly Readonly<{ id: string; position: GroundPointMm }>[]

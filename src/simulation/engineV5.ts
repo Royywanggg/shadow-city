@@ -1,5 +1,6 @@
 import { hashSeed } from './rng'
-import { createNavigationIndexV2, findRouteV2, type NavigationIndexV2, type AccessMode } from '../world/navigation/routeV2'
+import { createNavigationIndexV2, findRouteV2, findRoutesFromV2,
+  type NavigationIndexV2, type AccessMode } from '../world/navigation/routeV2'
 import type { ActivityKind, SemanticPlace, WorldModelV2 } from '../world/model'
 import { createCitizenProfilesV5, activityDemand, localMinute, placeIsOpen } from './v5Profiles'
 import { moveCitizenOneTick, initialTrace } from './movementV5'
@@ -18,6 +19,7 @@ export function worldFingerprintV5(world: WorldModelV2, config: SimulationConfig
   commands: readonly AccessCommandV5[] = []): string {
   if (world.version !== 2 || config.version !== 5) throw new Error('V5 version mismatch')
   const worldHash = hashSeed(JSON.stringify({ config: world.config, bounds: world.bounds,
+    baseCity: world.baseCity,
     districts: world.districts, roadNodes: world.roadNodes, roadEdges: world.roadEdges,
     surfaces: world.surfaces, navNodes: world.navNodes, navEdges: world.navEdges,
     connectors: world.connectors, places: world.places,
@@ -94,6 +96,8 @@ function chooseDestination(citizen: CitizenStateV5, profile: CitizenProfileV5,
   let best: { place: SemanticPlace; slotId: string;
     route: ReturnType<typeof findRouteV2> & { status: 'ok' }; activityKind: ActivityKind;
     score: number } | null = null
+  const routes = findRoutesFromV2(index, citizen.currentNodeId!, profile.travellerCosts,
+    accessModes, priorEdgeCrowd)
   for (const place of candidates) {
     const slots = place.kind === 'home' ? [profile.homeSlotNodeId] :
       place.slotNodeIds.filter((id) => !occupied.has(id))
@@ -103,8 +107,7 @@ function chooseDestination(citizen: CitizenStateV5, profile: CitizenProfileV5,
       activityDemand(b, localMinute(environment.config, tick)) * profile.preferences[b] ? a : b)
     const chosenSlot = returnHome ? profile.homeSlotNodeId :
       slots[hashSeed(`${environment.config.simulationSeed}:${citizen.id}:${tick}:${place.id}:slot`) % slots.length]
-    const route = findRouteV2(index, citizen.currentNodeId, chosenSlot,
-      profile.travellerCosts, accessModes, priorEdgeCrowd)
+    const route = routes.routeTo(chosenSlot)
     if (route.status !== 'ok') continue
     const familiarity = profile.workPlaceId === place.id ? 0.35 : 0
     const score = returnHome ? -route.costMs :

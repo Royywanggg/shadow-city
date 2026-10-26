@@ -92,26 +92,66 @@ export function edgeCostMs(edge: NavEdgeV2, costs: TravellerCosts, crowdCount = 
     Math.min(6_000, crowdCount * 350))
 }
 
-export function findRouteV2(index: NavigationIndexV2, originNodeId: string,
-  destinationNodeId: string, costs: TravellerCosts = DEFAULT_TRAVELLER_COSTS,
-  accessModes: ReadonlyMap<string, AccessMode> = new Map(),
-  priorCrowd: ReadonlyMap<string, number> = new Map()): RouteResultV2 {
-  if (!index.nodeById.has(originNodeId) || !index.nodeById.has(destinationNodeId)) {
-    return { status: 'unreachable', reason: 'unknown-node' }
+type QueueItem = Readonly<{ nodeId: string; costMs: number }>
+
+class RouteQueue {
+  private readonly items: QueueItem[] = []
+  private less(a: QueueItem, b: QueueItem): boolean {
+    return a.costMs < b.costMs || a.costMs === b.costMs && a.nodeId < b.nodeId
   }
-  if (originNodeId === destinationNodeId) return { status: 'ok', steps: [], lengthMm: 0, costMs: 0 }
+  push(item: QueueItem): void {
+    const items = this.items
+    items.push(item)
+    let index = items.length - 1
+    while (index > 0) {
+      const parent = Math.floor((index - 1) / 2)
+      if (!this.less(items[index], items[parent])) break
+      ;[items[index], items[parent]] = [items[parent], items[index]]
+      index = parent
+    }
+  }
+  pop(): QueueItem | null {
+    const items = this.items
+    if (items.length === 0) return null
+    const result = items[0]
+    const last = items.pop()!
+    if (items.length > 0) {
+      items[0] = last
+      let index = 0
+      while (true) {
+        const left = index * 2 + 1
+        const right = left + 1
+        let smallest = index
+        if (left < items.length && this.less(items[left], items[smallest])) smallest = left
+        if (right < items.length && this.less(items[right], items[smallest])) smallest = right
+        if (smallest === index) break
+        ;[items[index], items[smallest]] = [items[smallest], items[index]]
+        index = smallest
+      }
+    }
+    return result
+  }
+  get size(): number { return this.items.length }
+}
+
+/** One shortest-path tree can answer every candidate place for one decision Tick. */
+export function findRoutesFromV2(index: NavigationIndexV2, originNodeId: string,
+  costs: TravellerCosts = DEFAULT_TRAVELLER_COSTS,
+  accessModes: ReadonlyMap<string, AccessMode> = new Map(),
+  priorCrowd: ReadonlyMap<string, number> = new Map(),
+  stopAtNodeId?: string): Readonly<{ routeTo(destinationNodeId: string): RouteResultV2 }> {
+  if (!index.nodeById.has(originNodeId)) return {
+    routeTo: () => ({ status: 'unreachable', reason: 'unknown-node' }),
+  }
   const costsByNode = new Map<string, number>([[originNodeId, 0]])
   const previous = new Map<string, { fromNodeId: string; edgeId: string }>()
-  const pending = new Set<string>([originNodeId])
+  const pending = new RouteQueue()
+  pending.push({ nodeId: originNodeId, costMs: 0 })
   while (pending.size > 0) {
-    let nodeId: string | null = null
-    for (const candidate of pending) {
-      if (nodeId === null || costsByNode.get(candidate)! < costsByNode.get(nodeId)! ||
-        (costsByNode.get(candidate) === costsByNode.get(nodeId) && candidate < nodeId)) nodeId = candidate
-    }
-    if (!nodeId) break
-    pending.delete(nodeId)
-    if (nodeId === destinationNodeId) break
+    const current = pending.pop()!
+    const nodeId = current.nodeId
+    if (current.costMs !== costsByNode.get(nodeId)) continue
+    if (nodeId === stopAtNodeId) break
     for (const neighbour of index.adjacency.get(nodeId) ?? []) {
       const edge = index.edgeById.get(neighbour.edgeId)!
       if ((edge.kind === 'stair' && !costs.allowStairs) ||
@@ -126,23 +166,35 @@ export function findRouteV2(index: NavigationIndexV2, originNodeId: string,
           `${nodeId}:${edge.id}` < `${oldPredecessor.fromNodeId}:${oldPredecessor.edgeId}`)) {
         costsByNode.set(neighbour.toNodeId, nextCost)
         previous.set(neighbour.toNodeId, { fromNodeId: nodeId, edgeId: edge.id })
-        pending.add(neighbour.toNodeId)
+        pending.push({ nodeId: neighbour.toNodeId, costMs: nextCost })
       }
     }
   }
-  const costMs = costsByNode.get(destinationNodeId)
-  if (costMs === undefined) return { status: 'unreachable', reason: 'disconnected' }
-  const reversed: RouteStepV5[] = []
-  let cursor = destinationNodeId
-  while (cursor !== originNodeId) {
-    const source = previous.get(cursor)
-    if (!source) throw new Error('Missing multi-level route predecessor')
-    reversed.push({ edgeId: source.edgeId, fromNodeId: source.fromNodeId,
-      toNodeId: cursor, lengthMm: index.edgeById.get(source.edgeId)!.lengthMm })
-    cursor = source.fromNodeId
-  }
-  const steps = reversed.reverse()
-  return { status: 'ok', steps, lengthMm: steps.reduce((sum, step) => sum + step.lengthMm, 0), costMs }
+  return { routeTo(destinationNodeId: string): RouteResultV2 {
+    if (!index.nodeById.has(destinationNodeId)) return { status: 'unreachable', reason: 'unknown-node' }
+    const costMs = costsByNode.get(destinationNodeId)
+    if (costMs === undefined) return { status: 'unreachable', reason: 'disconnected' }
+    const reversed: RouteStepV5[] = []
+    let cursor = destinationNodeId
+    while (cursor !== originNodeId) {
+      const source = previous.get(cursor)
+      if (!source) throw new Error('Missing multi-level route predecessor')
+      reversed.push({ edgeId: source.edgeId, fromNodeId: source.fromNodeId,
+        toNodeId: cursor, lengthMm: index.edgeById.get(source.edgeId)!.lengthMm })
+      cursor = source.fromNodeId
+    }
+    const steps = reversed.reverse()
+    return { status: 'ok', steps,
+      lengthMm: steps.reduce((sum, step) => sum + step.lengthMm, 0), costMs }
+  } }
+}
+
+export function findRouteV2(index: NavigationIndexV2, originNodeId: string,
+  destinationNodeId: string, costs: TravellerCosts = DEFAULT_TRAVELLER_COSTS,
+  accessModes: ReadonlyMap<string, AccessMode> = new Map(),
+  priorCrowd: ReadonlyMap<string, number> = new Map()): RouteResultV2 {
+  return findRoutesFromV2(index, originNodeId, costs, accessModes, priorCrowd,
+    destinationNodeId).routeTo(destinationNodeId)
 }
 
 export function orientedEdgePath(index: NavigationIndexV2, step: RouteStepV5): readonly WorldPointMm[] {
