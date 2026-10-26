@@ -1,5 +1,6 @@
 import { Bloom, EffectComposer } from '@react-three/postprocessing'
 import type { CityModel } from '../city/model'
+import type { CameraController } from '../camera/cameraController'
 import { Buildings } from './Buildings'
 import { CameraRig } from './CameraRig'
 import { InstancedBoxes } from './InstancedBoxes'
@@ -8,7 +9,7 @@ import { RenderDiagnostics } from './RenderDiagnostics'
 import { Roads } from './Roads'
 import { StreetFurniture } from './StreetFurniture'
 
-export function CityScene({ city, resetToken }: { city: CityModel; resetToken: number }) {
+export function CityScene({ city, cameraController }: { city: CityModel; cameraController: CameraController }) {
   const half = city.size / 2
   return (
     <>
@@ -59,7 +60,7 @@ export function CityScene({ city, resetToken }: { city: CityModel; resetToken: n
       <EffectComposer multisampling={0}>
         <Bloom intensity={0.23} luminanceThreshold={1.2} luminanceSmoothing={0.2} mipmapBlur />
       </EffectComposer>
-      <CameraRig resetToken={resetToken} />
+      <CameraRig controller={cameraController} />
       {import.meta.env.DEV && <RenderDiagnostics />}
     </>
   )

@@ -68,32 +68,119 @@ body { min-width: 320px; }
   letter-spacing: .02em;
 }
 
-.reset-view {
+.camera-controls {
   position: absolute;
   top: clamp(30px, 5.5vh, 66px);
   right: clamp(26px, 5vw, 84px);
+  display: grid;
+  grid-template-columns: 42px minmax(66px, auto) 58px;
+  align-items: center;
+  gap: 8px 10px;
+  padding: 9px;
   border: 1px solid rgba(134, 177, 188, .35);
   border-radius: 2px;
-  padding: 10px 12px;
   color: #a7c5cb;
-  background: rgba(10, 24, 38, .56);
+  background: rgba(8, 20, 33, .72);
+  box-shadow: 0 8px 30px rgba(0, 4, 12, .16);
   font: 600 10px 'DM Sans', Arial, sans-serif;
-  letter-spacing: .18em;
+  z-index: 2;
+}
+
+.camera-controls button, .simulation-controls button {
+  border: 1px solid rgba(134, 177, 188, .28);
+  border-radius: 2px;
+  color: #b9d4d5;
+  background: rgba(22, 42, 56, .64);
+  font: 600 10px 'DM Sans', Arial, sans-serif;
+  letter-spacing: .11em;
   cursor: pointer;
 }
 
-.reset-view:hover, .reset-view:focus-visible {
-  border-color: #a6d4d2;
-  color: #eef7f4;
+.camera-controls button:hover, .camera-controls button:focus-visible,
+.simulation-controls button:hover, .simulation-controls button:focus-visible {
+  border-color: #9bd0cf;
+  color: #f0f8f5;
   outline: none;
 }
 
-.reset-view span { margin-left: 7px; font-size: 14px; }
+.camera-controls button:disabled, .simulation-controls button:disabled {
+  opacity: .4;
+  cursor: default;
+}
+
+.camera-compass { width: 42px; height: 42px; padding: 0; font-size: 15px !important; }
+.camera-compass-needle { display: inline-block; color: #92d2d1; transform-origin: center; }
+.camera-bearing { display: grid; gap: 3px; min-width: 66px; }
+.camera-control-label { color: #82a4ad; font-size: 9px; letter-spacing: .18em; }
+.camera-bearing output { color: #d8ebeb; font-family: 'Space Grotesk', Arial, sans-serif; font-size: 16px; }
+.camera-rotate { display: flex; gap: 3px; }
+.camera-rotate button { width: 28px; height: 30px; padding: 0; font-size: 16px; }
+.camera-pitch { grid-column: 1 / 3; display: grid; gap: 5px; }
+.camera-pitch .camera-control-label { display: flex; justify-content: space-between; }
+.camera-pitch output { color: #b9d4d5; }
+.camera-pitch input { width: 100%; margin: 0; accent-color: #78bac0; cursor: pointer; }
+.camera-reset { grid-column: 3; width: 100%; height: 28px; padding: 0 5px; font-size: 8px !important; white-space: nowrap; }
+.camera-reset span { margin-left: 2px; }
+
+.simulation-controls {
+  position: absolute;
+  left: 50%;
+  bottom: 20px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  width: min(760px, calc(100% - 360px));
+  min-height: 68px;
+  padding: 10px 13px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(134, 177, 188, .3);
+  border-radius: 2px;
+  color: #bdd5d7;
+  background: rgba(8, 20, 33, .83);
+  box-shadow: 0 8px 30px rgba(0, 4, 12, .22);
+  backdrop-filter: blur(8px);
+}
+
+.simulation-readout { display: grid; gap: 3px; min-width: 142px; }
+.simulation-kicker, .simulation-events, .simulation-navigation label {
+  color: #83a7af;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+.simulation-kicker { color: #80c6c3; }
+.simulation-tick { color: #e1eeed; font-family: 'Space Grotesk', Arial, sans-serif; font-size: 17px; white-space: nowrap; }
+.simulation-live-tick { color: #8faab4; font-size: 10px; }
+.simulation-events { letter-spacing: .05em; text-transform: none; }
+.simulation-actions { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.simulation-actions > button { height: 30px; padding: 0 10px; white-space: nowrap; }
+.simulation-actions > button:first-child { min-width: 55px; color: #a8dbd5; border-color: rgba(120, 186, 192, .5); }
+.simulation-speed { display: flex; gap: 2px; margin-left: 3px; }
+.simulation-speed button { width: 30px; height: 30px; padding: 0; letter-spacing: 0; }
+.simulation-speed button[aria-pressed='true'] { color: #eaf8f5; border-color: #8abfbe; background: #31535e; }
+.simulation-navigation { display: grid; gap: 4px; min-width: 122px; margin-left: auto; }
+.simulation-navigation form, .simulation-inspection-actions { display: flex; align-items: center; gap: 4px; }
+.simulation-navigation label { margin-right: 2px; }
+.simulation-navigation input {
+  width: 52px;
+  height: 29px;
+  padding: 3px 5px;
+  border: 1px solid rgba(134, 177, 188, .28);
+  border-radius: 2px;
+  color: #d8e8e8;
+  background: rgba(16, 37, 51, .8);
+  font: 10px 'DM Sans', Arial, sans-serif;
+}
+.simulation-navigation button { height: 29px; padding: 0 6px; font-size: 8px; }
+.simulation-inspection-actions button:last-child { white-space: nowrap; }
+.simulation-notice { position: absolute; right: 0; bottom: calc(100% + 6px); max-width: 300px; margin: 0; padding: 7px 9px; border: 1px solid rgba(134, 177, 188, .35); color: #d8e8e8; background: rgba(8, 20, 33, .9); font-size: 10px; }
 
 .scene-meta {
   position: absolute;
   left: clamp(26px, 5vw, 84px);
-  bottom: clamp(26px, 5vh, 54px);
+  bottom: 106px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -106,7 +193,7 @@ body { min-width: 320px; }
 .interaction-hint {
   position: absolute;
   right: clamp(26px, 5vw, 84px);
-  bottom: clamp(26px, 5vh, 54px);
+  bottom: 106px;
   margin: 0;
   pointer-events: none;
 }
@@ -126,9 +213,22 @@ body { min-width: 320px; }
 @media (max-width: 650px) {
   .masthead { top: 26px; left: 25px; }
   .masthead h1 { margin-top: 9px; }
-  .reset-view { top: 34px; right: 25px; padding: 7px; font-size: 0; }
-  .reset-view span { margin: 0; font-size: 16px; }
-  .scene-meta { left: 25px; bottom: 55px; gap: 7px; font-size: 8px; letter-spacing: .12em; }
+  .camera-controls { top: 121px; right: 18px; grid-template-columns: 32px 50px 48px; gap: 5px; padding: 5px; }
+  .camera-compass { width: 32px; height: 32px; }
+  .camera-bearing { min-width: 0; }
+  .camera-bearing output { font-size: 12px; }
+  .camera-control-label { font-size: 7px; }
+  .camera-rotate button { width: 23px; height: 25px; }
+  .camera-reset { font-size: 0 !important; }
+  .camera-reset span { margin: 0; font-size: 13px; }
+  .scene-meta { left: 25px; bottom: 160px; gap: 7px; font-size: 8px; letter-spacing: .12em; }
   .meta-rule { width: 15px; }
-  .interaction-hint { left: 25px; right: auto; bottom: 24px; font-size: 8px; }
+  .interaction-hint { display: none; }
+  .simulation-controls { bottom: 12px; width: calc(100% - 24px); min-height: 135px; padding: 9px; align-items: flex-start; flex-wrap: wrap; gap: 6px 8px; }
+  .simulation-readout { min-width: 118px; }
+  .simulation-tick { font-size: 14px; }
+  .simulation-actions { flex: 1; justify-content: flex-end; }
+  .simulation-actions > button { height: 27px; padding: 0 5px; font-size: 8px; }
+  .simulation-speed button { height: 26px; width: 26px; }
+  .simulation-navigation { width: 100%; margin-left: 0; }
 }
