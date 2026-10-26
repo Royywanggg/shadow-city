@@ -21,4 +21,35 @@ describe('character level of detail', () => {
     expect(preferredCharacterTier(7, false, 'medium')).toBe('medium')
     expect(preferredCharacterTier(7, false, 'far')).toBe('far')
   })
+
+  it('keeps incumbents when two residents exchange a small screen-size lead at pool capacity', () => {
+    const candidates = Array.from({ length: MAX_MEDIUM_CHARACTERS + 1 }, (_, index) => ({
+      id: `citizen-${index}`,
+      pixelHeight: index === MAX_MEDIUM_CHARACTERS ? 9.1 : 9,
+      selected: false,
+      previous: index === MAX_MEDIUM_CHARACTERS ? 'far' as const : 'medium' as const,
+    }))
+    const first = allocateCharacterTiers(candidates)
+    expect(first.get('citizen-0')).toBe('medium')
+    expect(first.get(`citizen-${MAX_MEDIUM_CHARACTERS}`)).toBe('far')
+    const second = allocateCharacterTiers(candidates.map((candidate) => ({
+      ...candidate,
+      previous: first.get(candidate.id)!,
+      pixelHeight: candidate.id === `citizen-${MAX_MEDIUM_CHARACTERS}` ? 9.2 : 9,
+    })))
+    expect(second.get('citizen-0')).toBe('medium')
+    expect(second.get(`citizen-${MAX_MEDIUM_CHARACTERS}`)).toBe('far')
+  })
+
+  it('allows a substantially larger newcomer to displace an incumbent', () => {
+    const candidates = Array.from({ length: MAX_CLOSE_CHARACTERS + 1 }, (_, index) => ({
+      id: `citizen-${index}`,
+      pixelHeight: index === MAX_CLOSE_CHARACTERS ? 28 : 20,
+      selected: false,
+      previous: index === MAX_CLOSE_CHARACTERS ? 'far' as const : 'close' as const,
+    }))
+    const tiers = allocateCharacterTiers(candidates)
+    expect(tiers.get(`citizen-${MAX_CLOSE_CHARACTERS}`)).toBe('close')
+    expect([...tiers.values()].filter((tier) => tier === 'close')).toHaveLength(MAX_CLOSE_CHARACTERS)
+  })
 })
