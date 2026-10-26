@@ -17,6 +17,7 @@ export function CityScene({ city, cameraController }: { city: CityModel; cameraC
       <fogExp2 attach="fog" args={['#08111f', 0.00255]} />
       <ambientLight color="#9db5cc" intensity={0.9} />
       <hemisphereLight args={['#adc5d8', '#172331', 1.18]} />
+      <directionalLight position={[65, 90, -80]} color="#8eaebc" intensity={0.38} />
       <directionalLight
         position={[-85, 145, 65]}
         color="#c9d9e9"

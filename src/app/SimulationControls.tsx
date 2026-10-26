@@ -4,11 +4,12 @@ import { type PlaybackSpeed } from '../playback/FixedStepScheduler'
 
 interface SimulationControlsProps {
   controller: PlaybackController
+  populationSize: number
 }
 
 const SPEEDS: readonly PlaybackSpeed[] = [1, 2, 4]
 
-export function SimulationControls({ controller }: SimulationControlsProps) {
+export function SimulationControls({ controller, populationSize }: SimulationControlsProps) {
   const snapshot = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot)
   const [targetTick, setTargetTick] = useState('')
 
@@ -36,7 +37,7 @@ export function SimulationControls({ controller }: SimulationControlsProps) {
           TICK {snapshot.tick.toLocaleString('en-US')}
           {snapshot.isInspecting && <span className="simulation-live-tick"> / LIVE {snapshot.liveTick.toLocaleString('en-US')}</span>}
         </span>
-        <span className="simulation-events">{snapshot.commandCount} probes submitted · {snapshot.eventCount} diagnostic events</span>
+        <span className="simulation-events">{populationSize} synthetic citizens · {snapshot.eventCount} events · {snapshot.commandCount} probes</span>
       </div>
       <div className="simulation-actions">
         <button
