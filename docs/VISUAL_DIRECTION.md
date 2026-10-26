@@ -2,7 +2,7 @@
 
 ## Status and source of truth
 
-This document is the visual source of truth for Shadow City v0.1. The supplied reference image has been inspected. It shows a dense isometric architectural miniature with layered roof equipment, deep blue-black massing, selective cyan light, and warm pockets of occupancy. Translate its depth, crafted silhouettes, and material richness into a wider fictional city; do not copy its strongly luminous platform edge or turn the entire city into neon science fiction.
+This document is the visual source of truth for Shadow City's city scene and later visual additions. The supplied reference image has been inspected. It shows a dense isometric architectural miniature with layered roof equipment, deep blue-black massing, selective cyan light, and warm pockets of occupancy. Translate its depth, crafted silhouettes, and material richness into a wider fictional city; do not copy its strongly luminous platform edge or turn the entire city into neon science fiction.
 
 The final setting is a **fictional modern metropolis**. London and other European cities may inform its density, street hierarchy, and proportions, but no real city or geographic data is being recreated. The rendering style is **stylized realism**: more detailed and materially considered than a cartoon low-poly scene, while remaining a deliberately composed miniature rather than a photoreal game world.
 
@@ -103,3 +103,9 @@ The preserved `docs/screenshots/hero-1440x900.png` is the v0.1 baseline. Compare
 ## v0.1.2 review focus
 
 The v0.1.2 pass keeps the nine building families and connected road graph. Larger parcel groupings near the square and in selected work blocks, split apartment masses, asymmetric offices, deeper facade ribs, and more varied roofs should be judged in the default hero view. The fixed screenshot is a review candidate, not visual approval. The regular road lattice remains visible, and local light changes should only be retained when they produce a clear improvement in the browser image.
+
+## v0.3 living city review focus
+
+Citizens should reveal movement and human scale without turning the architectural miniature into a bright icon map. Use restrained pale teal and warm amber to separate outward and returning travel. Their silhouettes should be readable at the fixed hero scale and at closer zoom, especially near the plaza and crossings; keep their world size credible beside doorways and street fixtures. Parked or indoor citizens need no exterior mesh. Selection may show a small ground ring, a thin route line following pedestrian edges, and a compact information panel outside the city focal area. Avoid broad neon paths, floating labels over every person, or glowing effects that compete with the skyline.
+
+The v0.3 browser gate uses city seed `shadow-city-hero-01`, simulation seed `shadow-city-sim-01`, 1440 × 900 CSS pixels, and explicit Tick 0, 100, and 500 screenshots. Check that citizens are visible at hero and close scales, stand on walking surfaces, turn along pedestrian edges, remain legible at 0°/90°/180°/270° bearings, and stay selectable. Also inspect the narrow layout and a 100-citizen run. Preserve v0.2 captures for comparison. Record any reverse-view facade darkness and only retain a local fill or material adjustment if the actual browser image improves without flattening the hero lighting hierarchy.

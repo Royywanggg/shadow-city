@@ -95,8 +95,9 @@ try {
   await page.getByRole('button', { name: 'Step', exact: true }).click()
   await page.getByRole('button', { name: 'Step', exact: true }).click()
   assert(await tick(page) === 2, 'Probe command should run through two fixed ticks')
-  assert((await page.locator('.simulation-events').textContent())?.includes('1 diagnostic events'),
-    'Diagnostic event must appear in the event count')
+  assert(await page.evaluate(() => window.__shadowCityV03?.getEvents().some((event) =>
+    event.type === 'DiagnosticProbeSampled')),
+  'Diagnostic probe must still emit its typed event')
   await page.getByRole('spinbutton', { name: 'Tick to inspect' }).fill('0')
   await page.getByRole('button', { name: 'Jump to Tick' }).click()
   assert(await tick(page) === 0, 'Seek must reconstruct tick zero')

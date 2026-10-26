@@ -64,11 +64,18 @@ This roadmap is milestone-based, not date-based. Each milestone should leave a u
 
 ## v0.3 — Urban agents and movement
 
-**Goal:** Make the city behave as a place before introducing crime or policing.
+**Goal:** Make the city visibly alive with reproducible citizen activity and movement before introducing crime or policing.
 
-**In scope:** Basic agent schedules, destinations, movement on the road graph, and visible agent state. Add routing here, with documented assumptions about travel and access.
+**In scope:** A static pedestrian network derived from the existing road, block, parcel, and entrance layout; deterministic route planning; configurable citizen population; a clearly labeled synthetic activity state machine; fixed-tick movement and meaningful trip events; independent instanced agent rendering, route-aware visual interpolation, and a compact selected-agent inspector. Preserve the existing city, camera, playback, replay, and static/dynamic data boundary.
 
-**Exit criteria:** Agents move on valid connected routes, runs remain reproducible, and the renderer can display many agents without compromising the city view or interaction quality.
+**Out of scope:** Criminal or police agents, crowd collision avoidance, traffic, realistic economic behavior, backend services, and databases.
+
+**Exit criteria:**
+
+- Shared static entrance and crossing data align rendered geometry with pedestrian graph connections. Every eligible home and destination is accessible; route edges are contiguous and avoid building interiors. Unreachable destinations return an explicit failure rather than a teleport.
+- The same city, versioned config, simulation seed, and ordered command history reproduce the same population, agent state at each tick, trip events, and replay result. Agent movement depends only on fixed logical ticks; Pause, Step, 1×/2×/4×, Reset, and historical inspection retain their exact semantics. Static `CityModel` and camera state remain independent.
+- A fixed `shadow-city-hero-01` run at 1440 × 900 is inspected in a browser at defined simulation ticks. Agents are legible at hero and close views, remain on valid walking surfaces at cardinal camera bearings, and can be selected. Narrow layout and 100-agent playback are inspected. Preserve v0.2 screenshots and save separate v0.3 evidence with browser, DPR, seeds, population, tick, and performance sampling method.
+- Focused spatial, routing, movement, behavior, determinism, replay, rendering-interpolation, and integration tests pass, along with type checking and production build. Report 100-agent simulation tick cost separately from frame time, FPS, draw calls, and triangles on a named rendering environment; do not treat software rendering as a hardware GPU benchmark.
 
 ## v0.4 — Ground truth and observation
 
