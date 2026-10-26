@@ -27,6 +27,7 @@ import { DEFAULT_SIMULATION_CONFIG, type SimulationConfig } from '../simulation/
 import { DEFAULT_V3_SCENARIO_CONFIG, V04_REVIEW_SCENARIO_CONFIG } from '../simulation/v3Types'
 import { DEFAULT_V4_SCENARIO_CONFIG, V05_REVIEW_SCENARIO_CONFIG } from '../simulation/v4Types'
 import './styles.css'
+import { MultiLevelApp } from './MultiLevelApp'
 
 declare global {
   interface Window {
@@ -66,7 +67,7 @@ const REPORTING_PROBABILITIES: Readonly<Record<ReportingScenarioId, number>> = {
   C: 0.9,
 }
 
-export function App() {
+function LegacyApp() {
   const parameters = new URLSearchParams(window.location.search)
   const seed = parameters.get('seed') || HERO_SEED
   const modelV2 = parameters.get('model') === 'v2'
@@ -284,4 +285,11 @@ export function App() {
       <p className="interaction-hint">DRAG TO PAN <span>·</span> RIGHT DRAG TO ROTATE <span>·</span> SCROLL TO ZOOM</p>
     </main>
   )
+}
+
+export function App() {
+  const params = new URLSearchParams(window.location.search)
+  if (params.get('world') === 'legacy' || params.has('model') ||
+    params.get('review') === '1') return <LegacyApp />
+  return <MultiLevelApp />
 }

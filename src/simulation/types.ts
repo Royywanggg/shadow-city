@@ -86,12 +86,13 @@ export interface SimulationStateV1 extends SimulationStateBase {
   readonly version: 1
 }
 
-export type CitizenActivity = 'atHome' | 'planningTrip' | 'travelling' | 'atDestination' | 'returningHome'
+export type CitizenActivity = 'atHome' | 'planningTrip' | 'waitingForSpace' | 'travelling' | 'atDestination' | 'returningHome'
 
 export interface AgentProfile {
   readonly id: string
   readonly homeAnchorId: string
   readonly speedUnitsPerLogicalSecond: number
+  readonly jogPreference: number
   readonly firstDepartureTick: number
   readonly homeDwellTicks: number
   readonly visitDwellTicks: number
@@ -113,9 +114,13 @@ export interface RouteStep {
 export interface CitizenState {
   readonly id: string
   readonly activity: CitizenActivity
+  readonly movementMode: 'walk' | 'jog'
+  readonly headingRadians: number
   readonly position: WorldPosition
   readonly currentAnchorId: string | null
   readonly destinationAnchorId: string | null
+  /** Reserved public activity slot while travelling, then occupied until departure. */
+  readonly occupancySlotId: string | null
   readonly route: readonly RouteStep[]
   readonly routeIndex: number
   readonly distanceOnEdge: number
@@ -150,6 +155,7 @@ export interface SimulationEnvironment {
   readonly navigation: NavigationIndex
   readonly profiles: readonly AgentProfile[]
   readonly publicAnchorIds: readonly string[]
+  readonly activitySlots: readonly import('./activitySlots').ActivitySlot[]
   readonly fingerprint: string
   readonly runId: string
 }
@@ -203,8 +209,14 @@ export interface TripFailedEvent extends CitizenEventBase {
   readonly reason: 'unreachable' | 'invalid-anchor'
 }
 
+export interface TripDeferredEvent extends CitizenEventBase {
+  readonly type: 'TripDeferred'
+  readonly desiredAnchorId: string
+  readonly reason: 'capacity'
+}
+
 export type CitizenEvent = TripStartedEvent | DestinationReachedEvent |
-  ActivityStartedEvent | ActivityFinishedEvent | TripFailedEvent
+  ActivityStartedEvent | ActivityFinishedEvent | TripFailedEvent | TripDeferredEvent
 
 export type SimulationEvent = DiagnosticProbeSampledEvent | CitizenEvent
 

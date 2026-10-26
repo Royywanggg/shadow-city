@@ -1,4 +1,5 @@
 export type PlaybackSpeed = 1 | 2 | 4
+export const DEFAULT_TICKS_PER_SECOND = 10
 export type SchedulerStatus = 'paused' | 'playing' | 'suspended'
 
 export interface SchedulerSnapshot {
@@ -55,7 +56,7 @@ export class FixedStepScheduler {
     this.host = host
     this.onTick = onTick
     this.onChange = onChange
-    this.baseTicksPerSecond = options.baseTicksPerSecond ?? 10
+    this.baseTicksPerSecond = options.baseTicksPerSecond ?? DEFAULT_TICKS_PER_SECOND
     this.maximumStepsPerFrame = options.maximumStepsPerFrame ?? 8
     this.maximumDebtTicks = options.maximumDebtTicks ?? 20
     this.longGapMs = options.longGapMs ?? 1000

@@ -11,6 +11,7 @@ export interface AgentMotionState {
   }>[]
   readonly routeId: string | null
   readonly distanceAlongRoute: number
+  readonly headingRadians?: number
 }
 
 export interface AgentRenderPose {
@@ -37,6 +38,16 @@ function routeLength(route: AgentMotionState['route']): number {
   return route.reduce((length, step) => length + Math.max(0, step.length), 0)
 }
 
+function heading(a: PedestrianNode, b: PedestrianNode): number {
+  return Math.atan2(b.x - a.x, b.z - a.z)
+}
+
+function blendHeading(from: number, to: number, progress: number): number {
+  const eased = progress * progress * (3 - 2 * progress)
+  const delta = Math.atan2(Math.sin(to - from), Math.cos(to - from))
+  return from + delta * eased
+}
+
 function sampleRoute(
   route: AgentMotionState['route'],
   distance: number,
@@ -49,11 +60,22 @@ function sampleRoute(
     if (!from || !to || !(step.length > 0)) return null
     if (remainder <= step.length || index === route.length - 1) {
       const amount = Math.max(0, Math.min(1, remainder / step.length))
+      let yaw = heading(from, to)
+      const turnWindow = Math.min(0.75, step.length * 0.4)
+      if (amount * step.length < turnWindow && index > 0) {
+        const before = lookup.nodes.get(route[index - 1].fromNodeId)
+        if (before) yaw = blendHeading(blendHeading(heading(before, from), yaw, 0.5), yaw,
+          amount * step.length / turnWindow)
+      } else if ((1 - amount) * step.length < turnWindow && index < route.length - 1) {
+        const after = lookup.nodes.get(route[index + 1].toNodeId)
+        if (after) yaw = blendHeading(yaw, blendHeading(yaw, heading(to, after), 0.5),
+          1 - (1 - amount) * step.length / turnWindow)
+      }
       return {
         x: from.x + (to.x - from.x) * amount,
         y: from.surfaceY + (to.surfaceY - from.surfaceY) * amount,
         z: from.z + (to.z - from.z) * amount,
-        yaw: Math.atan2(to.x - from.x, to.z - from.z),
+        yaw,
       }
     }
     remainder -= step.length
@@ -66,7 +88,7 @@ function currentPose(state: AgentMotionState): AgentRenderPose {
     x: state.position.x,
     y: state.position.y,
     z: state.position.z,
-    yaw: 0,
+    yaw: state.headingRadians ?? 0,
     visible: isOutdoor(state.activity),
   }
 }

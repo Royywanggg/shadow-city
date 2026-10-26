@@ -1,0 +1,1121 @@
+{
+  "model": "WorldModelV2 / SimulationStateV5",
+  "worldSeed": "shadow-city-multilevel-01",
+  "seedPairs": 20,
+  "ticks": 500,
+  "logicalSecondsPerTick": 6,
+  "population": 100,
+  "timeWindow": "08:00–08:50",
+  "intervention": "bridge-entry open versus entryClosed at Tick 0",
+  "note": "Synthetic model output; no real-world causal interpretation. Tick 500 is 50 logical minutes, not a day.",
+  "summary": {
+    "bridgeEntries": {
+      "open": {
+        "min": 8,
+        "median": 14,
+        "max": 16
+      },
+      "closed": {
+        "min": 0,
+        "median": 0,
+        "max": 0
+      }
+    },
+    "visits": {
+      "open": {
+        "min": 501,
+        "median": 534,
+        "max": 559
+      },
+      "closed": {
+        "min": 501,
+        "median": 533,
+        "max": 561
+      }
+    },
+    "encounters": {
+      "open": {
+        "min": 351,
+        "median": 685,
+        "max": 1166
+      },
+      "closed": {
+        "min": 399,
+        "median": 712,
+        "max": 1088
+      }
+    },
+    "offences": {
+      "open": {
+        "min": 0,
+        "median": 1,
+        "max": 3
+      },
+      "closed": {
+        "min": 0,
+        "median": 1,
+        "max": 3
+      }
+    },
+    "reports": {
+      "open": {
+        "min": 0,
+        "median": 0,
+        "max": 2
+      },
+      "closed": {
+        "min": 0,
+        "median": 1,
+        "max": 2
+      }
+    },
+    "levelPersonTicks": {
+      "L0": {
+        "open": {
+          "min": 48183,
+          "median": 48591,
+          "max": 48920
+        },
+        "closed": {
+          "min": 49077,
+          "median": 49581,
+          "max": 49881
+        }
+      },
+      "L1": {
+        "open": {
+          "min": 1013,
+          "median": 1395,
+          "max": 1732
+        },
+        "closed": {
+          "min": 109,
+          "median": 407,
+          "max": 895
+        }
+      }
+    }
+  },
+  "pairs": [
+    {
+      "seedIndex": 0,
+      "open": {
+        "seed": "v06-paired-00",
+        "bridgeOpen": true,
+        "bridgeEntries": 13,
+        "levelPersonTicks": {
+          "L0": 48591,
+          "L1": 1349
+        },
+        "visits": 520,
+        "encounters": 351,
+        "offences": 0,
+        "reports": 0,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 13,
+            "visits": 520,
+            "encounters": 351,
+            "offences": 0,
+            "L0PersonTicks": 48591,
+            "L1PersonTicks": 1349
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:c8e74d81"
+      },
+      "closed": {
+        "seed": "v06-paired-00",
+        "bridgeOpen": false,
+        "bridgeEntries": 0,
+        "levelPersonTicks": {
+          "L0": 49567,
+          "L1": 411
+        },
+        "visits": 521,
+        "encounters": 399,
+        "offences": 1,
+        "reports": 1,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 0,
+            "visits": 521,
+            "encounters": 399,
+            "offences": 1,
+            "L0PersonTicks": 49567,
+            "L1PersonTicks": 411
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:70c7b0e3"
+      }
+    },
+    {
+      "seedIndex": 1,
+      "open": {
+        "seed": "v06-paired-01",
+        "bridgeOpen": true,
+        "bridgeEntries": 16,
+        "levelPersonTicks": {
+          "L0": 48275,
+          "L1": 1638
+        },
+        "visits": 539,
+        "encounters": 732,
+        "offences": 0,
+        "reports": 0,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 16,
+            "visits": 539,
+            "encounters": 732,
+            "offences": 0,
+            "L0PersonTicks": 48275,
+            "L1PersonTicks": 1638
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:3a1f79fc"
+      },
+      "closed": {
+        "seed": "v06-paired-01",
+        "bridgeOpen": false,
+        "bridgeEntries": 0,
+        "levelPersonTicks": {
+          "L0": 49077,
+          "L1": 895
+        },
+        "visits": 540,
+        "encounters": 825,
+        "offences": 0,
+        "reports": 0,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 0,
+            "visits": 540,
+            "encounters": 825,
+            "offences": 0,
+            "L0PersonTicks": 49077,
+            "L1PersonTicks": 895
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:48437548"
+      }
+    },
+    {
+      "seedIndex": 2,
+      "open": {
+        "seed": "v06-paired-02",
+        "bridgeOpen": true,
+        "bridgeEntries": 14,
+        "levelPersonTicks": {
+          "L0": 48492,
+          "L1": 1395
+        },
+        "visits": 545,
+        "encounters": 1166,
+        "offences": 0,
+        "reports": 0,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 14,
+            "visits": 545,
+            "encounters": 1166,
+            "offences": 0,
+            "L0PersonTicks": 48492,
+            "L1PersonTicks": 1395
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:9461a14b"
+      },
+      "closed": {
+        "seed": "v06-paired-02",
+        "bridgeOpen": false,
+        "bridgeEntries": 0,
+        "levelPersonTicks": {
+          "L0": 49276,
+          "L1": 678
+        },
+        "visits": 544,
+        "encounters": 1088,
+        "offences": 3,
+        "reports": 0,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 0,
+            "visits": 544,
+            "encounters": 1088,
+            "offences": 3,
+            "L0PersonTicks": 49276,
+            "L1PersonTicks": 678
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:2de62e5d"
+      }
+    },
+    {
+      "seedIndex": 3,
+      "open": {
+        "seed": "v06-paired-03",
+        "bridgeOpen": true,
+        "bridgeEntries": 15,
+        "levelPersonTicks": {
+          "L0": 48911,
+          "L1": 1013
+        },
+        "visits": 537,
+        "encounters": 779,
+        "offences": 0,
+        "reports": 0,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 15,
+            "visits": 537,
+            "encounters": 779,
+            "offences": 0,
+            "L0PersonTicks": 48911,
+            "L1PersonTicks": 1013
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:3ee9a476"
+      },
+      "closed": {
+        "seed": "v06-paired-03",
+        "bridgeOpen": false,
+        "bridgeEntries": 0,
+        "levelPersonTicks": {
+          "L0": 49664,
+          "L1": 304
+        },
+        "visits": 535,
+        "encounters": 864,
+        "offences": 0,
+        "reports": 0,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 0,
+            "visits": 535,
+            "encounters": 864,
+            "offences": 0,
+            "L0PersonTicks": 49664,
+            "L1PersonTicks": 304
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:1ab7482"
+      }
+    },
+    {
+      "seedIndex": 4,
+      "open": {
+        "seed": "v06-paired-04",
+        "bridgeOpen": true,
+        "bridgeEntries": 13,
+        "levelPersonTicks": {
+          "L0": 48401,
+          "L1": 1533
+        },
+        "visits": 534,
+        "encounters": 901,
+        "offences": 0,
+        "reports": 0,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 13,
+            "visits": 534,
+            "encounters": 901,
+            "offences": 0,
+            "L0PersonTicks": 48401,
+            "L1PersonTicks": 1533
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:845b6a2d"
+      },
+      "closed": {
+        "seed": "v06-paired-04",
+        "bridgeOpen": false,
+        "bridgeEntries": 0,
+        "levelPersonTicks": {
+          "L0": 49307,
+          "L1": 649
+        },
+        "visits": 533,
+        "encounters": 917,
+        "offences": 2,
+        "reports": 2,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 0,
+            "visits": 533,
+            "encounters": 917,
+            "offences": 2,
+            "L0PersonTicks": 49307,
+            "L1PersonTicks": 649
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:110d60c7"
+      }
+    },
+    {
+      "seedIndex": 5,
+      "open": {
+        "seed": "v06-paired-05",
+        "bridgeOpen": true,
+        "bridgeEntries": 12,
+        "levelPersonTicks": {
+          "L0": 48473,
+          "L1": 1446
+        },
+        "visits": 518,
+        "encounters": 1033,
+        "offences": 3,
+        "reports": 1,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 12,
+            "visits": 518,
+            "encounters": 1033,
+            "offences": 3,
+            "L0PersonTicks": 48473,
+            "L1PersonTicks": 1446
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:64b96b30"
+      },
+      "closed": {
+        "seed": "v06-paired-05",
+        "bridgeOpen": false,
+        "bridgeEntries": 0,
+        "levelPersonTicks": {
+          "L0": 49557,
+          "L1": 407
+        },
+        "visits": 521,
+        "encounters": 1083,
+        "offences": 2,
+        "reports": 1,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 0,
+            "visits": 521,
+            "encounters": 1083,
+            "offences": 2,
+            "L0PersonTicks": 49557,
+            "L1PersonTicks": 407
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:3b269ac4"
+      }
+    },
+    {
+      "seedIndex": 6,
+      "open": {
+        "seed": "v06-paired-06",
+        "bridgeOpen": true,
+        "bridgeEntries": 12,
+        "levelPersonTicks": {
+          "L0": 48319,
+          "L1": 1615
+        },
+        "visits": 527,
+        "encounters": 476,
+        "offences": 1,
+        "reports": 0,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 12,
+            "visits": 527,
+            "encounters": 476,
+            "offences": 1,
+            "L0PersonTicks": 48319,
+            "L1PersonTicks": 1615
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:53c80a97"
+      },
+      "closed": {
+        "seed": "v06-paired-06",
+        "bridgeOpen": false,
+        "bridgeEntries": 0,
+        "levelPersonTicks": {
+          "L0": 49881,
+          "L1": 109
+        },
+        "visits": 528,
+        "encounters": 482,
+        "offences": 2,
+        "reports": 1,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 0,
+            "visits": 528,
+            "encounters": 482,
+            "offences": 2,
+            "L0PersonTicks": 49881,
+            "L1PersonTicks": 109
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:aed3acd1"
+      }
+    },
+    {
+      "seedIndex": 7,
+      "open": {
+        "seed": "v06-paired-07",
+        "bridgeOpen": true,
+        "bridgeEntries": 10,
+        "levelPersonTicks": {
+          "L0": 48896,
+          "L1": 1047
+        },
+        "visits": 536,
+        "encounters": 944,
+        "offences": 1,
+        "reports": 1,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 10,
+            "visits": 536,
+            "encounters": 944,
+            "offences": 1,
+            "L0PersonTicks": 48896,
+            "L1PersonTicks": 1047
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:315e95ba"
+      },
+      "closed": {
+        "seed": "v06-paired-07",
+        "bridgeOpen": false,
+        "bridgeEntries": 0,
+        "levelPersonTicks": {
+          "L0": 49536,
+          "L1": 441
+        },
+        "visits": 536,
+        "encounters": 935,
+        "offences": 2,
+        "reports": 1,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 0,
+            "visits": 536,
+            "encounters": 935,
+            "offences": 2,
+            "L0PersonTicks": 49536,
+            "L1PersonTicks": 441
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:d3326b3e"
+      }
+    },
+    {
+      "seedIndex": 8,
+      "open": {
+        "seed": "v06-paired-08",
+        "bridgeOpen": true,
+        "bridgeEntries": 11,
+        "levelPersonTicks": {
+          "L0": 48813,
+          "L1": 1126
+        },
+        "visits": 523,
+        "encounters": 531,
+        "offences": 2,
+        "reports": 1,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 11,
+            "visits": 523,
+            "encounters": 531,
+            "offences": 2,
+            "L0PersonTicks": 48813,
+            "L1PersonTicks": 1126
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:85bfa909"
+      },
+      "closed": {
+        "seed": "v06-paired-08",
+        "bridgeOpen": false,
+        "bridgeEntries": 0,
+        "levelPersonTicks": {
+          "L0": 49347,
+          "L1": 615
+        },
+        "visits": 525,
+        "encounters": 502,
+        "offences": 2,
+        "reports": 1,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 0,
+            "visits": 525,
+            "encounters": 502,
+            "offences": 2,
+            "L0PersonTicks": 49347,
+            "L1PersonTicks": 615
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:390bb6bb"
+      }
+    },
+    {
+      "seedIndex": 9,
+      "open": {
+        "seed": "v06-paired-09",
+        "bridgeOpen": true,
+        "bridgeEntries": 14,
+        "levelPersonTicks": {
+          "L0": 48761,
+          "L1": 1160
+        },
+        "visits": 534,
+        "encounters": 661,
+        "offences": 2,
+        "reports": 0,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 14,
+            "visits": 534,
+            "encounters": 661,
+            "offences": 2,
+            "L0PersonTicks": 48761,
+            "L1PersonTicks": 1160
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:e70d1fb4"
+      },
+      "closed": {
+        "seed": "v06-paired-09",
+        "bridgeOpen": false,
+        "bridgeEntries": 0,
+        "levelPersonTicks": {
+          "L0": 49786,
+          "L1": 192
+        },
+        "visits": 535,
+        "encounters": 686,
+        "offences": 1,
+        "reports": 0,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 0,
+            "visits": 535,
+            "encounters": 686,
+            "offences": 1,
+            "L0PersonTicks": 49786,
+            "L1PersonTicks": 192
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:93ab8290"
+      }
+    },
+    {
+      "seedIndex": 10,
+      "open": {
+        "seed": "v06-paired-10",
+        "bridgeOpen": true,
+        "bridgeEntries": 14,
+        "levelPersonTicks": {
+          "L0": 48537,
+          "L1": 1415
+        },
+        "visits": 549,
+        "encounters": 604,
+        "offences": 0,
+        "reports": 0,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 14,
+            "visits": 549,
+            "encounters": 604,
+            "offences": 0,
+            "L0PersonTicks": 48537,
+            "L1PersonTicks": 1415
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:1a63a14a"
+      },
+      "closed": {
+        "seed": "v06-paired-10",
+        "bridgeOpen": false,
+        "bridgeEntries": 0,
+        "levelPersonTicks": {
+          "L0": 49699,
+          "L1": 277
+        },
+        "visits": 541,
+        "encounters": 594,
+        "offences": 1,
+        "reports": 1,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 0,
+            "visits": 541,
+            "encounters": 594,
+            "offences": 1,
+            "L0PersonTicks": 49699,
+            "L1PersonTicks": 277
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:f194d74e"
+      }
+    },
+    {
+      "seedIndex": 11,
+      "open": {
+        "seed": "v06-paired-11",
+        "bridgeOpen": true,
+        "bridgeEntries": 8,
+        "levelPersonTicks": {
+          "L0": 48920,
+          "L1": 1044
+        },
+        "visits": 518,
+        "encounters": 620,
+        "offences": 1,
+        "reports": 1,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 8,
+            "visits": 518,
+            "encounters": 620,
+            "offences": 1,
+            "L0PersonTicks": 48920,
+            "L1PersonTicks": 1044
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:c644261b"
+      },
+      "closed": {
+        "seed": "v06-paired-11",
+        "bridgeOpen": false,
+        "bridgeEntries": 0,
+        "levelPersonTicks": {
+          "L0": 49650,
+          "L1": 329
+        },
+        "visits": 517,
+        "encounters": 650,
+        "offences": 1,
+        "reports": 1,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 0,
+            "visits": 517,
+            "encounters": 650,
+            "offences": 1,
+            "L0PersonTicks": 49650,
+            "L1PersonTicks": 329
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:f7b973ad"
+      }
+    },
+    {
+      "seedIndex": 12,
+      "open": {
+        "seed": "v06-paired-12",
+        "bridgeOpen": true,
+        "bridgeEntries": 16,
+        "levelPersonTicks": {
+          "L0": 48183,
+          "L1": 1732
+        },
+        "visits": 559,
+        "encounters": 715,
+        "offences": 0,
+        "reports": 0,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 16,
+            "visits": 559,
+            "encounters": 715,
+            "offences": 0,
+            "L0PersonTicks": 48183,
+            "L1PersonTicks": 1732
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:9f460194"
+      },
+      "closed": {
+        "seed": "v06-paired-12",
+        "bridgeOpen": false,
+        "bridgeEntries": 0,
+        "levelPersonTicks": {
+          "L0": 49688,
+          "L1": 300
+        },
+        "visits": 561,
+        "encounters": 712,
+        "offences": 1,
+        "reports": 1,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 0,
+            "visits": 561,
+            "encounters": 712,
+            "offences": 1,
+            "L0PersonTicks": 49688,
+            "L1PersonTicks": 300
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:eb1ed630"
+      }
+    },
+    {
+      "seedIndex": 13,
+      "open": {
+        "seed": "v06-paired-13",
+        "bridgeOpen": true,
+        "bridgeEntries": 10,
+        "levelPersonTicks": {
+          "L0": 48854,
+          "L1": 1095
+        },
+        "visits": 517,
+        "encounters": 567,
+        "offences": 2,
+        "reports": 0,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 10,
+            "visits": 517,
+            "encounters": 567,
+            "offences": 2,
+            "L0PersonTicks": 48854,
+            "L1PersonTicks": 1095
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:3023f9ed"
+      },
+      "closed": {
+        "seed": "v06-paired-13",
+        "bridgeOpen": false,
+        "bridgeEntries": 0,
+        "levelPersonTicks": {
+          "L0": 49473,
+          "L1": 512
+        },
+        "visits": 523,
+        "encounters": 583,
+        "offences": 1,
+        "reports": 0,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 0,
+            "visits": 523,
+            "encounters": 583,
+            "offences": 1,
+            "L0PersonTicks": 49473,
+            "L1PersonTicks": 512
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:89a1b687"
+      }
+    },
+    {
+      "seedIndex": 14,
+      "open": {
+        "seed": "v06-paired-14",
+        "bridgeOpen": true,
+        "bridgeEntries": 13,
+        "levelPersonTicks": {
+          "L0": 48800,
+          "L1": 1143
+        },
+        "visits": 501,
+        "encounters": 539,
+        "offences": 0,
+        "reports": 0,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 13,
+            "visits": 501,
+            "encounters": 539,
+            "offences": 0,
+            "L0PersonTicks": 48800,
+            "L1PersonTicks": 1143
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:734003e6"
+      },
+      "closed": {
+        "seed": "v06-paired-14",
+        "bridgeOpen": false,
+        "bridgeEntries": 0,
+        "levelPersonTicks": {
+          "L0": 49770,
+          "L1": 207
+        },
+        "visits": 501,
+        "encounters": 552,
+        "offences": 0,
+        "reports": 0,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 0,
+            "visits": 501,
+            "encounters": 552,
+            "offences": 0,
+            "L0PersonTicks": 49770,
+            "L1PersonTicks": 207
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:90e34cb2"
+      }
+    },
+    {
+      "seedIndex": 15,
+      "open": {
+        "seed": "v06-paired-15",
+        "bridgeOpen": true,
+        "bridgeEntries": 12,
+        "levelPersonTicks": {
+          "L0": 48710,
+          "L1": 1238
+        },
+        "visits": 524,
+        "encounters": 628,
+        "offences": 1,
+        "reports": 1,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 12,
+            "visits": 524,
+            "encounters": 628,
+            "offences": 1,
+            "L0PersonTicks": 48710,
+            "L1PersonTicks": 1238
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:b5db6bf7"
+      },
+      "closed": {
+        "seed": "v06-paired-15",
+        "bridgeOpen": false,
+        "bridgeEntries": 0,
+        "levelPersonTicks": {
+          "L0": 49581,
+          "L1": 399
+        },
+        "visits": 522,
+        "encounters": 691,
+        "offences": 1,
+        "reports": 1,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 0,
+            "visits": 522,
+            "encounters": 691,
+            "offences": 1,
+            "L0PersonTicks": 49581,
+            "L1PersonTicks": 399
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:d15d8a71"
+      }
+    },
+    {
+      "seedIndex": 16,
+      "open": {
+        "seed": "v06-paired-16",
+        "bridgeOpen": true,
+        "bridgeEntries": 16,
+        "levelPersonTicks": {
+          "L0": 48411,
+          "L1": 1521
+        },
+        "visits": 546,
+        "encounters": 901,
+        "offences": 1,
+        "reports": 0,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 16,
+            "visits": 546,
+            "encounters": 901,
+            "offences": 1,
+            "L0PersonTicks": 48411,
+            "L1PersonTicks": 1521
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:16c60a30"
+      },
+      "closed": {
+        "seed": "v06-paired-16",
+        "bridgeOpen": false,
+        "bridgeEntries": 0,
+        "levelPersonTicks": {
+          "L0": 49304,
+          "L1": 655
+        },
+        "visits": 544,
+        "encounters": 918,
+        "offences": 2,
+        "reports": 1,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 0,
+            "visits": 544,
+            "encounters": 918,
+            "offences": 2,
+            "L0PersonTicks": 49304,
+            "L1PersonTicks": 655
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:21aa7fc4"
+      }
+    },
+    {
+      "seedIndex": 17,
+      "open": {
+        "seed": "v06-paired-17",
+        "bridgeOpen": true,
+        "bridgeEntries": 14,
+        "levelPersonTicks": {
+          "L0": 48507,
+          "L1": 1430
+        },
+        "visits": 541,
+        "encounters": 362,
+        "offences": 0,
+        "reports": 0,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 14,
+            "visits": 541,
+            "encounters": 362,
+            "offences": 0,
+            "L0PersonTicks": 48507,
+            "L1PersonTicks": 1430
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:d6cc2779"
+      },
+      "closed": {
+        "seed": "v06-paired-17",
+        "bridgeOpen": false,
+        "bridgeEntries": 0,
+        "levelPersonTicks": {
+          "L0": 49817,
+          "L1": 167
+        },
+        "visits": 540,
+        "encounters": 402,
+        "offences": 0,
+        "reports": 0,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 0,
+            "visits": 540,
+            "encounters": 402,
+            "offences": 0,
+            "L0PersonTicks": 49817,
+            "L1PersonTicks": 167
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:9ec4b9ab"
+      }
+    },
+    {
+      "seedIndex": 18,
+      "open": {
+        "seed": "v06-paired-18",
+        "bridgeOpen": true,
+        "bridgeEntries": 14,
+        "levelPersonTicks": {
+          "L0": 48637,
+          "L1": 1331
+        },
+        "visits": 534,
+        "encounters": 685,
+        "offences": 1,
+        "reports": 1,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 14,
+            "visits": 534,
+            "encounters": 685,
+            "offences": 1,
+            "L0PersonTicks": 48637,
+            "L1PersonTicks": 1331
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:61642b42"
+      },
+      "closed": {
+        "seed": "v06-paired-18",
+        "bridgeOpen": false,
+        "bridgeEntries": 0,
+        "levelPersonTicks": {
+          "L0": 49816,
+          "L1": 172
+        },
+        "visits": 531,
+        "encounters": 750,
+        "offences": 1,
+        "reports": 1,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 0,
+            "visits": 531,
+            "encounters": 750,
+            "offences": 1,
+            "L0PersonTicks": 49816,
+            "L1PersonTicks": 172
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:523bceb6"
+      }
+    },
+    {
+      "seedIndex": 19,
+      "open": {
+        "seed": "v06-paired-19",
+        "bridgeOpen": true,
+        "bridgeEntries": 16,
+        "levelPersonTicks": {
+          "L0": 48381,
+          "L1": 1559
+        },
+        "visits": 531,
+        "encounters": 949,
+        "offences": 2,
+        "reports": 2,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 16,
+            "visits": 531,
+            "encounters": 949,
+            "offences": 2,
+            "L0PersonTicks": 48381,
+            "L1PersonTicks": 1559
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:d5853553"
+      },
+      "closed": {
+        "seed": "v06-paired-19",
+        "bridgeOpen": false,
+        "bridgeEntries": 0,
+        "levelPersonTicks": {
+          "L0": 49285,
+          "L1": 683
+        },
+        "visits": 533,
+        "encounters": 999,
+        "offences": 0,
+        "reports": 0,
+        "hourly": {
+          "08": {
+            "bridgeEntries": 0,
+            "visits": 533,
+            "encounters": 999,
+            "offences": 0,
+            "L0PersonTicks": 49285,
+            "L1PersonTicks": 683
+          }
+        },
+        "finalFingerprint": "world-v2:district-world-v1:430836c8:sim-v5:cdca6d95"
+      }
+    }
+  ]
+}

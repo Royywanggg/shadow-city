@@ -1,8 +1,9 @@
+import { createActivitySlots } from './activitySlots'
 import { createNavigationIndex } from './navigation'
 import { createRandomStream, hashSeed, nextRandom } from './rng'
 import type { AgentProfile, SimulationConfigV2, SimulationEnvironment, StaticCity } from './types'
 
-export const CITIZEN_ENGINE_VERSION = '0.3.0-synthetic-v1'
+export const CITIZEN_ENGINE_VERSION = '0.5.2-synthetic-v2-occupancy'
 
 export function validateCitizenConfig(config: SimulationConfigV2): void {
   if (config.version !== 2 || !config.simulationSeed || config.behaviorModel !== 'synthetic-v1' ||
@@ -31,6 +32,7 @@ export function createSimulationEnvironment(city: StaticCity, config: Simulation
   validateCitizenConfig(config)
   const pedestrianNetwork = city.pedestrian
   const navigation = createNavigationIndex(pedestrianNetwork)
+  const activitySlots = createActivitySlots(pedestrianNetwork)
   const buildingById = new Map(city.buildings.map((building) => [building.id, building]))
   const homes = pedestrianNetwork.anchors
     .filter((anchor) => anchor.kind === 'building' && anchor.buildingId &&
@@ -40,9 +42,9 @@ export function createSimulationEnvironment(city: StaticCity, config: Simulation
     .filter((anchor) => anchor.kind === 'building')
     .sort((a, b) => a.id.localeCompare(b.id))
   const availableHomes = homes.length > 0 ? homes : fallbackHomes
-  const publicAnchorIds = pedestrianNetwork.anchors
-    .filter((anchor) => anchor.kind === 'plaza' || anchor.kind === 'park')
-    .map((anchor) => anchor.id)
+  const publicAnchorIds = activitySlots
+    .filter((slot) => slot.kind !== 'street')
+    .map((slot) => slot.anchorId)
     .sort((a, b) => a.localeCompare(b))
   if (config.populationSize > 0 && (availableHomes.length === 0 || publicAnchorIds.length === 0)) {
     throw new Error('Citizen population requires accessible home and public anchors')
@@ -51,6 +53,7 @@ export function createSimulationEnvironment(city: StaticCity, config: Simulation
   const profiles: AgentProfile[] = []
   for (let index = 0; index < config.populationSize; index += 1) {
     const id = `citizen-${String(index).padStart(4, '0')}`
+    const jogPreference = hashSeed(`${config.simulationSeed}\u0000gait:${id}`) / 4294967296
     let rng = createRandomStream(config.simulationSeed, `profile:${id}`)
     const draw = () => {
       const sample = nextRandom(rng)
@@ -62,6 +65,7 @@ export function createSimulationEnvironment(city: StaticCity, config: Simulation
       id,
       homeAnchorId,
       speedUnitsPerLogicalSecond: 0.27 + draw() * 0.16,
+      jogPreference,
       firstDepartureTick: 1 + Math.floor(draw() * 120),
       homeDwellTicks: 100 + Math.floor(draw() * 200),
       visitDwellTicks: 25 + Math.floor(draw() * 60),
@@ -92,6 +96,7 @@ export function createSimulationEnvironment(city: StaticCity, config: Simulation
     navigation,
     profiles: Object.freeze(profiles),
     publicAnchorIds: Object.freeze(publicAnchorIds),
+    activitySlots: Object.freeze(activitySlots),
     fingerprint,
     runId,
   })

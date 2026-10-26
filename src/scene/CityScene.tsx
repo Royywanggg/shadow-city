@@ -9,7 +9,7 @@ import { RenderDiagnostics } from './RenderDiagnostics'
 import { Roads } from './Roads'
 import { StreetFurniture } from './StreetFurniture'
 
-export function CityScene({ city, cameraController }: { city: CityModel; cameraController: CameraController }) {
+export function CityStaticScene({ city }: { city: CityModel }) {
   const half = city.size / 2
   return (
     <>
@@ -61,8 +61,14 @@ export function CityScene({ city, cameraController }: { city: CityModel; cameraC
       <EffectComposer multisampling={0}>
         <Bloom intensity={0.23} luminanceThreshold={1.2} luminanceSmoothing={0.2} mipmapBlur />
       </EffectComposer>
-      <CameraRig controller={cameraController} city={city} />
-      {import.meta.env.DEV && <RenderDiagnostics />}
     </>
   )
+}
+
+export function CityScene({ city, cameraController }: { city: CityModel; cameraController: CameraController }) {
+  return <>
+    <CityStaticScene city={city} />
+    <CameraRig controller={cameraController} city={city} />
+    {import.meta.env.DEV && <RenderDiagnostics />}
+  </>
 }

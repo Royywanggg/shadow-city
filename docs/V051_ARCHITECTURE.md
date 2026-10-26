@@ -1,5 +1,7 @@
 # v0.5.1 population and character architecture
 
+This document records the v0.5.1 design. [v0.5.2](V052_ARCHITECTURE.md) adds independent activity occupancy and real simulation-backed jogging; its spatial and animation rules supersede the corresponding v0.5.1 limitations below.
+
 ## Data boundaries
 
 ```text
@@ -19,7 +21,7 @@ Appearance seed + stable citizen ID --> IdentityCatalog -----+--> character pres
 
 The identity catalogue is keyed by stable citizen ID and separate identity and appearance seeds. It does not read offending propensity, camera state, render time, or replay mode. An appearance references a verified precomposed model plus an optional verified clothing-only color pair. Unsupported independent outfit, hairstyle, and accessory choices are `null`. The current catalogue has ten model presets and at most 109 model/color combinations; identities remain distinct even when assets are shared.
 
-The simulation remains authoritative for position, activity, route, and Tick. `AgentLayer` interpolates only for display and chooses a Far instance, Medium static character mesh, or Close skinned character according to projected size, selection, and a bounded pool. The selected agent gets priority for Close. The imported clips are Idle, Walk, and Run; citizens use Idle/Walk from real activity. Run is a development preview until the simulation models jogging. Horizontal animation root motion is removed. A selected-only portrait clones the same rig and reads the inspected logical time, so city occlusion cannot prevent individual visual inspection.
+The simulation remains authoritative for position, activity, route, and Tick. `AgentLayer` interpolates only for display and chooses a Far instanced sprite baked from its character preset, Medium mesh baked from the model's Idle pose, or Close skinned character according to projected size, selection, and a bounded pool. Capacity assignment favors incumbent tiers to prevent small projection changes from repeatedly swapping models. The selected agent gets priority for Close. The imported clips are Idle, Walk, and Run; citizens use Idle/Walk from real activity, with clip weights blended across activity transitions. Character clip time derives from displayed playback ticks at 10 ticks per real second; the six seconds of simulated city time represented by each Tick must not drive the clip mixer directly. Run is a development preview until the simulation models jogging. Horizontal animation root motion is removed. A selected-only portrait samples animation between logical ticks while playback runs, so city occlusion cannot prevent individual visual inspection or make its motion update only at tick rate.
 
 ## Replay and scale
 

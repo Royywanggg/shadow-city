@@ -1,0 +1,123 @@
+{
+  "date": "2026-10-26T12:12:29.307Z",
+  "browser": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36",
+  "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+  "viewport": "1440x900",
+  "dpr": 1,
+  "citySeed": "shadow-city-hero-01",
+  "simulationSeed": "shadow-city-sim-01",
+  "population": 200,
+  "selectedId": "citizen-0003",
+  "spatial": {
+    "tick0": {
+      "tick": 0,
+      "outdoorCount": 50,
+      "renderedCount": 50,
+      "occupiedCount": 0,
+      "uniqueOccupiedSlots": 0,
+      "sharedActivitySites": 0,
+      "invalidOccupiedPositions": 0,
+      "waitingCount": 0
+    },
+    "tick100": {
+      "tick": 100,
+      "outdoorCount": 167,
+      "renderedCount": 167,
+      "occupiedCount": 54,
+      "uniqueOccupiedSlots": 54,
+      "sharedActivitySites": 9,
+      "invalidOccupiedPositions": 0,
+      "waitingCount": 0
+    },
+    "tick500": {
+      "tick": 500,
+      "outdoorCount": 128,
+      "renderedCount": 128,
+      "occupiedCount": 40,
+      "uniqueOccupiedSlots": 40,
+      "sharedActivitySites": 12,
+      "invalidOccupiedPositions": 0,
+      "waitingCount": 0
+    },
+    "replay100": {
+      "tick": 100,
+      "outdoorCount": 167,
+      "renderedCount": 167,
+      "occupiedCount": 54,
+      "uniqueOccupiedSlots": 54,
+      "sharedActivitySites": 9,
+      "invalidOccupiedPositions": 0,
+      "waitingCount": 0
+    },
+    "returnLive500": {
+      "tick": 500,
+      "outdoorCount": 128,
+      "renderedCount": 128,
+      "occupiedCount": 40,
+      "uniqueOccupiedSlots": 40,
+      "sharedActivitySites": 12,
+      "invalidOccupiedPositions": 0,
+      "waitingCount": 0
+    }
+  },
+  "tickDurationsMs": {
+    "count": 500,
+    "p50": 0.5,
+    "p95": 0.8999999985098839
+  },
+  "activePlayback": {
+    "seconds": 4.038300000000745,
+    "frames": 240,
+    "approximateFps": 59.43094866650713,
+    "ticks": 39,
+    "scene": {
+      "drawCalls": 154,
+      "triangles": 107445,
+      "geometries": 90,
+      "textures": 40,
+      "medianActiveFrameMs": 16.600000001490116,
+      "p50ActiveFrameMs": 16.600000001490116,
+      "p95ActiveFrameMs": 32.80000000074506,
+      "sampledFrames": 120,
+      "renderedFrames": 265
+    },
+    "characters": {
+      "farCount": 128,
+      "mediumCount": 0,
+      "closeCount": 0,
+      "visibleCount": 128,
+      "assetPresetCount": 10,
+      "activeInstances": 0,
+      "pooledInstances": 1,
+      "farSpriteCount": 128,
+      "primitiveFallbackCount": 0,
+      "selectedTier": null,
+      "selectedVisualTime": 53.83020000000298,
+      "selectedPresetId": "character-5",
+      "selectedPrimaryColor": "#9f92a5"
+    },
+    "spatial": {
+      "tick": 539,
+      "outdoorCount": 126,
+      "renderedCount": 128,
+      "occupiedCount": 37,
+      "uniqueOccupiedSlots": 37,
+      "sharedActivitySites": 6,
+      "invalidOccupiedPositions": 0,
+      "waitingCount": 0
+    },
+    "jsHeapBytes": 115714680,
+    "statusAfterSampling": "SIMULATION / RUNNING"
+  },
+  "screenshots": [
+    "v052-population-200-tick000-1440x900",
+    "v052-population-200-tick100-1440x900",
+    "v052-population-200-plaza-close-tick100-1440x900",
+    "v052-population-200-tick500-1440x900",
+    "v052-population-200-narrow-tick100-390x844"
+  ],
+  "errors": [],
+  "warnings": [
+    "THREE.Clock: This module has been deprecated. Please use THREE.Timer instead."
+  ]
+}

@@ -40,6 +40,10 @@ The researcher has a global God View of the synthetic population. A Population I
 
 Generation must be reproducible from a seed and configuration. The rendering layer should not make random layout decisions. Add complexity only when a milestone needs it and it improves the result.
 
+From v0.6 onward, the default `WorldModelV2` is **derived from the original `generateCity('shadow-city-hero-01')` map**. The original 212 m core keeps its road and building IDs, plaza, skyline and architectural rendering. A connected outer ring expands the same city to 300 × 300 m; one plaza-adjacent core block becomes the two-level Galleria. Millimetre coordinates, walkable surfaces, semantic levels, portals, places, resources, and a three-dimensional navigation graph extend that city. `surfaceId` determines spatial membership; identical X/Z coordinates do not imply co-location across floors. `SimulationStateV5` holds citizens, reservations, access changes, encounters, offences, and reports separately. Earlier v2–v4 replay remains available through the explicit legacy model entry. An experiment fingerprint includes the world generator and structure, model settings, and ordered commands; a changed fingerprint is a replay error.
+
+The Galleria, bridge, public spaces, opening times, and place attractions create **opportunities**, not scripted outcomes. Destination choice, routes, contact, offending, and reporting each have separate deterministic inputs. A reported event is a limited observation of a ground-truth event. The researcher Population Inspector keeps complete truth at the selected Tick; future police observers require their own restricted read model.
+
 ## Scope boundaries
 
-There is no backend, authentication, cloud infrastructure, or database requirement for v0.1. Agent behavior, policing, crime reporting, and experiment comparison belong to later milestones described in `ROADMAP.md`.
+There is no backend, authentication, cloud infrastructure, or database requirement for v0.6. Policing strategies and experiment comparison follow the multi-level world milestone in `ROADMAP.md`. Synthetic schedules, guardianship and offence parameters are not calibrated against real-world evidence and must not be interpreted as real-city causal estimates.

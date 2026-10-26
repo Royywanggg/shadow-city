@@ -14,7 +14,12 @@
     "visual:v03": "node scripts/v03-check.mjs",
     "visual:v04": "node scripts/v04-check.mjs",
     "visual:v05": "node scripts/v05-check.mjs",
-    "visual:v051": "node scripts/v051-check.mjs"
+    "visual:v051": "node scripts/v051-check.mjs",
+    "visual:v0511": "node scripts/v0511-playback-check.mjs",
+    "visual:v052": "node scripts/v052-check.mjs",
+    "visual:v06": "node scripts/v06-check.mjs",
+    "experiment:v06": "node scripts/v06-experiments.mjs",
+    "assets:bake-impostors": "node scripts/bake-character-impostors.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.9",

@@ -135,7 +135,7 @@ export interface PedestrianEdge {
 export interface PedestrianAnchor {
   id: string
   nodeId: string
-  kind: 'building' | 'plaza' | 'park'
+  kind: 'building' | 'plaza' | 'park' | 'publicEntrance' | 'street'
   buildingId?: string
   blockId?: string
 }

@@ -124,7 +124,37 @@ This roadmap is milestone-based, not date-based. Each milestone should leave a u
 
 **Exit criteria:** The same agent keeps its appearance and identity through playback, Pause/Resume, 1×/2×/4×, Tick 100/500 inspection, bearing/pitch changes, and LOD transitions. Every selected citizen can be inspected in the portrait even when city geometry occludes the map view. Record package URL, version, acquisition date, applicable license, and hashes; do not commit raw assets with unresolved redistribution rights. Browser screenshots at the fixed seeds and 1440 × 900 show a visible improvement at close range without overwhelming the city. Report draw calls, triangles, frame times, visible population, and full-rig count on a named renderer, plus tests, type checking, and build results. A 1,000-person synthetic fixture may measure catalog, list, and renderer scaling but must not be presented as an actual 1,000-citizen simulation; raise the simulation cap only with independent behavior, event, spatial-capacity, and replay tests.
 
-## v0.6 — Policing strategy design and implementation
+## v0.5.2 — Population spatial fidelity and character behaviour
+
+**Goal:** Give concurrent public activities separate legal positions, maintain identity through character representations, and make movement animation follow authoritative state for 100–200 citizens.
+
+**In scope:** Deterministic activity slots derived from pedestrian anchors at plazas, parks, public entrances, and sidewalks; per-slot capacity, nearby alternatives, and explicit waiting when full. Preserve every citizen in the world renderer. Store route heading and a synthetic walk/jog choice in simulation state; use state for turning, arrival, and clip blending. Keep the researcher Population Inspector independent of event layers and observer restrictions. Check character resource bounds and named hardware-GPU browser behavior.
+
+**Out of scope:** Crowd collision avoidance, 1,000-citizen simulation acceptance, policing strategies, backend services, and an asset-system replacement.
+
+**Exit criteria:** With fixed city and simulation seeds, 200 citizens remain distinct at Tick 0/100/500 and replay. Every occupied slot is unique, reachable, and on a legal pedestrian surface; several citizens can occupy one site at separate slots. Capacity exhaustion produces a visible waiting state or event. No outdoor citizen is silently omitted by LOD. Selection, Focus, Follow, portrait, event-mode changes, bearing/pitch, Pause/Step, and replay still work. Report fixed-view and narrow screenshots, the renderer and frame sampling method, instance and GPU resource counts, simulation tick cost, tests, type checking, and build results. State remaining close-view and moving-crowd limitations explicitly.
+
+## v0.6 — Multi-level urban world and emergent opportunities
+
+**Goal:** Grow the existing `shadow-city-hero-01` map from 212 × 212 m to a connected 300 × 300 m city. Preserve the original core's roads, central plaza, building IDs, skyline and architectural vocabulary; add outer districts and replace only one east-of-plaza core block with the Galleria. Connect all new streets, entrances and multi-level routes to the same pedestrian network. Let visits, encounters, and offences follow explicit spatial and behavioural rules rather than a prescribed bridge itinerary or scripted crime location. The v0.5.2 simulation remains accessible through `?world=legacy`; the discarded separate 320 m scene is available only as `?world=prototype` for comparison.
+
+The v0.6 implementation is split into reviewable gates:
+
+| Gate | Deliverable | Exit evidence |
+| --- | --- | --- |
+| **A — Static world and proof** | Versioned `WorldModelV2` derived from the original `CityModel`, a connected 300 m outer ring, semantic building places, and an independent L0/L1 bridge fixture. | Original core roads, plaza and retained building IDs match the v0.5.2 map; outer road and pedestrian graphs connect to that core; same X/Z on distinct surfaces is not conflated; 3D stair/ramp routes are continuous; the old city generator's golden data is unchanged. |
+| **B — Accessible Galleria** | Upper and lower walkable floors, corridors, indoor retail/cafés, portals, atrium, stairs, ramp, escalator and ground alternative. | Every generated node and surface edge is legal; closed entries reject new arrivals, occupied connectors can finish, and indoor residents can exit. Browser near views check slab/rail/door alignment. |
+| **C — Activity and routes** | `SimulationStateV5`, deterministic profile needs and location utility, bounded activity slots, personal integer-cost routes, dynamic access commands, waiting, and safe-node replanning. | 200 identities stay separate, reservations do not overlap, route and command histories replay, and Tick 0/100/500 and long-range states agree. |
+| **D — Spatial opportunity** | Second-resolution same-surface encounters, real citizen or named place-resource targets, episode hazard/cooldowns, truth incidents and separate reports. | Zero opportunity gives zero offence; different floors do not co-occupy; an episode produces at most one offence; changing reporting only preserves citizen and truth trajectories; observer reports expose only observed fields. |
+| **E — God View and visual review** | Expanded original-map default scene with v5 simulation, legacy model entry, floor filter, cutaway, surface pick, route/nav overlays, cross-floor camera focus/follow, and character LOD. | Before/after 1440 × 900 DPR 1 screenshots show the original city still recognizable within its new districts; bridge and Galleria close views, cardinal bearings, narrow view, selection and replay are inspected in a real browser; hardware GPU performance is measured against the limits below. Any missed performance gate remains open. |
+
+**Reference performance target:** 200 citizens on Chrome hardware GPU at 1440 × 900, DPR 1: average ≥50 FPS, p95 frame interval ≤33 ms, simulation Tick p95 ≤5 ms, and deterministic Tick 500 recomputation ≤2 seconds. Record renderer, draw calls, triangles, geometry/texture counts, and available JS memory separately. These are machine-specific review targets, not cross-device guarantees.
+
+**Current expanded-world status:** The 300 m city, blue open-air overpass with two navigable exterior stairs, upper Galleria connection, camera interactions and retained ground crossing have browser screenshot evidence. The reusable overpass has a transverse guard at its free end. Its Galleria-side stair and footpad sit at least 0.5 m beyond the vehicle curb on a paved forecourt formed by locally recessing the mall facade; L0/L1 floors, roof, portal and interior routes follow the same outline. A rotated second-road fixture checks reuse without adding another bridge to the default city. The 200-citizen simulation Tick and Tick 500 recomputation exceed the reference limits, so the performance part of Gate E remains open; close-view bridge detailing must still be judged against the user-provided photograph. See `V06_ARCHITECTURE.md`.
+
+**Out of scope:** police investigation, SSP/HSP, elevator dispatch, a production NavMesh, a 1,000-citizen acceptance claim, empirical calibration, backend services, and database persistence. The bridge, Galleria, operating hours and place attractiveness may change outcomes through reproducible interventions; no route or offence is guaranteed by config. See `V06_ARCHITECTURE.md` for data flow, evidence and remaining limits. If visual or hardware inspection is unavailable, leave the relevant gate pending.
+
+## v0.7 — Policing strategy design and implementation
 
 **Goal:** Compare explicit police decision strategies under transparent model assumptions.
 
@@ -132,7 +162,7 @@ This roadmap is milestone-based, not date-based. Each milestone should leave a u
 
 **Exit criteria:** Strategies consume only permitted knowledge, use reproducible decisions, and report detection and cost metrics only when corresponding mechanisms exist.
 
-## v0.7 — Experiment comparison
+## v0.8 — Experiment comparison
 
 **Goal:** Make repeated experiments understandable and shareable.
 

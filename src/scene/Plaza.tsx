@@ -3,16 +3,20 @@ import { InstancedBoxes, type BoxInstance } from './InstancedBoxes'
 
 export function Plaza({ city }: { city: CityModel }) {
   const { x, z, width, depth } = city.plaza
+  const hasBridgePavilion = city.size > 212
   const treePositions: [number, number][] = [
-    [-0.38, -0.36], [-0.18, -0.36], [0.18, -0.36], [0.38, -0.36],
+    [-0.38, -0.36], [-0.18, -0.36], [0.18, -0.36],
+    [hasBridgePavilion ? 0.21 : 0.38, hasBridgePavilion ? -0.43 : -0.36],
     [-0.38, 0.36], [-0.18, 0.36], [0.18, 0.36], [0.38, 0.36],
   ]
   const lampPositions: [number, number][] = [
-    [-0.39, -0.13], [-0.39, 0.13], [0.39, -0.13], [0.39, 0.13],
+    [-0.39, -0.13], [-0.39, 0.13],
+    [hasBridgePavilion ? 0.24 : 0.39, hasBridgePavilion ? -0.29 : -0.13], [0.39, 0.13],
   ]
   const planting: BoxInstance[] = [
     { position: [x - width * 0.31, 0.3, z], scale: [width * 0.11, 0.22, depth * 0.45], color: '#263d3d' },
-    { position: [x + width * 0.31, 0.3, z], scale: [width * 0.11, 0.22, depth * 0.45], color: '#263d3d' },
+    { position: [x + width * 0.31, 0.3, z + (hasBridgePavilion ? depth * 0.19 : 0)],
+      scale: [width * 0.11, 0.22, depth * (hasBridgePavilion ? 0.19 : 0.45)], color: '#263d3d' },
   ]
   const pavingLines: BoxInstance[] = [
     { position: [x, 0.28, z], scale: [width * 0.75, 0.02, 0.13] },

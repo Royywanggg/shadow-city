@@ -11,7 +11,8 @@ const executablePath = process.env.SHADOW_CITY_CHROME ??
 const browser = await chromium.launch({
   headless: true,
   executablePath,
-  args: ['--enable-webgl', '--use-gl=angle', '--use-angle=swiftshader'],
+  args: process.env.SHADOW_CITY_WEBGL === 'hardware'
+    ? ['--enable-webgl'] : ['--enable-webgl', '--use-gl=angle', '--use-angle=swiftshader'],
 })
 const baseUrl = new URL(process.env.SHADOW_CITY_URL ?? 'http://127.0.0.1:5173/')
 baseUrl.searchParams.set('review', '1')
@@ -84,6 +85,9 @@ try {
   await hero.waitForFunction(() => Boolean(window.__shadowCityV05))
   await hero.getByTestId('population-sidebar').waitFor()
   await hero.waitForTimeout(500)
+  await hero.waitForFunction(() => window.__shadowCityCharacterDiagnostics?.assetPresetCount === 10 &&
+    window.__shadowCityCharacterDiagnostics?.primitiveFallbackCount === 0,
+  undefined, { timeout: 15000 })
   assert(await hero.getByTestId('experiment-panel').getAttribute('data-mode') === 'observed',
     'The event layer should begin in Observed mode')
   assert((await hero.getByTestId('population-sidebar').textContent()).includes('80 citizens'),
@@ -157,6 +161,8 @@ try {
     characters: window.__shadowCityCharacterDiagnostics ?? null,
     selectedScreenPoint: window.__shadowCityAgentDiagnostics?.candidates.find((item) => item.id === 'citizen-0003') ?? null,
   }))
+  assert(closeCharacterDiagnostics.characters?.primitiveFallbackCount === 0,
+    'Far residents should use asset-derived impostors after character loading')
   await hero.getByTestId('population-inspect').click()
   await hero.waitForFunction(() => Number(document.querySelector('.camera-controls')?.getAttribute('data-zoom-ratio')) >= 7,
     undefined, { timeout: 10000 })
@@ -169,6 +175,8 @@ try {
   }))
   assert(detailCharacterDiagnostics.characters?.closeCount > 0,
     '3D inspection must display at least the selected rigged character')
+  assert(detailCharacterDiagnostics.characters?.selectedTier === 'close',
+    'The selected citizen should retain a full rig in Inspect 3D')
   const inspectBearing = (await cameraState(hero)).bearing
   await hero.getByRole('button', { name: 'Rotate right 15 degrees' }).click()
   assert((await cameraState(hero)).bearing === (inspectBearing + 15) % 360,
@@ -313,6 +321,8 @@ try {
     scene: window.__shadowCityDiagnostics ?? null,
     characters: window.__shadowCityCharacterDiagnostics ?? null,
   }))
+  assert(activeEnd.characters?.primitiveFallbackCount === 0,
+    'No primitive character fallback should reappear during playback')
   await hundred.getByRole('button', { name: 'Pause', exact: true }).click()
   await hundred.close()
 

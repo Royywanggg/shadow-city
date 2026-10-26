@@ -1,5 +1,5 @@
 import {
-  AnimationClip, AnimationMixer, Box3, Color, Group, Mesh, MeshStandardMaterial, Object3D, SkinnedMesh,
+  AnimationClip, AnimationMixer, Box3, Color, Group, Mesh, MeshStandardMaterial, Object3D, SkinnedMesh, Vector3,
   type KeyframeTrack,
 } from 'three'
 import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js'
@@ -13,6 +13,11 @@ export interface CharacterRenderItem {
   readonly id: string
   readonly appearance: CitizenAppearance
   readonly activity: string
+  readonly movementMode?: 'walk' | 'jog'
+  readonly previousActivity?: string
+  readonly previousMovementMode?: 'walk' | 'jog'
+  readonly transitionProgress?: number
+  readonly animationRate?: number
   readonly pose: AgentRenderPose
   readonly pixelHeight: number
 }
@@ -23,11 +28,14 @@ export interface CharacterDiagnostics {
   readonly closeCount: number
   readonly visibleCount: number
   readonly assetPresetCount: number
+  readonly activeInstances: number
+  readonly pooledInstances: number
 }
 
 interface LoadedAsset {
   readonly definition: CharacterAsset
   readonly scene: Object3D
+  readonly mediumScene: Object3D
   readonly clips: ReadonlyMap<string, AnimationClip>
   readonly scale: number
   readonly feetOffset: number
@@ -42,8 +50,24 @@ interface CharacterInstance {
   readonly materials: readonly MeshStandardMaterial[]
   readonly originalColors: ReadonlyMap<MeshStandardMaterial, Color>
   readonly clips: ReadonlyMap<string, AnimationClip>
-  action: string | null
+  readonly meshes: readonly Mesh[]
   colors: string
+}
+
+export function animationWeights(activity: string, previousActivity?: string, transitionProgress = 1,
+  preview: 'Idle' | 'Walk' | 'Run' | null = null, movementMode: 'walk' | 'jog' = 'walk',
+  previousMovementMode: 'walk' | 'jog' = 'walk'): Readonly<Record<'Idle' | 'Walk' | 'Run', number>> {
+  const clipFor = (value: string, mode: 'walk' | 'jog') =>
+    value === 'travelling' || value === 'returningHome' ? (mode === 'jog' ? 'Run' : 'Walk') : 'Idle'
+  if (preview) return { Idle: Number(preview === 'Idle'), Walk: Number(preview === 'Walk'), Run: Number(preview === 'Run') }
+  const next = clipFor(activity, movementMode)
+  const prior = previousActivity ? clipFor(previousActivity, previousMovementMode) : next
+  const blend = Math.max(0, Math.min(1, transitionProgress))
+  return {
+    Idle: (prior === 'Idle' ? 1 - blend : 0) + (next === 'Idle' ? blend : 0),
+    Walk: (prior === 'Walk' ? 1 - blend : 0) + (next === 'Walk' ? blend : 0),
+    Run: (prior === 'Run' ? 1 - blend : 0) + (next === 'Run' ? blend : 0),
+  }
 }
 
 export function stripHorizontalRootMotion(source: AnimationClip): AnimationClip {
@@ -62,6 +86,41 @@ export function stripHorizontalRootMotion(source: AnimationClip): AnimationClip 
   return clip
 }
 
+/** Convert a sampled skinned pose into shared static geometry for medium-distance residents. */
+export function bakeStaticPose(scene: Object3D, idleClip: AnimationClip): Object3D {
+  const posed = cloneSkeleton(scene)
+  const mixer = new AnimationMixer(posed)
+  mixer.clipAction(idleClip).play()
+  mixer.setTime(Math.min(0.3, idleClip.duration * 0.25))
+  posed.updateMatrixWorld(true)
+  const staticRoot = new Group()
+  const vertex = new Vector3()
+  posed.traverse((object) => {
+    if (!(object instanceof Mesh)) return
+    const geometry = object.geometry.clone()
+    if (object instanceof SkinnedMesh) {
+      const source = object.geometry.getAttribute('position')
+      const positions = geometry.getAttribute('position')
+      for (let index = 0; index < source.count; index += 1) {
+        vertex.fromBufferAttribute(source, index)
+        object.applyBoneTransform(index, vertex)
+        positions.setXYZ(index, vertex.x, vertex.y, vertex.z)
+      }
+      positions.needsUpdate = true
+    }
+    geometry.applyMatrix4(object.matrixWorld)
+    geometry.computeVertexNormals()
+    geometry.computeBoundingBox()
+    geometry.computeBoundingSphere()
+    const mesh = new Mesh(geometry, object.material)
+    mesh.name = object.name
+    staticRoot.add(mesh)
+  })
+  mixer.stopAllAction()
+  mixer.uncacheRoot(posed)
+  return staticRoot
+}
+
 function prepareAsset(definition: CharacterAsset, gltf: GLTF): LoadedAsset {
   const bounds = new Box3().setFromObject(gltf.scene)
   const height = bounds.max.y - bounds.min.y
@@ -73,7 +132,8 @@ function prepareAsset(definition: CharacterAsset, gltf: GLTF): LoadedAsset {
     throw new Error(`Missing movement clips: ${definition.presetId}`)
   }
   const scale = 1.76 / height
-  return { definition, scene: gltf.scene, clips, scale, feetOffset: -bounds.min.y * scale }
+  const mediumScene = bakeStaticPose(gltf.scene, clips.get('Idle')!)
+  return { definition, scene: gltf.scene, mediumScene, clips, scale, feetOffset: -bounds.min.y * scale }
 }
 
 let characterAssetPromise: Promise<ReadonlyMap<string, LoadedAsset>> | null = null
@@ -95,27 +155,16 @@ export function loadCharacterAssets(): Promise<ReadonlyMap<string, LoadedAsset>>
 }
 
 function createInstance(asset: LoadedAsset, tier: 'medium' | 'close'): CharacterInstance {
-  const rig = tier === 'close' ? cloneSkeleton(asset.scene) : asset.scene.clone(true)
-  if (tier === 'medium') {
-    const skinnedMeshes: SkinnedMesh[] = []
-    rig.traverse((object) => { if (object instanceof SkinnedMesh) skinnedMeshes.push(object) })
-    for (const skinned of skinnedMeshes) {
-      const staticMesh = new Mesh(skinned.geometry, skinned.material)
-      staticMesh.name = skinned.name
-      staticMesh.position.copy(skinned.position)
-      staticMesh.quaternion.copy(skinned.quaternion)
-      staticMesh.scale.copy(skinned.scale)
-      skinned.parent?.add(staticMesh)
-      skinned.parent?.remove(skinned)
-    }
-  }
+  const rig = tier === 'close' ? cloneSkeleton(asset.scene) : asset.mediumScene.clone(true)
   const root = new Group()
   rig.scale.setScalar(asset.scale)
   rig.position.y = asset.feetOffset
   root.add(rig)
   const materials: MeshStandardMaterial[] = []
+  const meshes: Mesh[] = []
   rig.traverse((object) => {
     if (!(object instanceof Mesh)) return
+    meshes.push(object)
     object.castShadow = false
     object.receiveShadow = true
     const originals = Array.isArray(object.material) ? object.material : [object.material]
@@ -127,10 +176,11 @@ function createInstance(asset: LoadedAsset, tier: 'medium' | 'close'): Character
     object.material = Array.isArray(object.material) ? clones : clones[0]
   })
   const mixer = tier === 'close' ? new AnimationMixer(rig) : null
+  if (mixer) for (const clip of asset.clips.values()) mixer.clipAction(clip).play().setEffectiveWeight(0)
   return {
     presetId: asset.definition.presetId, tier, root, rig, mixer, materials,
     originalColors: new Map(materials.map((material) => [material, material.color.clone()])),
-    clips: asset.clips, action: null, colors: '',
+    clips: asset.clips, meshes, colors: '',
   }
 }
 
@@ -150,14 +200,16 @@ function colorize(instance: CharacterInstance, appearance: CitizenAppearance): v
 
 function animate(instance: CharacterInstance, item: CharacterRenderItem, logicalTime: number, preview: 'Idle' | 'Walk' | 'Run' | null): void {
   if (!instance.mixer) return
-  const nextAction = preview ?? (item.activity === 'travelling' || item.activity === 'returningHome' ? 'Walk' : 'Idle')
-  if (instance.action !== nextAction) {
-    instance.mixer.stopAllAction()
-    instance.mixer.clipAction(instance.clips.get(nextAction)!).reset().play()
-    instance.action = nextAction
+  const weights = animationWeights(item.activity, item.previousActivity, item.transitionProgress, preview,
+    item.movementMode, item.previousMovementMode)
+  const walkRate = Math.max(0.75, Math.min(1.35, item.animationRate ?? 1))
+  for (const name of ['Idle', 'Walk', 'Run'] as const) {
+    instance.mixer.clipAction(instance.clips.get(name)!)
+      .setEffectiveWeight(weights[name])
+      .setEffectiveTimeScale(name === 'Idle' ? 0.72 + item.appearance.animationPhaseOffset * 0.28
+        : name === 'Run' ? walkRate * 1.45 : walkRate)
   }
-  const clip = instance.clips.get(nextAction)!
-  instance.mixer.setTime(logicalTime + item.appearance.animationPhaseOffset * clip.duration)
+  instance.mixer.setTime(logicalTime + item.appearance.animationPhaseOffset * 2)
 }
 
 /** A bounded pool of actual rigged characters. All citizens remain independently simulated. */
@@ -196,7 +248,7 @@ export class CharacterManager {
       instance.root.visible = false
       const poolKey = `${instance.presetId}:${instance.tier}`
       const available = this.pool.get(poolKey) ?? []
-      if (available.length < 4) {
+      if (available.length < 8) {
         available.push(instance)
         this.pool.set(poolKey, available)
       } else {
@@ -214,7 +266,13 @@ export class CharacterManager {
         if (instance) {
           this.group.remove(instance.root)
           this.active.delete(item.id)
-          this.disposeInstance(instance)
+          instance.root.visible = false
+          const poolKey = `${instance.presetId}:${instance.tier}`
+          const available = this.pool.get(poolKey) ?? []
+          if (available.length < 8) {
+            available.push(instance)
+            this.pool.set(poolKey, available)
+          } else this.disposeInstance(instance)
         }
         instance = this.pool.get(`${asset.definition.presetId}:${tier}`)?.pop() ?? createInstance(asset, tier)
         this.active.set(item.id, instance)
@@ -224,7 +282,7 @@ export class CharacterManager {
       instance.root.position.set(item.pose.x, item.pose.y, item.pose.z)
       instance.root.rotation.y = item.pose.yaw
       instance.root.userData.agentId = item.id
-      instance.rig.traverse((object) => { if (object instanceof Mesh) object.userData.agentId = item.id })
+      for (const mesh of instance.meshes) mesh.userData.agentId = item.id
       colorize(instance, item.appearance)
       animate(instance, item, logicalTime, item.id === selectedId ? this.previewClip : null)
     }
@@ -236,6 +294,8 @@ export class CharacterManager {
       closeCount: [...tiers.values()].filter((tier) => tier === 'close').length,
       visibleCount: items.length,
       assetPresetCount: this.assets.size,
+      activeInstances: this.active.size,
+      pooledInstances: [...this.pool.values()].reduce((count, available) => count + available.length, 0),
     }
     return { tiers, diagnostics }
   }

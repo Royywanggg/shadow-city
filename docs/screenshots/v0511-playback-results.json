@@ -1,0 +1,197 @@
+{
+  "date": "2026-10-26T11:55:43.815Z",
+  "viewport": "1440x900",
+  "dpr": 1,
+  "browser": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36",
+  "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (LLVM 10.0.0) (0x0000C0DE)), SwiftShader driver)",
+  "citySeed": "shadow-city-hero-01",
+  "simulationSeed": "shadow-city-sim-01",
+  "selectedCitizen": "citizen-0003",
+  "samples": [
+    {
+      "speed": 1,
+      "wallTime": 9672.89999999851,
+      "tick": 100,
+      "frames": 13,
+      "tier": "close",
+      "visualTime": 10,
+      "fallbackCount": 0,
+      "farSpriteCount": 59
+    },
+    {
+      "speed": 1,
+      "wallTime": 9795.5,
+      "tick": 101,
+      "frames": 14,
+      "tier": "close",
+      "visualTime": 10.1,
+      "fallbackCount": 0,
+      "farSpriteCount": 59
+    },
+    {
+      "speed": 1,
+      "wallTime": 9917.800000000745,
+      "tick": 101,
+      "frames": 14,
+      "tier": "close",
+      "visualTime": 10.1,
+      "fallbackCount": 0,
+      "farSpriteCount": 59
+    },
+    {
+      "speed": 1,
+      "wallTime": 10040.099999997765,
+      "tick": 103,
+      "frames": 15,
+      "tier": "close",
+      "visualTime": 10.3,
+      "fallbackCount": 0,
+      "farSpriteCount": 59
+    },
+    {
+      "speed": 1,
+      "wallTime": 10165.39999999851,
+      "tick": 103,
+      "frames": 15,
+      "tier": "close",
+      "visualTime": 10.3,
+      "fallbackCount": 0,
+      "farSpriteCount": 59
+    },
+    {
+      "speed": 1,
+      "wallTime": 10287.5,
+      "tick": 106,
+      "frames": 16,
+      "tier": "close",
+      "visualTime": 10.6,
+      "fallbackCount": 0,
+      "farSpriteCount": 60
+    },
+    {
+      "speed": 1,
+      "wallTime": 10428.89999999851,
+      "tick": 108,
+      "frames": 17,
+      "tier": "close",
+      "visualTime": 10.8,
+      "fallbackCount": 0,
+      "farSpriteCount": 60
+    },
+    {
+      "speed": 1,
+      "wallTime": 10560,
+      "tick": 108,
+      "frames": 17,
+      "tier": "close",
+      "visualTime": 10.8,
+      "fallbackCount": 0,
+      "farSpriteCount": 60
+    },
+    {
+      "speed": 1,
+      "wallTime": 11827.39999999851,
+      "tick": 120,
+      "frames": 22,
+      "tier": "close",
+      "visualTime": 12,
+      "fallbackCount": 0,
+      "farSpriteCount": 62
+    },
+    {
+      "speed": 1,
+      "wallTime": 11949.800000000745,
+      "tick": 122,
+      "frames": 23,
+      "tier": "close",
+      "visualTime": 12.2,
+      "fallbackCount": 0,
+      "farSpriteCount": 60
+    },
+    {
+      "speed": 1,
+      "wallTime": 12074.5,
+      "tick": 122,
+      "frames": 23,
+      "tier": "close",
+      "visualTime": 12.2,
+      "fallbackCount": 0,
+      "farSpriteCount": 60
+    },
+    {
+      "speed": 1,
+      "wallTime": 12197.599999997765,
+      "tick": 125,
+      "frames": 24,
+      "tier": "close",
+      "visualTime": 12.5,
+      "fallbackCount": 0,
+      "farSpriteCount": 58
+    },
+    {
+      "speed": 1,
+      "wallTime": 12319.800000000745,
+      "tick": 125,
+      "frames": 24,
+      "tier": "close",
+      "visualTime": 12.5,
+      "fallbackCount": 0,
+      "farSpriteCount": 58
+    },
+    {
+      "speed": 1,
+      "wallTime": 12441.699999999255,
+      "tick": 125,
+      "frames": 24,
+      "tier": "close",
+      "visualTime": 12.5,
+      "fallbackCount": 0,
+      "farSpriteCount": 58
+    },
+    {
+      "speed": 1,
+      "wallTime": 12564.39999999851,
+      "tick": 125,
+      "frames": 24,
+      "tier": "close",
+      "visualTime": 12.5,
+      "fallbackCount": 0,
+      "farSpriteCount": 58
+    },
+    {
+      "speed": 1,
+      "wallTime": 12686.89999999851,
+      "tick": 130,
+      "frames": 25,
+      "tier": "close",
+      "visualTime": 13,
+      "fallbackCount": 0,
+      "farSpriteCount": 57
+    },
+    {
+      "speed": 1,
+      "wallTime": 12809.300000000745,
+      "tick": 130,
+      "frames": 25,
+      "tier": "close",
+      "visualTime": 13,
+      "fallbackCount": 0,
+      "farSpriteCount": 57
+    },
+    {
+      "speed": 1,
+      "wallTime": 12942.39999999851,
+      "tick": 133,
+      "frames": 26,
+      "tier": "close",
+      "visualTime": 13.3,
+      "fallbackCount": 0,
+      "farSpriteCount": 59
+    }
+  ],
+  "errors": [],
+  "screenshots": [
+    "v0511-active-character-1440x900.png",
+    "v0511-after-playback-1440x900.png"
+  ]
+}

@@ -1,4 +1,5 @@
 import { advanceAlongRoute } from './movement'
+import { chooseActivitySlot } from './activitySlots'
 import { findRoute, locateOnRoute, type RouteResult } from './navigation'
 import { createRandomStream, nextRandom } from './rng'
 import type {
@@ -16,6 +17,7 @@ export type CitizenEventDraft =
   | { readonly type: 'ActivityFinished'; readonly destinationAnchorId: string }
   | { readonly type: 'TripFailed'; readonly originAnchorId: string; readonly destinationAnchorId: string;
       readonly reason: 'unreachable' | 'invalid-anchor' }
+  | { readonly type: 'TripDeferred'; readonly desiredAnchorId: string; readonly reason: 'capacity' }
 
 export interface CitizenStepResult {
   readonly citizen: CitizenState
@@ -41,16 +43,32 @@ function failureReason(result: Extract<RouteResult, { status: 'unreachable' }>):
   return result.reason === 'disconnected' ? 'unreachable' : 'invalid-anchor'
 }
 
+function movementMode(profile: AgentProfile, tripOrdinal: number): CitizenState['movementMode'] {
+  return profile.jogPreference > 0.7 && tripOrdinal % 2 === 1 ? 'jog' : 'walk'
+}
+
+function routeHeading(env: SimulationEnvironment, route: CitizenState['route'], routeIndex: number): number {
+  const step = route[Math.min(route.length - 1, routeIndex)]
+  if (!step) return 0
+  const from = env.navigation.nodeById.get(step.fromNodeId)!
+  const to = env.navigation.nodeById.get(step.toNodeId)!
+  return Math.atan2(to.x - from.x, to.z - from.z)
+}
+
 export function createInitialCitizens(env: SimulationEnvironment, config: SimulationConfigV2): readonly CitizenState[] {
+  const reservedSlots = new Set<string>()
   return env.profiles.map((profile, index) => {
     let behaviorRngState = createRandomStream(config.simulationSeed, `behavior:${profile.id}`)
     const homePosition = anchorPosition(env, profile.homeAnchorId)
     const base: CitizenState = {
       id: profile.id,
       activity: 'atHome',
+      movementMode: 'walk',
+      headingRadians: 0,
       position: homePosition,
       currentAnchorId: profile.homeAnchorId,
       destinationAnchorId: null,
+      occupancySlotId: null,
       route: [],
       routeIndex: 0,
       distanceOnEdge: 0,
@@ -65,9 +83,15 @@ export function createInitialCitizens(env: SimulationEnvironment, config: Simula
     if (index % 4 !== 0 || env.publicAnchorIds.length === 0) return base
     const selection = nextRandom(behaviorRngState)
     behaviorRngState = selection.state
-    const destinationAnchorId = env.publicAnchorIds[Math.floor(selection.value * env.publicAnchorIds.length)]
-    const route = routeBetween(env, profile.homeAnchorId, destinationAnchorId)
+    const desiredAnchorId = env.publicAnchorIds[Math.floor(selection.value * env.publicAnchorIds.length)]
+    const slot = chooseActivitySlot(env.activitySlots, desiredAnchorId, reservedSlots)
+    if (!slot) return {
+      ...base, activity: 'waitingForSpace', destinationAnchorId: desiredAnchorId,
+      nextDecisionTick: 1, behaviorRngState,
+    }
+    const route = routeBetween(env, profile.homeAnchorId, slot.anchorId)
     if (route.status !== 'ok' || route.steps.length === 0) return { ...base, behaviorRngState }
+    reservedSlots.add(slot.id)
     const progress = nextRandom(behaviorRngState)
     behaviorRngState = progress.state
     const distanceAlongRoute = route.length * (0.1 + progress.value * 0.7)
@@ -75,9 +99,12 @@ export function createInitialCitizens(env: SimulationEnvironment, config: Simula
     return {
       ...base,
       activity: 'travelling',
+      movementMode: movementMode(profile, 1),
+      headingRadians: routeHeading(env, route.steps, location.routeIndex),
       position: location.position,
       currentAnchorId: null,
-      destinationAnchorId,
+      destinationAnchorId: slot.anchorId,
+      occupancySlotId: slot.id,
       route: route.steps,
       routeIndex: location.routeIndex,
       distanceOnEdge: location.distanceOnEdge,
@@ -101,6 +128,7 @@ export function stepCitizen(
   profile: AgentProfile,
   previous: CitizenState,
   tick: number,
+  reservedSlots: ReadonlySet<string>,
 ): CitizenStepResult {
   if (previous.id !== profile.id) throw new Error('Citizen profile order mismatch')
   switch (previous.activity) {
@@ -108,11 +136,27 @@ export function stepCitizen(
       if (tick < previous.nextDecisionTick) return { citizen: previous, events: [] }
       return { citizen: { ...previous, activity: 'planningTrip', nextDecisionTick: tick + 1 }, events: [] }
     }
-    case 'planningTrip': {
+    case 'planningTrip':
+    case 'waitingForSpace': {
       if (tick < previous.nextDecisionTick) return { citizen: previous, events: [] }
-      const selection = nextRandom(previous.behaviorRngState)
-      const destinationAnchorId = env.publicAnchorIds[Math.floor(selection.value * env.publicAnchorIds.length)]
-      if (!destinationAnchorId) throw new Error('No public destination available')
+      const selection = previous.activity === 'planningTrip'
+        ? nextRandom(previous.behaviorRngState) : null
+      const desiredAnchorId = selection
+        ? env.publicAnchorIds[Math.floor(selection.value * env.publicAnchorIds.length)]
+        : previous.destinationAnchorId
+      if (!desiredAnchorId) throw new Error('No public destination available')
+      const slot = chooseActivitySlot(env.activitySlots, desiredAnchorId, reservedSlots)
+      if (!slot) {
+        const citizen: CitizenState = {
+          ...previous, activity: 'waitingForSpace', destinationAnchorId: desiredAnchorId,
+          nextDecisionTick: tick + 10,
+          behaviorRngState: selection?.state ?? previous.behaviorRngState,
+        }
+        return finish(citizen, previous.activity === 'waitingForSpace' ? [] : [
+          { type: 'TripDeferred', desiredAnchorId, reason: 'capacity' },
+        ])
+      }
+      const destinationAnchorId = slot.anchorId
       const route = routeBetween(env, profile.homeAnchorId, destinationAnchorId)
       if (route.status !== 'ok' || route.steps.length === 0) {
         const reason = route.status === 'ok' ? 'unreachable' : failureReason(route)
@@ -120,17 +164,21 @@ export function stepCitizen(
           ...previous,
           activity: 'atHome',
           destinationAnchorId: null,
+          occupancySlotId: null,
           nextDecisionTick: tick + 20,
-          behaviorRngState: selection.state,
+          behaviorRngState: selection?.state ?? previous.behaviorRngState,
         }, [{ type: 'TripFailed', originAnchorId: profile.homeAnchorId, destinationAnchorId, reason }])
       }
       const tripOrdinal = previous.tripOrdinal + 1
       return finish({
         ...previous,
         activity: 'travelling',
+        movementMode: movementMode(profile, tripOrdinal),
+        headingRadians: routeHeading(env, route.steps, 0),
         position: anchorPosition(env, profile.homeAnchorId),
         currentAnchorId: null,
         destinationAnchorId,
+        occupancySlotId: slot.id,
         route: route.steps,
         routeIndex: 0,
         distanceOnEdge: 0,
@@ -138,17 +186,19 @@ export function stepCitizen(
         routeId: `${profile.id}-trip-${tripOrdinal}`,
         tripOrdinal,
         nextDecisionTick: 0,
-        behaviorRngState: selection.state,
+        behaviorRngState: selection?.state ?? previous.behaviorRngState,
       }, [{ type: 'TripStarted', originAnchorId: profile.homeAnchorId, destinationAnchorId, routeLength: route.length }])
     }
     case 'travelling':
     case 'returningHome': {
-      const budget = profile.speedUnitsPerLogicalSecond * config.logicalSecondsPerTick
+      const budget = profile.speedUnitsPerLogicalSecond * config.logicalSecondsPerTick *
+        (previous.movementMode === 'jog' ? 1.45 : 1)
       const movement = advanceAlongRoute(env.navigation, previous, budget)
       if (!movement.arrived) {
         return { citizen: {
           ...previous,
           position: movement.position,
+          headingRadians: routeHeading(env, previous.route, movement.routeIndex),
           routeIndex: movement.routeIndex,
           distanceOnEdge: movement.distanceOnEdge,
           distanceAlongRoute: movement.distanceAlongRoute,
@@ -162,8 +212,11 @@ export function stepCitizen(
         ...previous,
         activity: atPublicDestination ? 'atDestination' : 'atHome',
         position: destinationPosition,
+        movementMode: 'walk',
+        headingRadians: routeHeading(env, previous.route, previous.route.length - 1),
         currentAnchorId: destinationAnchorId,
         destinationAnchorId: null,
+        occupancySlotId: atPublicDestination ? previous.occupancySlotId : null,
         route: [],
         routeIndex: 0,
         distanceOnEdge: 0,
@@ -190,8 +243,11 @@ export function stepCitizen(
       return finish({
         ...previous,
         activity: 'returningHome',
+        movementMode: movementMode(profile, tripOrdinal),
+        headingRadians: routeHeading(env, route.steps, 0),
         currentAnchorId: null,
         destinationAnchorId: profile.homeAnchorId,
+        occupancySlotId: null,
         route: route.steps,
         routeIndex: 0,
         distanceOnEdge: 0,
