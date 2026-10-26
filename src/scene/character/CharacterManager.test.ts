@@ -1,8 +1,16 @@
 import { AnimationClip, VectorKeyframeTrack } from 'three'
 import { describe, expect, it } from 'vitest'
-import { stripHorizontalRootMotion } from './CharacterManager'
+import { animationWeights, stripHorizontalRootMotion } from './CharacterManager'
 
 describe('character animation isolation', () => {
+  it('blends activity transitions without resetting to the bind pose', () => {
+    expect(animationWeights('travelling', 'atHome', 0)).toEqual({ Idle: 1, Walk: 0, Run: 0 })
+    expect(animationWeights('travelling', 'atHome', 0.5)).toEqual({ Idle: 0.5, Walk: 0.5, Run: 0 })
+    expect(animationWeights('travelling', 'atHome', 1)).toEqual({ Idle: 0, Walk: 1, Run: 0 })
+    expect(animationWeights('atDestination', 'travelling', 0.5)).toEqual({ Idle: 0.5, Walk: 0.5, Run: 0 })
+    expect(animationWeights('atHome', undefined, 0)).toEqual({ Idle: 1, Walk: 0, Run: 0 })
+    expect(animationWeights('atHome', 'travelling', 0.3, 'Run')).toEqual({ Idle: 0, Walk: 0, Run: 1 })
+  })
   it('locks horizontal root translation without changing authored vertical movement', () => {
     const source = new AnimationClip('Walk', 1, [
       new VectorKeyframeTrack('Body.position', [0, 0.5, 1], [1, 2, 3, 5, 4, 7, 9, 6, 11]),

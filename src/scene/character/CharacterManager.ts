@@ -13,6 +13,8 @@ export interface CharacterRenderItem {
   readonly id: string
   readonly appearance: CitizenAppearance
   readonly activity: string
+  readonly previousActivity?: string
+  readonly transitionProgress?: number
   readonly pose: AgentRenderPose
   readonly pixelHeight: number
 }
@@ -42,8 +44,22 @@ interface CharacterInstance {
   readonly materials: readonly MeshStandardMaterial[]
   readonly originalColors: ReadonlyMap<MeshStandardMaterial, Color>
   readonly clips: ReadonlyMap<string, AnimationClip>
-  action: string | null
+  readonly meshes: readonly Mesh[]
   colors: string
+}
+
+export function animationWeights(activity: string, previousActivity?: string, transitionProgress = 1,
+  preview: 'Idle' | 'Walk' | 'Run' | null = null): Readonly<Record<'Idle' | 'Walk' | 'Run', number>> {
+  const clipFor = (value: string) => value === 'travelling' || value === 'returningHome' ? 'Walk' : 'Idle'
+  if (preview) return { Idle: Number(preview === 'Idle'), Walk: Number(preview === 'Walk'), Run: Number(preview === 'Run') }
+  const next = clipFor(activity)
+  const prior = previousActivity ? clipFor(previousActivity) : next
+  const blend = Math.max(0, Math.min(1, transitionProgress))
+  return {
+    Idle: (prior === 'Idle' ? 1 - blend : 0) + (next === 'Idle' ? blend : 0),
+    Walk: (prior === 'Walk' ? 1 - blend : 0) + (next === 'Walk' ? blend : 0),
+    Run: 0,
+  }
 }
 
 export function stripHorizontalRootMotion(source: AnimationClip): AnimationClip {
@@ -114,8 +130,10 @@ function createInstance(asset: LoadedAsset, tier: 'medium' | 'close'): Character
   rig.position.y = asset.feetOffset
   root.add(rig)
   const materials: MeshStandardMaterial[] = []
+  const meshes: Mesh[] = []
   rig.traverse((object) => {
     if (!(object instanceof Mesh)) return
+    meshes.push(object)
     object.castShadow = false
     object.receiveShadow = true
     const originals = Array.isArray(object.material) ? object.material : [object.material]
@@ -127,10 +145,11 @@ function createInstance(asset: LoadedAsset, tier: 'medium' | 'close'): Character
     object.material = Array.isArray(object.material) ? clones : clones[0]
   })
   const mixer = tier === 'close' ? new AnimationMixer(rig) : null
+  if (mixer) for (const clip of asset.clips.values()) mixer.clipAction(clip).play().setEffectiveWeight(0)
   return {
     presetId: asset.definition.presetId, tier, root, rig, mixer, materials,
     originalColors: new Map(materials.map((material) => [material, material.color.clone()])),
-    clips: asset.clips, action: null, colors: '',
+    clips: asset.clips, meshes, colors: '',
   }
 }
 
@@ -150,14 +169,11 @@ function colorize(instance: CharacterInstance, appearance: CitizenAppearance): v
 
 function animate(instance: CharacterInstance, item: CharacterRenderItem, logicalTime: number, preview: 'Idle' | 'Walk' | 'Run' | null): void {
   if (!instance.mixer) return
-  const nextAction = preview ?? (item.activity === 'travelling' || item.activity === 'returningHome' ? 'Walk' : 'Idle')
-  if (instance.action !== nextAction) {
-    instance.mixer.stopAllAction()
-    instance.mixer.clipAction(instance.clips.get(nextAction)!).reset().play()
-    instance.action = nextAction
+  const weights = animationWeights(item.activity, item.previousActivity, item.transitionProgress, preview)
+  for (const name of ['Idle', 'Walk', 'Run'] as const) {
+    instance.mixer.clipAction(instance.clips.get(name)!).setEffectiveWeight(weights[name])
   }
-  const clip = instance.clips.get(nextAction)!
-  instance.mixer.setTime(logicalTime + item.appearance.animationPhaseOffset * clip.duration)
+  instance.mixer.setTime(logicalTime + item.appearance.animationPhaseOffset * 2)
 }
 
 /** A bounded pool of actual rigged characters. All citizens remain independently simulated. */
@@ -196,7 +212,7 @@ export class CharacterManager {
       instance.root.visible = false
       const poolKey = `${instance.presetId}:${instance.tier}`
       const available = this.pool.get(poolKey) ?? []
-      if (available.length < 4) {
+      if (available.length < 8) {
         available.push(instance)
         this.pool.set(poolKey, available)
       } else {
@@ -214,7 +230,13 @@ export class CharacterManager {
         if (instance) {
           this.group.remove(instance.root)
           this.active.delete(item.id)
-          this.disposeInstance(instance)
+          instance.root.visible = false
+          const poolKey = `${instance.presetId}:${instance.tier}`
+          const available = this.pool.get(poolKey) ?? []
+          if (available.length < 8) {
+            available.push(instance)
+            this.pool.set(poolKey, available)
+          } else this.disposeInstance(instance)
         }
         instance = this.pool.get(`${asset.definition.presetId}:${tier}`)?.pop() ?? createInstance(asset, tier)
         this.active.set(item.id, instance)
@@ -224,7 +246,7 @@ export class CharacterManager {
       instance.root.position.set(item.pose.x, item.pose.y, item.pose.z)
       instance.root.rotation.y = item.pose.yaw
       instance.root.userData.agentId = item.id
-      instance.rig.traverse((object) => { if (object instanceof Mesh) object.userData.agentId = item.id })
+      for (const mesh of instance.meshes) mesh.userData.agentId = item.id
       colorize(instance, item.appearance)
       animate(instance, item, logicalTime, item.id === selectedId ? this.previewClip : null)
     }

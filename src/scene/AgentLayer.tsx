@@ -179,6 +179,8 @@ export function AgentLayer({
           id: citizen.id,
           appearance,
           activity: citizen.activity,
+          previousActivity: prior?.activity,
+          transitionProgress: alpha,
           pose,
           pixelHeight: onScreen ? Math.abs(screenTop.y - screenPoint.y) * bounds.height / 2 : 0,
         })
@@ -267,7 +269,7 @@ export function AgentLayer({
       window.__shadowCityAgentDiagnostics = { visibleCount, candidates, renderedFrames: renderedFrames.current }
       lastDebugTick.current = current.tick
     }
-    return movingCount > 0
+    return movingCount > 0 || (result?.diagnostics.closeCount ?? 0) > 0
   }, [appearanceById, camera, clothingColor, gl, interactive, lookup, object, screenPoint, screenTop, selected, selectedId])
 
   useLayoutEffect(() => {
