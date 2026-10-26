@@ -40,7 +40,7 @@ describe('original-city v0.6 integration', () => {
     expect(visited.size).toBe(world.roadNodes.length)
   })
 
-  it('aligns curved bridge, stair and ramp paths at their real navigation landings', () => {
+  it('aligns the bridge with a plaza-edge pavilion and the Galleria upper floor', () => {
     const world = generateIntegratedWorld()
     const node = new Map(world.navNodes.map((item) => [item.id, item]))
     for (const id of ['bridge:deck', 'connector:west-stair', 'connector:east-ramp']) {
@@ -51,8 +51,26 @@ describe('original-city v0.6 integration', () => {
       expect(edge.path.every((point) => point.y >= 250 && point.y <= 5_500)).toBe(true)
     }
     const bridge = world.navEdges.find((edge) => edge.id === 'bridge:deck')!
-    expect(bridge.path.some((point) => point.z > 500)).toBe(true)
+    expect(new Set(bridge.path.map((point) => point.z)).size).toBe(1)
+    expect(bridge.path[0].z).toBeLessThan(-6_000)
     expect(bridge.path.every((point) => point.y === 5_500)).toBe(true)
+    const pavilion = world.surfaces.find((surface) => surface.id === 'pavilion-l1')!
+    const pavilionXs = pavilion.polygonXZ.map((point) => point.x)
+    const pavilionZs = pavilion.polygonXZ.map((point) => point.z)
+    expect(bridge.path[0].x).toBeGreaterThanOrEqual(Math.min(...pavilionXs))
+    expect(bridge.path[0].x).toBeLessThanOrEqual(Math.max(...pavilionXs))
+    expect(bridge.path[0].z).toBeGreaterThanOrEqual(Math.min(...pavilionZs))
+    expect(bridge.path[0].z).toBeLessThanOrEqual(Math.max(...pavilionZs))
+    const ramp = world.navEdges.find((edge) => edge.id === 'connector:east-ramp')!
+    const galleria = world.surfaces.find((surface) => surface.id === 'galleria-l0')!
+    const mallXs = galleria.polygonXZ.map((point) => point.x)
+    const mallZs = galleria.polygonXZ.map((point) => point.z)
+    expect(ramp.path.every((point) => point.x >= Math.min(...mallXs) &&
+      point.x <= Math.max(...mallXs) && point.z >= Math.min(...mallZs) &&
+      point.z <= Math.max(...mallZs))).toBe(true)
+    const atriumWest = Math.min(...world.surfaces.find((surface) =>
+      surface.id === 'galleria-l1')!.blockedPolygonsXZ[0].map((point) => point.x))
+    expect(Math.max(...ramp.path.map((point) => point.x)) + 800).toBeLessThan(atriumWest)
     const deck = createWalkwayDeckGeometry(bridge.path, 2.9)
     const vertices = deck.getAttribute('position')
     for (const [index, endpoint] of [[0, bridge.path[0]],
@@ -67,6 +85,11 @@ describe('original-city v0.6 integration', () => {
       box.size.x / 2 && Math.abs(bridge.path.at(-1)!.z - box.center.z) <= box.size.z / 2 &&
       Math.abs(box.center.y + box.size.y / 2 - bridge.path.at(-1)!.y) < 100)).toBe(true)
     deck.dispose()
+    const index = createNavigationIndexV2(world)
+    const crossing = findRouteV2(index, 'pavilion:l0:entry', 'galleria:l1:bridge-entry')
+    expect(crossing.status).toBe('ok')
+    if (crossing.status === 'ok') expect(crossing.steps.some((step) =>
+      step.edgeId === 'bridge:deck')).toBe(true)
   })
 
   it('keeps 200 homes distinct and gives every retained facade a legal portal', () => {

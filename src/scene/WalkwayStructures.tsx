@@ -101,16 +101,9 @@ export function WalkwayStructures({ world, onPickSurface }: { world: WorldModelV
     edge.id === 'bridge:deck' || edge.id === 'connector:west-stair' ||
     edge.id === 'connector:east-ramp'), [world])
   if (!world.baseCity) return null
-  const landing = world.navNodes.find((node) => node.id === 'bridge:west')!
   return <>{structures.map((edge) => <Structure key={edge.id} edge={edge}
-    width={edge.id === 'bridge:deck' ? 2.9 : edge.kind === 'ramp' ? 2 : 2.2}
+    width={edge.id === 'bridge:deck' ? 2.9 : edge.kind === 'ramp' ? 1.6 : 2.2}
     color={edge.id === 'bridge:deck' ? '#829aa5' : edge.kind === 'ramp' ? '#798f9b' : '#90a3ac'}
     onPick={onPickSurface} />)}
-    <mesh position={[metre(landing.position.x), metre(landing.position.y) - 0.19,
-      metre(landing.position.z)]} castShadow receiveShadow
-      onClick={(event) => { event.stopPropagation(); onPickSurface('skybridge') }}>
-      <cylinderGeometry args={[2.25, 2.25, 0.3, 28]} />
-      <meshStandardMaterial color="#8ca4ad" roughness={0.69} metalness={0.12} />
-    </mesh>
   </>
 }
