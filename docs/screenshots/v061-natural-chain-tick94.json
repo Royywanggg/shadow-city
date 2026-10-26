@@ -3,7 +3,7 @@
   "limitation": "The greeting and later offence occurred during one continuous social encounter episode; a distinct second episode is not shown here.",
   "citySeed": "shadow-city-hero-01",
   "generatorVersion": "heritage-extension-v6",
-  "fingerprint": "world-v2:heritage-extension-v6:b2d75275:sim-v5:a4dc8c6b",
+  "fingerprint": "world-v2:heritage-extension-v6:b2d75275:sim-v5:3e6f68fd",
   "tick": 94,
   "config": {
     "version": 5,
@@ -44,7 +44,8 @@
         "familiarityGreetingGain": 0.08,
         "familiarityConversationGain": 0.18,
         "familiarityDecayPer100Ticks": 0.985,
-        "diagnosticTraces": false
+        "diagnosticTraces": false,
+        "diagnosticTraceCapacity": 512
       },
       "lifecycle": {
         "enterDistanceMm": 2400,

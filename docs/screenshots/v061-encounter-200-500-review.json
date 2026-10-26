@@ -8,45 +8,45 @@
   "ticks": 500,
   "population": 200,
   "socialReview": true,
-  "generationMs": 146.994,
+  "generationMs": 87.802,
   "tickDuration": {
     "count": 500,
-    "meanMs": 20.157,
-    "p95Ms": 29.437,
-    "maxMs": 485.486
+    "meanMs": 18.016,
+    "p95Ms": 28.275,
+    "maxMs": 46.007
   },
-  "replayFromZeroMs": 8124.738,
+  "replayFromZeroMs": 8733.361,
   "replayEqual": true,
   "stageTiming": {
     "spatialQueryMs": {
       "count": 500,
-      "meanMs": 5.777,
-      "p95Ms": 5.81,
-      "maxMs": 343.778
+      "meanMs": 4.61,
+      "p95Ms": 5.875,
+      "maxMs": 17.387
     },
     "perceptionMs": {
       "count": 500,
-      "meanMs": 1.329,
-      "p95Ms": 2.195,
-      "maxMs": 30.825
+      "meanMs": 1.201,
+      "p95Ms": 2.201,
+      "maxMs": 3.384
     },
     "lifecycleMs": {
       "count": 500,
-      "meanMs": 1.7,
-      "p95Ms": 2.588,
-      "maxMs": 131.412
+      "meanMs": 1.457,
+      "p95Ms": 2.425,
+      "maxMs": 6.895
     },
     "crimeAndWitnessMs": {
       "count": 500,
-      "meanMs": 2.656,
-      "p95Ms": 4.314,
-      "maxMs": 46.359
+      "meanMs": 2.555,
+      "p95Ms": 4.341,
+      "maxMs": 17.86
     },
     "socialDecisionAndMemoryMs": {
       "count": 500,
-      "meanMs": 2.066,
-      "p95Ms": 2.836,
-      "maxMs": 37.744
+      "meanMs": 2.071,
+      "p95Ms": 2.97,
+      "maxMs": 9.774
     }
   },
   "candidatePairSeconds": 374055,
@@ -54,7 +54,7 @@
   "episodeCount": 1720,
   "uniquePairCount": 1141,
   "interactionDecisionEvaluations": 1341,
-  "interactionAttempts": 719,
+  "interactionAttempts": 721,
   "interactionDecisionReasons": {
     "busy": 203,
     "mutualGreeting": 194,
@@ -290,6 +290,3231 @@
   "actualWitnesses": 8,
   "deliveredReports": 5,
   "pendingReports": 0,
-  "serializedStateBytes": 5170277,
+  "serializedStateBytes": 5035289,
+  "scientificMetrics": {
+    "interval": {
+      "fromTick": 0,
+      "toTick": 500,
+      "population": 200,
+      "simulationSeed": "shadow-city-sim-01",
+      "socialSeed": "shadow-city-social-01"
+    },
+    "exposure": {
+      "candidatePairSeconds": 374055,
+      "perceivedPairSeconds": 312198,
+      "encounterEpisodes": 1720,
+      "uniqueEncounterPairs": 1141,
+      "uniqueContactsPerAgent": [
+        {
+          "agentId": "citizen-0000",
+          "count": 6
+        },
+        {
+          "agentId": "citizen-0001",
+          "count": 7
+        },
+        {
+          "agentId": "citizen-0002",
+          "count": 4
+        },
+        {
+          "agentId": "citizen-0003",
+          "count": 16
+        },
+        {
+          "agentId": "citizen-0004",
+          "count": 5
+        },
+        {
+          "agentId": "citizen-0005",
+          "count": 8
+        },
+        {
+          "agentId": "citizen-0006",
+          "count": 16
+        },
+        {
+          "agentId": "citizen-0007",
+          "count": 14
+        },
+        {
+          "agentId": "citizen-0008",
+          "count": 16
+        },
+        {
+          "agentId": "citizen-0009",
+          "count": 16
+        },
+        {
+          "agentId": "citizen-0010",
+          "count": 17
+        },
+        {
+          "agentId": "citizen-0011",
+          "count": 7
+        },
+        {
+          "agentId": "citizen-0012",
+          "count": 11
+        },
+        {
+          "agentId": "citizen-0013",
+          "count": 21
+        },
+        {
+          "agentId": "citizen-0014",
+          "count": 5
+        },
+        {
+          "agentId": "citizen-0015",
+          "count": 5
+        },
+        {
+          "agentId": "citizen-0016",
+          "count": 8
+        },
+        {
+          "agentId": "citizen-0017",
+          "count": 6
+        },
+        {
+          "agentId": "citizen-0018",
+          "count": 11
+        },
+        {
+          "agentId": "citizen-0019",
+          "count": 10
+        },
+        {
+          "agentId": "citizen-0020",
+          "count": 3
+        },
+        {
+          "agentId": "citizen-0021",
+          "count": 13
+        },
+        {
+          "agentId": "citizen-0022",
+          "count": 17
+        },
+        {
+          "agentId": "citizen-0023",
+          "count": 10
+        },
+        {
+          "agentId": "citizen-0024",
+          "count": 19
+        },
+        {
+          "agentId": "citizen-0025",
+          "count": 12
+        },
+        {
+          "agentId": "citizen-0026",
+          "count": 12
+        },
+        {
+          "agentId": "citizen-0027",
+          "count": 8
+        },
+        {
+          "agentId": "citizen-0028",
+          "count": 9
+        },
+        {
+          "agentId": "citizen-0029",
+          "count": 10
+        },
+        {
+          "agentId": "citizen-0030",
+          "count": 12
+        },
+        {
+          "agentId": "citizen-0031",
+          "count": 15
+        },
+        {
+          "agentId": "citizen-0032",
+          "count": 10
+        },
+        {
+          "agentId": "citizen-0033",
+          "count": 9
+        },
+        {
+          "agentId": "citizen-0034",
+          "count": 10
+        },
+        {
+          "agentId": "citizen-0035",
+          "count": 10
+        },
+        {
+          "agentId": "citizen-0036",
+          "count": 13
+        },
+        {
+          "agentId": "citizen-0037",
+          "count": 8
+        },
+        {
+          "agentId": "citizen-0038",
+          "count": 9
+        },
+        {
+          "agentId": "citizen-0039",
+          "count": 6
+        },
+        {
+          "agentId": "citizen-0040",
+          "count": 17
+        },
+        {
+          "agentId": "citizen-0041",
+          "count": 21
+        },
+        {
+          "agentId": "citizen-0042",
+          "count": 6
+        },
+        {
+          "agentId": "citizen-0043",
+          "count": 3
+        },
+        {
+          "agentId": "citizen-0044",
+          "count": 9
+        },
+        {
+          "agentId": "citizen-0045",
+          "count": 16
+        },
+        {
+          "agentId": "citizen-0046",
+          "count": 14
+        },
+        {
+          "agentId": "citizen-0047",
+          "count": 8
+        },
+        {
+          "agentId": "citizen-0048",
+          "count": 13
+        },
+        {
+          "agentId": "citizen-0049",
+          "count": 14
+        },
+        {
+          "agentId": "citizen-0050",
+          "count": 9
+        },
+        {
+          "agentId": "citizen-0051",
+          "count": 13
+        },
+        {
+          "agentId": "citizen-0052",
+          "count": 13
+        },
+        {
+          "agentId": "citizen-0053",
+          "count": 6
+        },
+        {
+          "agentId": "citizen-0054",
+          "count": 15
+        },
+        {
+          "agentId": "citizen-0055",
+          "count": 16
+        },
+        {
+          "agentId": "citizen-0056",
+          "count": 8
+        },
+        {
+          "agentId": "citizen-0057",
+          "count": 7
+        },
+        {
+          "agentId": "citizen-0058",
+          "count": 6
+        },
+        {
+          "agentId": "citizen-0059",
+          "count": 17
+        },
+        {
+          "agentId": "citizen-0060",
+          "count": 18
+        },
+        {
+          "agentId": "citizen-0061",
+          "count": 19
+        },
+        {
+          "agentId": "citizen-0062",
+          "count": 20
+        },
+        {
+          "agentId": "citizen-0063",
+          "count": 16
+        },
+        {
+          "agentId": "citizen-0064",
+          "count": 9
+        },
+        {
+          "agentId": "citizen-0065",
+          "count": 18
+        },
+        {
+          "agentId": "citizen-0066",
+          "count": 13
+        },
+        {
+          "agentId": "citizen-0067",
+          "count": 10
+        },
+        {
+          "agentId": "citizen-0068",
+          "count": 15
+        },
+        {
+          "agentId": "citizen-0069",
+          "count": 5
+        },
+        {
+          "agentId": "citizen-0070",
+          "count": 13
+        },
+        {
+          "agentId": "citizen-0071",
+          "count": 6
+        },
+        {
+          "agentId": "citizen-0072",
+          "count": 11
+        },
+        {
+          "agentId": "citizen-0073",
+          "count": 8
+        },
+        {
+          "agentId": "citizen-0074",
+          "count": 11
+        },
+        {
+          "agentId": "citizen-0075",
+          "count": 9
+        },
+        {
+          "agentId": "citizen-0076",
+          "count": 8
+        },
+        {
+          "agentId": "citizen-0077",
+          "count": 14
+        },
+        {
+          "agentId": "citizen-0078",
+          "count": 12
+        },
+        {
+          "agentId": "citizen-0079",
+          "count": 6
+        },
+        {
+          "agentId": "citizen-0080",
+          "count": 8
+        },
+        {
+          "agentId": "citizen-0081",
+          "count": 6
+        },
+        {
+          "agentId": "citizen-0082",
+          "count": 16
+        },
+        {
+          "agentId": "citizen-0083",
+          "count": 10
+        },
+        {
+          "agentId": "citizen-0084",
+          "count": 21
+        },
+        {
+          "agentId": "citizen-0085",
+          "count": 10
+        },
+        {
+          "agentId": "citizen-0086",
+          "count": 13
+        },
+        {
+          "agentId": "citizen-0087",
+          "count": 20
+        },
+        {
+          "agentId": "citizen-0088",
+          "count": 12
+        },
+        {
+          "agentId": "citizen-0089",
+          "count": 10
+        },
+        {
+          "agentId": "citizen-0090",
+          "count": 12
+        },
+        {
+          "agentId": "citizen-0091",
+          "count": 21
+        },
+        {
+          "agentId": "citizen-0092",
+          "count": 2
+        },
+        {
+          "agentId": "citizen-0093",
+          "count": 7
+        },
+        {
+          "agentId": "citizen-0094",
+          "count": 11
+        },
+        {
+          "agentId": "citizen-0095",
+          "count": 12
+        },
+        {
+          "agentId": "citizen-0096",
+          "count": 11
+        },
+        {
+          "agentId": "citizen-0097",
+          "count": 7
+        },
+        {
+          "agentId": "citizen-0098",
+          "count": 12
+        },
+        {
+          "agentId": "citizen-0099",
+          "count": 9
+        },
+        {
+          "agentId": "citizen-0100",
+          "count": 8
+        },
+        {
+          "agentId": "citizen-0101",
+          "count": 11
+        },
+        {
+          "agentId": "citizen-0102",
+          "count": 14
+        },
+        {
+          "agentId": "citizen-0103",
+          "count": 12
+        },
+        {
+          "agentId": "citizen-0104",
+          "count": 13
+        },
+        {
+          "agentId": "citizen-0105",
+          "count": 8
+        },
+        {
+          "agentId": "citizen-0106",
+          "count": 13
+        },
+        {
+          "agentId": "citizen-0107",
+          "count": 14
+        },
+        {
+          "agentId": "citizen-0108",
+          "count": 8
+        },
+        {
+          "agentId": "citizen-0109",
+          "count": 19
+        },
+        {
+          "agentId": "citizen-0110",
+          "count": 8
+        },
+        {
+          "agentId": "citizen-0111",
+          "count": 10
+        },
+        {
+          "agentId": "citizen-0112",
+          "count": 9
+        },
+        {
+          "agentId": "citizen-0113",
+          "count": 7
+        },
+        {
+          "agentId": "citizen-0114",
+          "count": 10
+        },
+        {
+          "agentId": "citizen-0115",
+          "count": 12
+        },
+        {
+          "agentId": "citizen-0116",
+          "count": 12
+        },
+        {
+          "agentId": "citizen-0117",
+          "count": 6
+        },
+        {
+          "agentId": "citizen-0118",
+          "count": 9
+        },
+        {
+          "agentId": "citizen-0119",
+          "count": 17
+        },
+        {
+          "agentId": "citizen-0120",
+          "count": 18
+        },
+        {
+          "agentId": "citizen-0121",
+          "count": 16
+        },
+        {
+          "agentId": "citizen-0122",
+          "count": 13
+        },
+        {
+          "agentId": "citizen-0123",
+          "count": 20
+        },
+        {
+          "agentId": "citizen-0124",
+          "count": 4
+        },
+        {
+          "agentId": "citizen-0125",
+          "count": 21
+        },
+        {
+          "agentId": "citizen-0126",
+          "count": 18
+        },
+        {
+          "agentId": "citizen-0127",
+          "count": 6
+        },
+        {
+          "agentId": "citizen-0128",
+          "count": 14
+        },
+        {
+          "agentId": "citizen-0129",
+          "count": 7
+        },
+        {
+          "agentId": "citizen-0130",
+          "count": 9
+        },
+        {
+          "agentId": "citizen-0131",
+          "count": 23
+        },
+        {
+          "agentId": "citizen-0132",
+          "count": 8
+        },
+        {
+          "agentId": "citizen-0133",
+          "count": 9
+        },
+        {
+          "agentId": "citizen-0134",
+          "count": 19
+        },
+        {
+          "agentId": "citizen-0135",
+          "count": 16
+        },
+        {
+          "agentId": "citizen-0136",
+          "count": 21
+        },
+        {
+          "agentId": "citizen-0137",
+          "count": 8
+        },
+        {
+          "agentId": "citizen-0138",
+          "count": 12
+        },
+        {
+          "agentId": "citizen-0139",
+          "count": 7
+        },
+        {
+          "agentId": "citizen-0140",
+          "count": 16
+        },
+        {
+          "agentId": "citizen-0141",
+          "count": 8
+        },
+        {
+          "agentId": "citizen-0142",
+          "count": 10
+        },
+        {
+          "agentId": "citizen-0143",
+          "count": 10
+        },
+        {
+          "agentId": "citizen-0144",
+          "count": 1
+        },
+        {
+          "agentId": "citizen-0145",
+          "count": 7
+        },
+        {
+          "agentId": "citizen-0146",
+          "count": 16
+        },
+        {
+          "agentId": "citizen-0147",
+          "count": 13
+        },
+        {
+          "agentId": "citizen-0148",
+          "count": 17
+        },
+        {
+          "agentId": "citizen-0149",
+          "count": 2
+        },
+        {
+          "agentId": "citizen-0150",
+          "count": 6
+        },
+        {
+          "agentId": "citizen-0151",
+          "count": 9
+        },
+        {
+          "agentId": "citizen-0152",
+          "count": 21
+        },
+        {
+          "agentId": "citizen-0153",
+          "count": 18
+        },
+        {
+          "agentId": "citizen-0154",
+          "count": 13
+        },
+        {
+          "agentId": "citizen-0155",
+          "count": 11
+        },
+        {
+          "agentId": "citizen-0156",
+          "count": 8
+        },
+        {
+          "agentId": "citizen-0157",
+          "count": 7
+        },
+        {
+          "agentId": "citizen-0158",
+          "count": 9
+        },
+        {
+          "agentId": "citizen-0159",
+          "count": 10
+        },
+        {
+          "agentId": "citizen-0160",
+          "count": 12
+        },
+        {
+          "agentId": "citizen-0161",
+          "count": 9
+        },
+        {
+          "agentId": "citizen-0162",
+          "count": 12
+        },
+        {
+          "agentId": "citizen-0163",
+          "count": 9
+        },
+        {
+          "agentId": "citizen-0164",
+          "count": 11
+        },
+        {
+          "agentId": "citizen-0165",
+          "count": 10
+        },
+        {
+          "agentId": "citizen-0166",
+          "count": 11
+        },
+        {
+          "agentId": "citizen-0167",
+          "count": 13
+        },
+        {
+          "agentId": "citizen-0168",
+          "count": 7
+        },
+        {
+          "agentId": "citizen-0169",
+          "count": 13
+        },
+        {
+          "agentId": "citizen-0170",
+          "count": 4
+        },
+        {
+          "agentId": "citizen-0171",
+          "count": 7
+        },
+        {
+          "agentId": "citizen-0172",
+          "count": 14
+        },
+        {
+          "agentId": "citizen-0173",
+          "count": 18
+        },
+        {
+          "agentId": "citizen-0174",
+          "count": 16
+        },
+        {
+          "agentId": "citizen-0175",
+          "count": 20
+        },
+        {
+          "agentId": "citizen-0176",
+          "count": 8
+        },
+        {
+          "agentId": "citizen-0177",
+          "count": 11
+        },
+        {
+          "agentId": "citizen-0178",
+          "count": 12
+        },
+        {
+          "agentId": "citizen-0179",
+          "count": 10
+        },
+        {
+          "agentId": "citizen-0180",
+          "count": 13
+        },
+        {
+          "agentId": "citizen-0181",
+          "count": 6
+        },
+        {
+          "agentId": "citizen-0182",
+          "count": 15
+        },
+        {
+          "agentId": "citizen-0183",
+          "count": 13
+        },
+        {
+          "agentId": "citizen-0184",
+          "count": 13
+        },
+        {
+          "agentId": "citizen-0185",
+          "count": 3
+        },
+        {
+          "agentId": "citizen-0186",
+          "count": 9
+        },
+        {
+          "agentId": "citizen-0187",
+          "count": 8
+        },
+        {
+          "agentId": "citizen-0188",
+          "count": 21
+        },
+        {
+          "agentId": "citizen-0189",
+          "count": 9
+        },
+        {
+          "agentId": "citizen-0190",
+          "count": 11
+        },
+        {
+          "agentId": "citizen-0191",
+          "count": 12
+        },
+        {
+          "agentId": "citizen-0192",
+          "count": 8
+        },
+        {
+          "agentId": "citizen-0193",
+          "count": 11
+        },
+        {
+          "agentId": "citizen-0194",
+          "count": 7
+        },
+        {
+          "agentId": "citizen-0195",
+          "count": 15
+        },
+        {
+          "agentId": "citizen-0196",
+          "count": 20
+        },
+        {
+          "agentId": "citizen-0197",
+          "count": 10
+        },
+        {
+          "agentId": "citizen-0198",
+          "count": 1
+        },
+        {
+          "agentId": "citizen-0199",
+          "count": 23
+        }
+      ],
+      "completedEpisodeDurationsSeconds": [
+        {
+          "key": "2",
+          "count": 82
+        },
+        {
+          "key": "3",
+          "count": 210
+        },
+        {
+          "key": "4",
+          "count": 238
+        },
+        {
+          "key": "5",
+          "count": 135
+        },
+        {
+          "key": "6",
+          "count": 34
+        },
+        {
+          "key": "7",
+          "count": 33
+        },
+        {
+          "key": "8",
+          "count": 11
+        },
+        {
+          "key": "9",
+          "count": 7
+        },
+        {
+          "key": "10",
+          "count": 3
+        },
+        {
+          "key": "11",
+          "count": 5
+        },
+        {
+          "key": "12",
+          "count": 4
+        },
+        {
+          "key": "13",
+          "count": 4
+        },
+        {
+          "key": "14",
+          "count": 13
+        },
+        {
+          "key": "15",
+          "count": 5
+        },
+        {
+          "key": "16",
+          "count": 2
+        },
+        {
+          "key": "17",
+          "count": 4
+        },
+        {
+          "key": "18",
+          "count": 4
+        },
+        {
+          "key": "19",
+          "count": 3
+        },
+        {
+          "key": "20",
+          "count": 3
+        },
+        {
+          "key": "21",
+          "count": 1
+        },
+        {
+          "key": "22",
+          "count": 3
+        },
+        {
+          "key": "23",
+          "count": 2
+        },
+        {
+          "key": "24",
+          "count": 2
+        },
+        {
+          "key": "25",
+          "count": 1
+        },
+        {
+          "key": "27",
+          "count": 1
+        },
+        {
+          "key": "28",
+          "count": 2
+        },
+        {
+          "key": "29",
+          "count": 2
+        },
+        {
+          "key": "30",
+          "count": 3
+        },
+        {
+          "key": "31",
+          "count": 1
+        },
+        {
+          "key": "32",
+          "count": 3
+        },
+        {
+          "key": "33",
+          "count": 2
+        },
+        {
+          "key": "34",
+          "count": 2
+        },
+        {
+          "key": "35",
+          "count": 1
+        },
+        {
+          "key": "36",
+          "count": 2
+        },
+        {
+          "key": "38",
+          "count": 3
+        },
+        {
+          "key": "39",
+          "count": 3
+        },
+        {
+          "key": "40",
+          "count": 2
+        },
+        {
+          "key": "41",
+          "count": 2
+        },
+        {
+          "key": "42",
+          "count": 1
+        },
+        {
+          "key": "43",
+          "count": 2
+        },
+        {
+          "key": "45",
+          "count": 5
+        },
+        {
+          "key": "46",
+          "count": 2
+        },
+        {
+          "key": "47",
+          "count": 2
+        },
+        {
+          "key": "48",
+          "count": 5
+        },
+        {
+          "key": "49",
+          "count": 1
+        },
+        {
+          "key": "50",
+          "count": 3
+        },
+        {
+          "key": "51",
+          "count": 1
+        },
+        {
+          "key": "52",
+          "count": 2
+        },
+        {
+          "key": "55",
+          "count": 1
+        },
+        {
+          "key": "56",
+          "count": 4
+        },
+        {
+          "key": "58",
+          "count": 2
+        },
+        {
+          "key": "59",
+          "count": 1
+        },
+        {
+          "key": "60",
+          "count": 2
+        },
+        {
+          "key": "61",
+          "count": 3
+        },
+        {
+          "key": "62",
+          "count": 1
+        },
+        {
+          "key": "63",
+          "count": 2
+        },
+        {
+          "key": "64",
+          "count": 2
+        },
+        {
+          "key": "65",
+          "count": 1
+        },
+        {
+          "key": "66",
+          "count": 1
+        },
+        {
+          "key": "67",
+          "count": 1
+        },
+        {
+          "key": "68",
+          "count": 2
+        },
+        {
+          "key": "69",
+          "count": 1
+        },
+        {
+          "key": "71",
+          "count": 1
+        },
+        {
+          "key": "72",
+          "count": 3
+        },
+        {
+          "key": "73",
+          "count": 2
+        },
+        {
+          "key": "74",
+          "count": 1
+        },
+        {
+          "key": "75",
+          "count": 2
+        },
+        {
+          "key": "76",
+          "count": 2
+        },
+        {
+          "key": "77",
+          "count": 1
+        },
+        {
+          "key": "78",
+          "count": 1
+        },
+        {
+          "key": "79",
+          "count": 1
+        },
+        {
+          "key": "80",
+          "count": 2
+        },
+        {
+          "key": "81",
+          "count": 1
+        },
+        {
+          "key": "82",
+          "count": 3
+        },
+        {
+          "key": "83",
+          "count": 2
+        },
+        {
+          "key": "84",
+          "count": 2
+        },
+        {
+          "key": "85",
+          "count": 1
+        },
+        {
+          "key": "86",
+          "count": 3
+        },
+        {
+          "key": "87",
+          "count": 2
+        },
+        {
+          "key": "91",
+          "count": 2
+        },
+        {
+          "key": "92",
+          "count": 4
+        },
+        {
+          "key": "93",
+          "count": 2
+        },
+        {
+          "key": "95",
+          "count": 1
+        },
+        {
+          "key": "97",
+          "count": 3
+        },
+        {
+          "key": "98",
+          "count": 1
+        },
+        {
+          "key": "99",
+          "count": 1
+        },
+        {
+          "key": "100",
+          "count": 1
+        },
+        {
+          "key": "101",
+          "count": 1
+        },
+        {
+          "key": "104",
+          "count": 1
+        },
+        {
+          "key": "105",
+          "count": 1
+        },
+        {
+          "key": "106",
+          "count": 2
+        },
+        {
+          "key": "107",
+          "count": 2
+        },
+        {
+          "key": "108",
+          "count": 1
+        },
+        {
+          "key": "109",
+          "count": 2
+        },
+        {
+          "key": "110",
+          "count": 2
+        },
+        {
+          "key": "112",
+          "count": 1
+        },
+        {
+          "key": "113",
+          "count": 1
+        },
+        {
+          "key": "114",
+          "count": 3
+        },
+        {
+          "key": "115",
+          "count": 2
+        },
+        {
+          "key": "116",
+          "count": 8
+        },
+        {
+          "key": "117",
+          "count": 1
+        },
+        {
+          "key": "119",
+          "count": 2
+        },
+        {
+          "key": "120",
+          "count": 2
+        },
+        {
+          "key": "121",
+          "count": 2
+        },
+        {
+          "key": "122",
+          "count": 2
+        },
+        {
+          "key": "123",
+          "count": 2
+        },
+        {
+          "key": "124",
+          "count": 1
+        },
+        {
+          "key": "125",
+          "count": 1
+        },
+        {
+          "key": "126",
+          "count": 1
+        },
+        {
+          "key": "127",
+          "count": 3
+        },
+        {
+          "key": "128",
+          "count": 3
+        },
+        {
+          "key": "131",
+          "count": 3
+        },
+        {
+          "key": "132",
+          "count": 4
+        },
+        {
+          "key": "133",
+          "count": 5
+        },
+        {
+          "key": "134",
+          "count": 3
+        },
+        {
+          "key": "135",
+          "count": 2
+        },
+        {
+          "key": "136",
+          "count": 1
+        },
+        {
+          "key": "137",
+          "count": 1
+        },
+        {
+          "key": "138",
+          "count": 2
+        },
+        {
+          "key": "140",
+          "count": 2
+        },
+        {
+          "key": "142",
+          "count": 2
+        },
+        {
+          "key": "143",
+          "count": 1
+        },
+        {
+          "key": "144",
+          "count": 5
+        },
+        {
+          "key": "146",
+          "count": 1
+        },
+        {
+          "key": "147",
+          "count": 2
+        },
+        {
+          "key": "148",
+          "count": 1
+        },
+        {
+          "key": "149",
+          "count": 1
+        },
+        {
+          "key": "150",
+          "count": 2
+        },
+        {
+          "key": "151",
+          "count": 2
+        },
+        {
+          "key": "154",
+          "count": 1
+        },
+        {
+          "key": "155",
+          "count": 2
+        },
+        {
+          "key": "157",
+          "count": 4
+        },
+        {
+          "key": "158",
+          "count": 1
+        },
+        {
+          "key": "159",
+          "count": 5
+        },
+        {
+          "key": "160",
+          "count": 6
+        },
+        {
+          "key": "161",
+          "count": 2
+        },
+        {
+          "key": "162",
+          "count": 1
+        },
+        {
+          "key": "163",
+          "count": 1
+        },
+        {
+          "key": "164",
+          "count": 5
+        },
+        {
+          "key": "167",
+          "count": 3
+        },
+        {
+          "key": "168",
+          "count": 2
+        },
+        {
+          "key": "169",
+          "count": 2
+        },
+        {
+          "key": "170",
+          "count": 4
+        },
+        {
+          "key": "171",
+          "count": 1
+        },
+        {
+          "key": "172",
+          "count": 1
+        },
+        {
+          "key": "173",
+          "count": 1
+        },
+        {
+          "key": "174",
+          "count": 2
+        },
+        {
+          "key": "175",
+          "count": 1
+        },
+        {
+          "key": "176",
+          "count": 1
+        },
+        {
+          "key": "177",
+          "count": 5
+        },
+        {
+          "key": "178",
+          "count": 2
+        },
+        {
+          "key": "180",
+          "count": 2
+        },
+        {
+          "key": "181",
+          "count": 2
+        },
+        {
+          "key": "182",
+          "count": 6
+        },
+        {
+          "key": "183",
+          "count": 1
+        },
+        {
+          "key": "184",
+          "count": 1
+        },
+        {
+          "key": "185",
+          "count": 3
+        },
+        {
+          "key": "187",
+          "count": 4
+        },
+        {
+          "key": "188",
+          "count": 3
+        },
+        {
+          "key": "189",
+          "count": 2
+        },
+        {
+          "key": "190",
+          "count": 1
+        },
+        {
+          "key": "191",
+          "count": 1
+        },
+        {
+          "key": "192",
+          "count": 1
+        },
+        {
+          "key": "194",
+          "count": 1
+        },
+        {
+          "key": "195",
+          "count": 3
+        },
+        {
+          "key": "196",
+          "count": 4
+        },
+        {
+          "key": "197",
+          "count": 2
+        },
+        {
+          "key": "198",
+          "count": 3
+        },
+        {
+          "key": "199",
+          "count": 1
+        },
+        {
+          "key": "200",
+          "count": 2
+        },
+        {
+          "key": "201",
+          "count": 2
+        },
+        {
+          "key": "202",
+          "count": 1
+        },
+        {
+          "key": "203",
+          "count": 1
+        },
+        {
+          "key": "204",
+          "count": 1
+        },
+        {
+          "key": "205",
+          "count": 1
+        },
+        {
+          "key": "206",
+          "count": 4
+        },
+        {
+          "key": "207",
+          "count": 2
+        },
+        {
+          "key": "209",
+          "count": 1
+        },
+        {
+          "key": "210",
+          "count": 1
+        },
+        {
+          "key": "211",
+          "count": 3
+        },
+        {
+          "key": "212",
+          "count": 1
+        },
+        {
+          "key": "214",
+          "count": 1
+        },
+        {
+          "key": "215",
+          "count": 2
+        },
+        {
+          "key": "216",
+          "count": 3
+        },
+        {
+          "key": "217",
+          "count": 2
+        },
+        {
+          "key": "218",
+          "count": 3
+        },
+        {
+          "key": "219",
+          "count": 1
+        },
+        {
+          "key": "221",
+          "count": 1
+        },
+        {
+          "key": "222",
+          "count": 1
+        },
+        {
+          "key": "223",
+          "count": 1
+        },
+        {
+          "key": "224",
+          "count": 2
+        },
+        {
+          "key": "225",
+          "count": 4
+        },
+        {
+          "key": "226",
+          "count": 3
+        },
+        {
+          "key": "227",
+          "count": 2
+        },
+        {
+          "key": "228",
+          "count": 5
+        },
+        {
+          "key": "229",
+          "count": 1
+        },
+        {
+          "key": "230",
+          "count": 3
+        },
+        {
+          "key": "231",
+          "count": 1
+        },
+        {
+          "key": "232",
+          "count": 4
+        },
+        {
+          "key": "233",
+          "count": 1
+        },
+        {
+          "key": "235",
+          "count": 3
+        },
+        {
+          "key": "236",
+          "count": 3
+        },
+        {
+          "key": "237",
+          "count": 3
+        },
+        {
+          "key": "238",
+          "count": 2
+        },
+        {
+          "key": "240",
+          "count": 1
+        },
+        {
+          "key": "241",
+          "count": 1
+        },
+        {
+          "key": "243",
+          "count": 1
+        },
+        {
+          "key": "246",
+          "count": 3
+        },
+        {
+          "key": "247",
+          "count": 1
+        },
+        {
+          "key": "248",
+          "count": 2
+        },
+        {
+          "key": "249",
+          "count": 3
+        },
+        {
+          "key": "253",
+          "count": 3
+        },
+        {
+          "key": "254",
+          "count": 3
+        },
+        {
+          "key": "255",
+          "count": 4
+        },
+        {
+          "key": "256",
+          "count": 4
+        },
+        {
+          "key": "257",
+          "count": 1
+        },
+        {
+          "key": "258",
+          "count": 2
+        },
+        {
+          "key": "259",
+          "count": 2
+        },
+        {
+          "key": "260",
+          "count": 8
+        },
+        {
+          "key": "261",
+          "count": 3
+        },
+        {
+          "key": "262",
+          "count": 3
+        },
+        {
+          "key": "266",
+          "count": 1
+        },
+        {
+          "key": "267",
+          "count": 1
+        },
+        {
+          "key": "269",
+          "count": 3
+        },
+        {
+          "key": "270",
+          "count": 2
+        },
+        {
+          "key": "271",
+          "count": 2
+        },
+        {
+          "key": "272",
+          "count": 2
+        },
+        {
+          "key": "273",
+          "count": 1
+        },
+        {
+          "key": "274",
+          "count": 1
+        },
+        {
+          "key": "275",
+          "count": 4
+        },
+        {
+          "key": "277",
+          "count": 4
+        },
+        {
+          "key": "278",
+          "count": 5
+        },
+        {
+          "key": "279",
+          "count": 4
+        },
+        {
+          "key": "280",
+          "count": 6
+        },
+        {
+          "key": "281",
+          "count": 2
+        },
+        {
+          "key": "282",
+          "count": 3
+        },
+        {
+          "key": "283",
+          "count": 3
+        },
+        {
+          "key": "285",
+          "count": 2
+        },
+        {
+          "key": "286",
+          "count": 1
+        },
+        {
+          "key": "289",
+          "count": 3
+        },
+        {
+          "key": "290",
+          "count": 2
+        },
+        {
+          "key": "291",
+          "count": 1
+        },
+        {
+          "key": "292",
+          "count": 2
+        },
+        {
+          "key": "294",
+          "count": 1
+        },
+        {
+          "key": "295",
+          "count": 1
+        },
+        {
+          "key": "296",
+          "count": 1
+        },
+        {
+          "key": "298",
+          "count": 2
+        },
+        {
+          "key": "299",
+          "count": 1
+        },
+        {
+          "key": "300",
+          "count": 1
+        },
+        {
+          "key": "301",
+          "count": 3
+        },
+        {
+          "key": "303",
+          "count": 2
+        },
+        {
+          "key": "305",
+          "count": 1
+        },
+        {
+          "key": "306",
+          "count": 1
+        },
+        {
+          "key": "307",
+          "count": 1
+        },
+        {
+          "key": "308",
+          "count": 5
+        },
+        {
+          "key": "309",
+          "count": 3
+        },
+        {
+          "key": "311",
+          "count": 1
+        },
+        {
+          "key": "313",
+          "count": 1
+        },
+        {
+          "key": "315",
+          "count": 1
+        },
+        {
+          "key": "316",
+          "count": 2
+        },
+        {
+          "key": "318",
+          "count": 2
+        },
+        {
+          "key": "320",
+          "count": 1
+        },
+        {
+          "key": "321",
+          "count": 2
+        },
+        {
+          "key": "324",
+          "count": 1
+        },
+        {
+          "key": "325",
+          "count": 1
+        },
+        {
+          "key": "327",
+          "count": 2
+        },
+        {
+          "key": "328",
+          "count": 2
+        },
+        {
+          "key": "331",
+          "count": 2
+        },
+        {
+          "key": "333",
+          "count": 2
+        },
+        {
+          "key": "335",
+          "count": 2
+        },
+        {
+          "key": "336",
+          "count": 1
+        },
+        {
+          "key": "337",
+          "count": 1
+        },
+        {
+          "key": "338",
+          "count": 1
+        },
+        {
+          "key": "340",
+          "count": 1
+        },
+        {
+          "key": "341",
+          "count": 1
+        },
+        {
+          "key": "342",
+          "count": 1
+        },
+        {
+          "key": "344",
+          "count": 2
+        },
+        {
+          "key": "345",
+          "count": 1
+        },
+        {
+          "key": "346",
+          "count": 5
+        },
+        {
+          "key": "348",
+          "count": 1
+        },
+        {
+          "key": "349",
+          "count": 2
+        },
+        {
+          "key": "350",
+          "count": 2
+        },
+        {
+          "key": "352",
+          "count": 3
+        },
+        {
+          "key": "355",
+          "count": 1
+        },
+        {
+          "key": "357",
+          "count": 1
+        },
+        {
+          "key": "358",
+          "count": 3
+        },
+        {
+          "key": "359",
+          "count": 1
+        },
+        {
+          "key": "360",
+          "count": 1
+        },
+        {
+          "key": "361",
+          "count": 2
+        },
+        {
+          "key": "365",
+          "count": 2
+        },
+        {
+          "key": "366",
+          "count": 1
+        },
+        {
+          "key": "367",
+          "count": 2
+        },
+        {
+          "key": "368",
+          "count": 3
+        },
+        {
+          "key": "369",
+          "count": 2
+        },
+        {
+          "key": "376",
+          "count": 2
+        },
+        {
+          "key": "377",
+          "count": 1
+        },
+        {
+          "key": "379",
+          "count": 1
+        },
+        {
+          "key": "380",
+          "count": 1
+        },
+        {
+          "key": "381",
+          "count": 1
+        },
+        {
+          "key": "382",
+          "count": 2
+        },
+        {
+          "key": "383",
+          "count": 1
+        },
+        {
+          "key": "384",
+          "count": 1
+        },
+        {
+          "key": "385",
+          "count": 3
+        },
+        {
+          "key": "386",
+          "count": 1
+        },
+        {
+          "key": "387",
+          "count": 2
+        },
+        {
+          "key": "388",
+          "count": 4
+        },
+        {
+          "key": "389",
+          "count": 1
+        },
+        {
+          "key": "390",
+          "count": 2
+        },
+        {
+          "key": "391",
+          "count": 1
+        },
+        {
+          "key": "392",
+          "count": 2
+        },
+        {
+          "key": "393",
+          "count": 1
+        },
+        {
+          "key": "394",
+          "count": 1
+        },
+        {
+          "key": "397",
+          "count": 1
+        },
+        {
+          "key": "398",
+          "count": 2
+        },
+        {
+          "key": "399",
+          "count": 1
+        },
+        {
+          "key": "400",
+          "count": 1
+        },
+        {
+          "key": "401",
+          "count": 1
+        },
+        {
+          "key": "403",
+          "count": 2
+        },
+        {
+          "key": "404",
+          "count": 3
+        },
+        {
+          "key": "409",
+          "count": 1
+        },
+        {
+          "key": "411",
+          "count": 2
+        },
+        {
+          "key": "413",
+          "count": 2
+        },
+        {
+          "key": "414",
+          "count": 1
+        },
+        {
+          "key": "423",
+          "count": 1
+        },
+        {
+          "key": "426",
+          "count": 2
+        },
+        {
+          "key": "427",
+          "count": 2
+        },
+        {
+          "key": "428",
+          "count": 3
+        },
+        {
+          "key": "432",
+          "count": 1
+        },
+        {
+          "key": "433",
+          "count": 1
+        },
+        {
+          "key": "434",
+          "count": 1
+        },
+        {
+          "key": "435",
+          "count": 1
+        },
+        {
+          "key": "436",
+          "count": 3
+        },
+        {
+          "key": "437",
+          "count": 1
+        },
+        {
+          "key": "438",
+          "count": 1
+        },
+        {
+          "key": "439",
+          "count": 4
+        },
+        {
+          "key": "441",
+          "count": 1
+        },
+        {
+          "key": "442",
+          "count": 1
+        },
+        {
+          "key": "444",
+          "count": 1
+        },
+        {
+          "key": "445",
+          "count": 1
+        },
+        {
+          "key": "446",
+          "count": 2
+        },
+        {
+          "key": "449",
+          "count": 1
+        },
+        {
+          "key": "450",
+          "count": 1
+        },
+        {
+          "key": "453",
+          "count": 2
+        },
+        {
+          "key": "454",
+          "count": 1
+        },
+        {
+          "key": "455",
+          "count": 1
+        },
+        {
+          "key": "456",
+          "count": 2
+        },
+        {
+          "key": "458",
+          "count": 2
+        },
+        {
+          "key": "459",
+          "count": 1
+        },
+        {
+          "key": "461",
+          "count": 2
+        },
+        {
+          "key": "462",
+          "count": 2
+        },
+        {
+          "key": "463",
+          "count": 1
+        },
+        {
+          "key": "464",
+          "count": 3
+        },
+        {
+          "key": "466",
+          "count": 2
+        },
+        {
+          "key": "469",
+          "count": 1
+        },
+        {
+          "key": "471",
+          "count": 1
+        },
+        {
+          "key": "472",
+          "count": 1
+        },
+        {
+          "key": "474",
+          "count": 1
+        },
+        {
+          "key": "475",
+          "count": 1
+        },
+        {
+          "key": "478",
+          "count": 1
+        },
+        {
+          "key": "479",
+          "count": 1
+        },
+        {
+          "key": "481",
+          "count": 1
+        },
+        {
+          "key": "482",
+          "count": 1
+        },
+        {
+          "key": "485",
+          "count": 1
+        },
+        {
+          "key": "488",
+          "count": 2
+        },
+        {
+          "key": "491",
+          "count": 2
+        },
+        {
+          "key": "492",
+          "count": 1
+        },
+        {
+          "key": "494",
+          "count": 1
+        },
+        {
+          "key": "495",
+          "count": 1
+        },
+        {
+          "key": "496",
+          "count": 1
+        },
+        {
+          "key": "497",
+          "count": 1
+        },
+        {
+          "key": "498",
+          "count": 1
+        },
+        {
+          "key": "499",
+          "count": 1
+        },
+        {
+          "key": "502",
+          "count": 1
+        },
+        {
+          "key": "504",
+          "count": 1
+        },
+        {
+          "key": "506",
+          "count": 1
+        },
+        {
+          "key": "509",
+          "count": 1
+        },
+        {
+          "key": "512",
+          "count": 1
+        },
+        {
+          "key": "513",
+          "count": 1
+        },
+        {
+          "key": "515",
+          "count": 2
+        },
+        {
+          "key": "516",
+          "count": 2
+        },
+        {
+          "key": "517",
+          "count": 1
+        },
+        {
+          "key": "518",
+          "count": 2
+        },
+        {
+          "key": "519",
+          "count": 1
+        },
+        {
+          "key": "521",
+          "count": 1
+        },
+        {
+          "key": "522",
+          "count": 1
+        },
+        {
+          "key": "526",
+          "count": 2
+        },
+        {
+          "key": "535",
+          "count": 1
+        },
+        {
+          "key": "537",
+          "count": 1
+        },
+        {
+          "key": "539",
+          "count": 3
+        },
+        {
+          "key": "540",
+          "count": 1
+        },
+        {
+          "key": "541",
+          "count": 1
+        },
+        {
+          "key": "542",
+          "count": 1
+        },
+        {
+          "key": "543",
+          "count": 1
+        },
+        {
+          "key": "546",
+          "count": 1
+        },
+        {
+          "key": "547",
+          "count": 1
+        },
+        {
+          "key": "548",
+          "count": 2
+        },
+        {
+          "key": "549",
+          "count": 2
+        },
+        {
+          "key": "550",
+          "count": 1
+        },
+        {
+          "key": "551",
+          "count": 2
+        },
+        {
+          "key": "552",
+          "count": 1
+        },
+        {
+          "key": "553",
+          "count": 1
+        },
+        {
+          "key": "554",
+          "count": 1
+        },
+        {
+          "key": "558",
+          "count": 1
+        },
+        {
+          "key": "563",
+          "count": 1
+        },
+        {
+          "key": "565",
+          "count": 1
+        },
+        {
+          "key": "567",
+          "count": 1
+        },
+        {
+          "key": "568",
+          "count": 1
+        },
+        {
+          "key": "571",
+          "count": 1
+        },
+        {
+          "key": "574",
+          "count": 1
+        },
+        {
+          "key": "575",
+          "count": 1
+        },
+        {
+          "key": "576",
+          "count": 1
+        },
+        {
+          "key": "579",
+          "count": 2
+        },
+        {
+          "key": "584",
+          "count": 3
+        },
+        {
+          "key": "586",
+          "count": 1
+        },
+        {
+          "key": "588",
+          "count": 1
+        },
+        {
+          "key": "592",
+          "count": 1
+        },
+        {
+          "key": "598",
+          "count": 1
+        },
+        {
+          "key": "599",
+          "count": 1
+        },
+        {
+          "key": "601",
+          "count": 1
+        },
+        {
+          "key": "602",
+          "count": 1
+        },
+        {
+          "key": "606",
+          "count": 1
+        },
+        {
+          "key": "607",
+          "count": 1
+        },
+        {
+          "key": "610",
+          "count": 1
+        },
+        {
+          "key": "611",
+          "count": 2
+        },
+        {
+          "key": "612",
+          "count": 1
+        },
+        {
+          "key": "613",
+          "count": 1
+        },
+        {
+          "key": "614",
+          "count": 3
+        },
+        {
+          "key": "619",
+          "count": 1
+        },
+        {
+          "key": "625",
+          "count": 1
+        },
+        {
+          "key": "643",
+          "count": 1
+        },
+        {
+          "key": "646",
+          "count": 1
+        },
+        {
+          "key": "650",
+          "count": 2
+        },
+        {
+          "key": "652",
+          "count": 1
+        },
+        {
+          "key": "658",
+          "count": 1
+        },
+        {
+          "key": "659",
+          "count": 1
+        },
+        {
+          "key": "671",
+          "count": 1
+        },
+        {
+          "key": "672",
+          "count": 1
+        },
+        {
+          "key": "677",
+          "count": 1
+        },
+        {
+          "key": "678",
+          "count": 1
+        },
+        {
+          "key": "690",
+          "count": 1
+        },
+        {
+          "key": "691",
+          "count": 1
+        },
+        {
+          "key": "696",
+          "count": 1
+        },
+        {
+          "key": "700",
+          "count": 1
+        },
+        {
+          "key": "703",
+          "count": 1
+        },
+        {
+          "key": "709",
+          "count": 1
+        },
+        {
+          "key": "714",
+          "count": 1
+        },
+        {
+          "key": "716",
+          "count": 1
+        },
+        {
+          "key": "717",
+          "count": 1
+        },
+        {
+          "key": "723",
+          "count": 1
+        },
+        {
+          "key": "729",
+          "count": 1
+        },
+        {
+          "key": "733",
+          "count": 1
+        },
+        {
+          "key": "735",
+          "count": 1
+        },
+        {
+          "key": "740",
+          "count": 1
+        },
+        {
+          "key": "741",
+          "count": 1
+        },
+        {
+          "key": "743",
+          "count": 1
+        },
+        {
+          "key": "744",
+          "count": 1
+        },
+        {
+          "key": "745",
+          "count": 1
+        },
+        {
+          "key": "751",
+          "count": 1
+        },
+        {
+          "key": "753",
+          "count": 1
+        },
+        {
+          "key": "756",
+          "count": 1
+        },
+        {
+          "key": "760",
+          "count": 1
+        },
+        {
+          "key": "769",
+          "count": 1
+        },
+        {
+          "key": "775",
+          "count": 1
+        },
+        {
+          "key": "779",
+          "count": 1
+        },
+        {
+          "key": "784",
+          "count": 1
+        },
+        {
+          "key": "788",
+          "count": 3
+        },
+        {
+          "key": "789",
+          "count": 1
+        },
+        {
+          "key": "796",
+          "count": 1
+        },
+        {
+          "key": "813",
+          "count": 1
+        },
+        {
+          "key": "820",
+          "count": 1
+        },
+        {
+          "key": "829",
+          "count": 1
+        },
+        {
+          "key": "842",
+          "count": 1
+        },
+        {
+          "key": "853",
+          "count": 1
+        },
+        {
+          "key": "864",
+          "count": 1
+        },
+        {
+          "key": "868",
+          "count": 1
+        },
+        {
+          "key": "879",
+          "count": 2
+        },
+        {
+          "key": "887",
+          "count": 1
+        },
+        {
+          "key": "903",
+          "count": 3
+        },
+        {
+          "key": "905",
+          "count": 1
+        },
+        {
+          "key": "906",
+          "count": 1
+        },
+        {
+          "key": "922",
+          "count": 1
+        },
+        {
+          "key": "924",
+          "count": 1
+        },
+        {
+          "key": "975",
+          "count": 1
+        },
+        {
+          "key": "986",
+          "count": 1
+        },
+        {
+          "key": "991",
+          "count": 1
+        },
+        {
+          "key": "1008",
+          "count": 1
+        },
+        {
+          "key": "1015",
+          "count": 1
+        },
+        {
+          "key": "1020",
+          "count": 1
+        },
+        {
+          "key": "1032",
+          "count": 1
+        },
+        {
+          "key": "1039",
+          "count": 1
+        },
+        {
+          "key": "1046",
+          "count": 1
+        },
+        {
+          "key": "1048",
+          "count": 1
+        },
+        {
+          "key": "1071",
+          "count": 1
+        },
+        {
+          "key": "1117",
+          "count": 1
+        },
+        {
+          "key": "1155",
+          "count": 1
+        },
+        {
+          "key": "1200",
+          "count": 1
+        },
+        {
+          "key": "1533",
+          "count": 1
+        },
+        {
+          "key": "1542",
+          "count": 1
+        },
+        {
+          "key": "1559",
+          "count": 1
+        }
+      ],
+      "rightCensoredEpisodes": 88,
+      "encountersByLastRecordedPlace": [
+        {
+          "placeId": null,
+          "count": 160
+        },
+        {
+          "placeId": "building:building-block--1-1-1-0",
+          "count": 5
+        },
+        {
+          "placeId": "building:building-block--1-2-1-0",
+          "count": 45
+        },
+        {
+          "placeId": "building:building-block--1-3-0-0",
+          "count": 6
+        },
+        {
+          "placeId": "building:building-block--1-3-1-0",
+          "count": 8
+        },
+        {
+          "placeId": "building:building-block--1-5-0-0",
+          "count": 5
+        },
+        {
+          "placeId": "building:building-block--1-5-1-0",
+          "count": 6
+        },
+        {
+          "placeId": "building:building-block--1-6-0-0",
+          "count": 6
+        },
+        {
+          "placeId": "building:building-block--1-6-1-0",
+          "count": 7
+        },
+        {
+          "placeId": "building:building-block-0-1-0-0",
+          "count": 6
+        },
+        {
+          "placeId": "building:building-block-0-2-0-0",
+          "count": 80
+        },
+        {
+          "placeId": "building:building-block-0-3-0-0",
+          "count": 30
+        },
+        {
+          "placeId": "building:building-block-0-3-0-1",
+          "count": 7
+        },
+        {
+          "placeId": "building:building-block-0-4-0-0",
+          "count": 33
+        },
+        {
+          "placeId": "building:building-block-0-7-0-0",
+          "count": 9
+        },
+        {
+          "placeId": "building:building-block-0-7-1-0",
+          "count": 6
+        },
+        {
+          "placeId": "building:building-block-1--1-1-0",
+          "count": 59
+        },
+        {
+          "placeId": "building:building-block-1-0-0-0",
+          "count": 5
+        },
+        {
+          "placeId": "building:building-block-1-3-0-1",
+          "count": 4
+        },
+        {
+          "placeId": "building:building-block-1-4-0-0",
+          "count": 227
+        },
+        {
+          "placeId": "building:building-block-1-6-0-0",
+          "count": 8
+        },
+        {
+          "placeId": "building:building-block-1-7-0-0",
+          "count": 7
+        },
+        {
+          "placeId": "building:building-block-2--1-0-0",
+          "count": 3
+        },
+        {
+          "placeId": "building:building-block-2--1-1-0",
+          "count": 3
+        },
+        {
+          "placeId": "building:building-block-2-1-0-0",
+          "count": 27
+        },
+        {
+          "placeId": "building:building-block-2-2-0-0",
+          "count": 88
+        },
+        {
+          "placeId": "building:building-block-2-3-0-0",
+          "count": 4
+        },
+        {
+          "placeId": "building:building-block-2-5-0-0",
+          "count": 2
+        },
+        {
+          "placeId": "building:building-block-2-7-0-0",
+          "count": 4
+        },
+        {
+          "placeId": "building:building-block-2-7-1-0",
+          "count": 4
+        },
+        {
+          "placeId": "building:building-block-3-0-1-0",
+          "count": 2
+        },
+        {
+          "placeId": "building:building-block-3-5-0-0",
+          "count": 2
+        },
+        {
+          "placeId": "building:building-block-3-5-1-0",
+          "count": 3
+        },
+        {
+          "placeId": "building:building-block-4--1-0-0",
+          "count": 4
+        },
+        {
+          "placeId": "building:building-block-4--1-1-0",
+          "count": 7
+        },
+        {
+          "placeId": "building:building-block-4-0-0-0",
+          "count": 75
+        },
+        {
+          "placeId": "building:building-block-4-1-0-0",
+          "count": 31
+        },
+        {
+          "placeId": "building:building-block-4-2-0-0",
+          "count": 62
+        },
+        {
+          "placeId": "building:building-block-4-5-0-0",
+          "count": 4
+        },
+        {
+          "placeId": "building:building-block-4-6-0-0",
+          "count": 2
+        },
+        {
+          "placeId": "building:building-block-4-7-0-0",
+          "count": 6
+        },
+        {
+          "placeId": "building:building-block-4-7-1-0",
+          "count": 6
+        },
+        {
+          "placeId": "building:building-block-5-0-0-0",
+          "count": 32
+        },
+        {
+          "placeId": "building:building-block-5-1-0-0",
+          "count": 113
+        },
+        {
+          "placeId": "building:building-block-5-2-0-0",
+          "count": 4
+        },
+        {
+          "placeId": "building:building-block-5-3-0-0",
+          "count": 4
+        },
+        {
+          "placeId": "building:building-block-5-3-0-1",
+          "count": 4
+        },
+        {
+          "placeId": "building:building-block-5-4-0-0",
+          "count": 4
+        },
+        {
+          "placeId": "building:building-block-5-5-0-0",
+          "count": 3
+        },
+        {
+          "placeId": "building:building-block-5-6-0-0",
+          "count": 4
+        },
+        {
+          "placeId": "building:building-block-5-7-1-0",
+          "count": 4
+        },
+        {
+          "placeId": "building:building-block-6--1-0-0",
+          "count": 6
+        },
+        {
+          "placeId": "building:building-block-6--1-1-0",
+          "count": 6
+        },
+        {
+          "placeId": "building:building-block-6-0-0-0",
+          "count": 34
+        },
+        {
+          "placeId": "building:building-block-6-1-0-0",
+          "count": 22
+        },
+        {
+          "placeId": "building:building-block-6-5-0-0",
+          "count": 2
+        },
+        {
+          "placeId": "building:building-block-6-6-0-0",
+          "count": 1
+        },
+        {
+          "placeId": "building:building-block-6-7-0-0",
+          "count": 7
+        },
+        {
+          "placeId": "building:building-block-7-0-0-0",
+          "count": 233
+        },
+        {
+          "placeId": "building:building-block-7-0-1-0",
+          "count": 7
+        },
+        {
+          "placeId": "building:building-block-7-1-0-0",
+          "count": 7
+        },
+        {
+          "placeId": "building:building-block-7-1-1-0",
+          "count": 7
+        },
+        {
+          "placeId": "building:building-block-7-2-0-0",
+          "count": 7
+        },
+        {
+          "placeId": "building:building-block-7-2-1-0",
+          "count": 7
+        },
+        {
+          "placeId": "building:building-block-7-3-0-0",
+          "count": 7
+        },
+        {
+          "placeId": "building:building-block-7-4-0-0",
+          "count": 5
+        },
+        {
+          "placeId": "building:building-block-7-4-1-0",
+          "count": 7
+        },
+        {
+          "placeId": "building:building-block-7-5-0-0",
+          "count": 7
+        },
+        {
+          "placeId": "building:building-block-7-5-1-0",
+          "count": 6
+        },
+        {
+          "placeId": "central-galleria",
+          "count": 85
+        },
+        {
+          "placeId": "galleria-cafe-l0",
+          "count": 10
+        },
+        {
+          "placeId": "galleria-cafe-l1",
+          "count": 3
+        },
+        {
+          "placeId": "overpass-east-access",
+          "count": 1
+        },
+        {
+          "placeId": "public:block-7-6",
+          "count": 3
+        }
+      ],
+      "encountersByStartHour": [
+        {
+          "key": "08",
+          "count": 1720
+        }
+      ],
+      "repeatedPairsWithinInterval": 455,
+      "additionalEpisodesForRepeatedPairs": 579
+    },
+    "interactions": {
+      "decisionEvaluations": 1341,
+      "attempts": 721,
+      "accepted": 195,
+      "completed": 195,
+      "interrupted": 0,
+      "acceptedByType": [
+        {
+          "key": "conversation",
+          "count": 1
+        },
+        {
+          "key": "greeting",
+          "count": 194
+        }
+      ],
+      "completedDurationTicks": [
+        {
+          "key": "0",
+          "count": 194
+        },
+        {
+          "key": "5",
+          "count": 1
+        }
+      ]
+    },
+    "network": {
+      "directedRelations": 2094,
+      "familiarDirectedTies": 3,
+      "knownContactDirectedTies": 0,
+      "newlyFamiliarDirectedTies": 3,
+      "possibleDirectedTies": 39800,
+      "knownContactDensity": 0,
+      "familiarityDistribution": [
+        {
+          "key": "zero",
+          "count": 37706
+        },
+        {
+          "key": "weak (0–<0.25)",
+          "count": 2091
+        },
+        {
+          "key": "familiar (0.25–<0.50)",
+          "count": 3
+        },
+        {
+          "key": "strong (0.50–<0.75)",
+          "count": 0
+        },
+        {
+          "key": "very strong (0.75–1)",
+          "count": 0
+        }
+      ]
+    },
+    "perception": {
+      "perceivedEncounterEpisodes": 1720,
+      "mutuallyPerceivedEncounterEpisodes": 1319,
+      "recognizedDirectedContactsCurrent": 350,
+      "retainedMemoriesCurrent": 398,
+      "retainedKnowledgeCurrent": 358,
+      "potentialWitnessAssessments": 53,
+      "actualWitnessObservations": 6,
+      "victimObservations": 2,
+      "identification": {
+        "correct": 0,
+        "incorrect": 0,
+        "unknown": 8
+      }
+    },
+    "crime": {
+      "opportunitySeconds": 87978,
+      "offenderAttempts": 16,
+      "completedOffences": 12,
+      "offencesPer1000OpportunitySeconds": 0.13639773579758577,
+      "opportunityEpisodeConversion": null,
+      "citizenTargetOffences": 12,
+      "witnessedOffences": 5,
+      "unwitnessedOffences": 7,
+      "reportedOffences": 4,
+      "unreportedOffences": 8,
+      "deliveredReports": 5,
+      "offencesByPlace": [
+        {
+          "placeId": "building:building-block-1-4-0-0",
+          "count": 5
+        },
+        {
+          "placeId": "building:building-block-2-2-0-0",
+          "count": 1
+        },
+        {
+          "placeId": "building:building-block-7-0-0-0",
+          "count": 5
+        },
+        {
+          "placeId": "galleria-cafe-l0",
+          "count": 1
+        }
+      ]
+    }
+  },
   "note": "Synthetic rules and local Node/Vite CPU measurements. This is not a browser or GPU benchmark."
 }

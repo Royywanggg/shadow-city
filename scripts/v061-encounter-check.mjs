@@ -28,6 +28,7 @@ try {
   const { DEFAULT_SIMULATION_CONFIG_V5 } = await vite.ssrLoadModule('/src/simulation/v5Types.ts')
   const { DEFAULT_ENCOUNTER_SCENARIO_V1 } = await vite.ssrLoadModule('/src/simulation/encounter/config.ts')
   const { setEncounterTimingObserverV1 } = await vite.ssrLoadModule('/src/simulation/encounter/pipeline.ts')
+  const { summarizeSocialMetricsV1 } = await vite.ssrLoadModule('/src/simulation/encounter/socialMetrics.ts')
   const generatedAt = performance.now()
   const world = generateIntegratedWorld()
   const generationMs = performance.now() - generatedAt
@@ -122,6 +123,7 @@ try {
     deliveredReports: state.reports.length,
     pendingReports: social.pendingWitnessReports.length,
     serializedStateBytes: Buffer.byteLength(JSON.stringify(state)),
+    scientificMetrics: summarizeSocialMetricsV1(state, config),
     ...(process.env.V061_SPATIAL_DIAGNOSTICS === '1' ? { stationaryDistance } : {}),
     note: 'Synthetic rules and local Node/Vite CPU measurements. This is not a browser or GPU benchmark.',
   }

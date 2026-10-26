@@ -97,6 +97,19 @@ try {
       visible: !!(label.offsetWidth && label.offsetHeight) })))
   await screenshot('v061-conversation-active-tick121-1440x900', true)
   const activeUi = await page.locator('.v06-inspector').innerText()
+  const decisionCard = page.locator('.v06-decision')
+  await decisionCard.scrollIntoViewIfNeeded()
+  const decisionText = await decisionCard.innerText()
+  const decisionTraces = await page.evaluate((episodeId) =>
+    window.__shadowCityV06.getSnapshot().state.social.decisionTraces.filter((trace) =>
+      trace.episodeId === episodeId), activeConversation.encounterId)
+  const decisionGrounded = decisionTraces.length > 0 && decisionTraces.some((trace) =>
+    trace.firstChance !== null && trace.firstDraw !== null &&
+    trace.secondChance !== null && trace.secondDraw !== null) &&
+    decisionTraces.every((trace) => [trace.firstChance, trace.firstDraw,
+      trace.secondChance, trace.secondDraw].filter((value) => value !== null)
+      .every((value) => decisionText.includes(value.toFixed(3))))
+  await screenshot('v061-decision-explanation-tick121-1440x900', true)
 
   await page.evaluate(() => window.__shadowCityV06.advanceToTick(126))
   await page.evaluate(() => window.__shadowCityV06.inspectTick(126))
@@ -258,7 +271,9 @@ try {
       diagnosticTraces: true },
     viewport: '1440x900 CSS pixels', dpr: 1, browser: 'Google Chrome ' + browser.version(),
     userAgent: await page.evaluate(() => navigator.userAgent), renderer,
-    gpuKind, activeConversation, activeVisualLabel, activeUiContainsConversation:
+    gpuKind, activeConversation, activeVisualLabel,
+    decisionExplanation: { text: decisionText, traceCount: decisionTraces.length,
+      grounded: decisionGrounded }, activeUiContainsConversation:
       /conversation|CONVERSATION/.test(activeUi),
     relationshipTextHasConversation: /conversation/.test(relationshipText),
     memoryTextHasInteraction: /interaction/.test(memoryText),
@@ -281,6 +296,9 @@ try {
   if (!activeVisualLabel.some((label) => label.visible &&
     label.text.includes('CONVERSATION'))) {
     throw new Error('Active conversation has no visible map label')
+  }
+  if (!decisionGrounded || !/DECISION EXPLANATION/.test(decisionText)) {
+    throw new Error('Encounter decision explanation is missing real chance/draw inputs')
   }
   if (!activeUi.includes('conversation') ||
     !relationshipText.includes('conversation') || !memoryText.includes('interaction')) {
