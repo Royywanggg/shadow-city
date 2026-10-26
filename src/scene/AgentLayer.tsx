@@ -1,6 +1,7 @@
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
-import { CanvasTexture, Color, DoubleSide, DynamicDrawUsage, Object3D, Sphere, Vector3, type InstancedMesh, type Mesh } from 'three'
+import { CanvasTexture, Color, DoubleSide, DynamicDrawUsage, MeshBasicMaterial, Object3D, PlaneGeometry,
+  Sphere, SRGBColorSpace, TextureLoader, Vector3, type InstancedMesh, type Mesh } from 'three'
 import type { PedestrianNetwork } from '../city/model'
 import type { AgentSelectionController } from '../app/agentSelection'
 import type { PlaybackController } from '../playback/PlaybackController'
@@ -9,7 +10,8 @@ import { getCitizenSimulationState, type SimulationStateV2 } from '../simulation
 import { createPedestrianLookup, interpolateAgentPose, type AgentRenderPose } from './agentInterpolation'
 import { SelectedRoute } from './SelectedRoute'
 import { CharacterManager, loadCharacterAssets, type CharacterDiagnostics, type CharacterRenderItem } from './character/CharacterManager'
-import { CHARACTER_ASSET_BY_ID } from './character/catalog'
+import { sampleAnimationTime } from './character/animationClock'
+import { CHARACTER_ASSETS, CHARACTER_ASSET_BY_ID } from './character/catalog'
 
 declare global {
   interface Window {
@@ -19,7 +21,13 @@ declare global {
       renderedFrames: number
     }
     __shadowCityAnonymousPresence?: { visibleCount: number }
-    __shadowCityCharacterDiagnostics?: CharacterDiagnostics & { assetError?: string }
+    __shadowCityCharacterDiagnostics?: CharacterDiagnostics & {
+      farSpriteCount?: number
+      primitiveFallbackCount?: number
+      selectedTier?: 'far' | 'medium' | 'close' | null
+      selectedVisualTime?: number | null
+      assetError?: string
+    }
     __shadowCityCharacterPreview?: {
       setClip(clip: 'Idle' | 'Walk' | 'Run' | null): void
     }
@@ -78,6 +86,7 @@ export function AgentLayer({
   const bodyRef = useRef<InstancedMesh>(null)
   const headRef = useRef<InstancedMesh>(null)
   const footlightRef = useRef<InstancedMesh>(null)
+  const farMeshesRef = useRef(new Map<string, InstancedMesh>())
   const ringRef = useRef<Mesh>(null)
   const locatorRef = useRef<Mesh>(null)
   const locatorTipRef = useRef<Mesh>(null)
@@ -85,6 +94,8 @@ export function AgentLayer({
   const object = useMemo(() => new Object3D(), [])
   const clothingColor = useMemo(() => new Color(), [])
   const footlightTexture = useMemo(createFootlightTexture, [])
+  const farPlane = useMemo(() => new PlaneGeometry(0.88, 1.76), [])
+  const [farMaterials, setFarMaterials] = useState<readonly { presetId: string; material: MeshBasicMaterial }[]>([])
   const screenPoint = useMemo(() => new Vector3(), [])
   const screenTop = useMemo(() => new Vector3(), [])
   const managerRef = useRef<CharacterManager | null>(null)
@@ -102,6 +113,31 @@ export function AgentLayer({
       delete window.__shadowCityCharacterDiagnostics
     }
   }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    const loader = new TextureLoader()
+    Promise.all(CHARACTER_ASSETS.map(async ({ presetId }) => {
+      const texture = await loader.loadAsync(`/characters/quaternius-v01/impostors/${presetId}.png`)
+      texture.colorSpace = SRGBColorSpace
+      return { presetId, material: new MeshBasicMaterial({
+        map: texture, color: '#b8c7ce', transparent: true, alphaTest: 0.08,
+        depthWrite: true, side: DoubleSide, toneMapped: false,
+      }) }
+    })).then((loaded) => {
+      if (cancelled) {
+        for (const { material } of loaded) { material.map?.dispose(); material.dispose() }
+      } else {
+        setFarMaterials(loaded)
+        invalidate()
+      }
+    }).catch(() => { /* The original distant markers remain available if a sprite cannot load. */ })
+    return () => { cancelled = true }
+  }, [invalidate])
+
+  useEffect(() => () => {
+    for (const { material } of farMaterials) { material.map?.dispose(); material.dispose() }
+  }, [farMaterials])
 
   useEffect(() => {
     let cancelled = false
@@ -187,36 +223,73 @@ export function AgentLayer({
       }
     }
     const manager = managerRef.current
-    const visualTime = previous
-      ? previous.logicalTimeSeconds + (current.logicalTimeSeconds - previous.logicalTimeSeconds) * alpha
-      : current.logicalTimeSeconds
+    const visualTime = sampleAnimationTime(previous?.tick ?? null, current.tick, alpha)
     const result = manager?.update(renderItems, selectedId, visualTime)
     const tiers = result?.tiers
-    if (import.meta.env.DEV && updateDebug) window.__shadowCityCharacterDiagnostics = result?.diagnostics ?? {
-      farCount: visibleCount, mediumCount: 0, closeCount: 0, visibleCount, assetPresetCount: 0,
+    const farReady = farMaterials.length === CHARACTER_ASSETS.length
+    body.count = farReady ? 0 : current.citizens.length
+    head.count = farReady ? 0 : current.citizens.length
+    if (farReady) {
+      const counts = new Map<string, number>()
+      for (const [index, citizen] of current.citizens.entries()) {
+        const appearance = appearanceById.get(citizen.id)
+        const pose = poses[index]
+        if (!pose.visible || !appearance || (tiers?.get(citizen.id) ?? 'far') !== 'far') continue
+        const mesh = farMeshesRef.current.get(appearance.presetId)
+        if (!mesh) continue
+        const slot = counts.get(appearance.presetId) ?? 0
+        object.position.set(pose.x, pose.y + 0.88, pose.z)
+        object.quaternion.copy(camera.quaternion)
+        object.scale.setScalar(1)
+        object.updateMatrix()
+        mesh.setMatrixAt(slot, object.matrix)
+        const agentIds = mesh.userData.agentIds as string[]
+        agentIds[slot] = citizen.id
+        counts.set(appearance.presetId, slot + 1)
+      }
+      for (const { presetId } of farMaterials) {
+        const mesh = farMeshesRef.current.get(presetId)
+        if (!mesh) continue
+        mesh.count = counts.get(presetId) ?? 0
+        mesh.instanceMatrix.needsUpdate = true
+      }
+    }
+    if (import.meta.env.DEV && updateDebug) {
+      const diagnostics = result?.diagnostics ?? {
+        farCount: visibleCount, mediumCount: 0, closeCount: 0, visibleCount, assetPresetCount: 0,
+      }
+      window.__shadowCityCharacterDiagnostics = {
+        ...diagnostics,
+        farSpriteCount: farReady ? diagnostics.farCount : 0,
+        primitiveFallbackCount: farReady ? 0 : diagnostics.farCount,
+        selectedTier: selectedId ? tiers?.get(selectedId) ?? null : null,
+        selectedVisualTime: selectedId ? visualTime : null,
+      }
     }
     for (const [index, citizen] of current.citizens.entries()) {
       const pose = poses[index]
       const appearance = appearanceById.get(citizen.id)
-      const scale = pose.visible && tiers?.get(citizen.id) !== 'medium' && tiers?.get(citizen.id) !== 'close'
-        ? 1 : HIDDEN_SCALE
-      object.position.set(pose.x, pose.y + 0.77, pose.z)
-      object.rotation.set(0, pose.yaw, 0)
-      object.scale.setScalar(scale)
-      object.updateMatrix()
-      body.setMatrixAt(index, object.matrix)
-      const visualColor = appearance?.primaryClothingColor ??
-        (appearance ? CHARACTER_ASSET_BY_ID.get(appearance.presetId)?.farColor : null)
-      body.setColorAt(index, visualColor
-        ? clothingColor.set(visualColor)
-        : citizen.activity === 'returningHome'
-          ? RETURNING_COLOR : citizen.activity === 'atDestination' ? VISITING_COLOR : TRAVELLING_COLOR)
+      if (!farReady) {
+        const scale = pose.visible && tiers?.get(citizen.id) !== 'medium' && tiers?.get(citizen.id) !== 'close'
+          ? 1 : HIDDEN_SCALE
+        object.position.set(pose.x, pose.y + 0.77, pose.z)
+        object.rotation.set(0, pose.yaw, 0)
+        object.scale.setScalar(scale)
+        object.updateMatrix()
+        body.setMatrixAt(index, object.matrix)
+        const visualColor = appearance?.primaryClothingColor ??
+          (appearance ? CHARACTER_ASSET_BY_ID.get(appearance.presetId)?.farColor : null)
+        body.setColorAt(index, visualColor
+          ? clothingColor.set(visualColor)
+          : citizen.activity === 'returningHome'
+            ? RETURNING_COLOR : citizen.activity === 'atDestination' ? VISITING_COLOR : TRAVELLING_COLOR)
 
-      object.position.set(pose.x, pose.y + 1.61, pose.z)
-      object.rotation.set(0, 0, 0)
-      object.scale.setScalar(scale)
-      object.updateMatrix()
-      head.setMatrixAt(index, object.matrix)
+        object.position.set(pose.x, pose.y + 1.61, pose.z)
+        object.rotation.set(0, 0, 0)
+        object.scale.setScalar(scale)
+        object.updateMatrix()
+        head.setMatrixAt(index, object.matrix)
+      }
 
       object.position.set(pose.x, pose.y + 0.035, pose.z)
       object.rotation.set(-Math.PI / 2, 0, 0)
@@ -225,10 +298,12 @@ export function AgentLayer({
       footlight.setMatrixAt(index, object.matrix)
       footlight.setColorAt(index, citizen.activity === 'returningHome' ? RETURNING_COLOR : TRAVELLING_COLOR)
     }
-    body.instanceMatrix.needsUpdate = true
-    head.instanceMatrix.needsUpdate = true
+    if (!farReady) {
+      body.instanceMatrix.needsUpdate = true
+      head.instanceMatrix.needsUpdate = true
+      if (body.instanceColor) body.instanceColor.needsUpdate = true
+    }
     footlight.instanceMatrix.needsUpdate = true
-    if (body.instanceColor) body.instanceColor.needsUpdate = true
     if (footlight.instanceColor) footlight.instanceColor.needsUpdate = true
     const ring = ringRef.current
     const locator = locatorRef.current
@@ -270,7 +345,7 @@ export function AgentLayer({
       lastDebugTick.current = current.tick
     }
     return movingCount > 0 || (result?.diagnostics.closeCount ?? 0) > 0
-  }, [appearanceById, camera, clothingColor, gl, interactive, lookup, object, screenPoint, screenTop, selected, selectedId])
+  }, [appearanceById, camera, clothingColor, farMaterials, gl, interactive, lookup, object, screenPoint, screenTop, selected, selectedId])
 
   useLayoutEffect(() => {
     const current = state
@@ -324,7 +399,8 @@ export function AgentLayer({
     if (dx * dx + dy * dy > 36) return
     const id = typeof event.object.userData.agentId === 'string'
       ? event.object.userData.agentId as string
-      : event.instanceId === undefined ? null : state.citizens[event.instanceId]?.id
+      : event.instanceId === undefined ? null
+        : (event.object.userData.agentIds as string[] | undefined)?.[event.instanceId] ?? state.citizens[event.instanceId]?.id
     const citizen = state.citizens.find((item) => item.id === id)
     if (!citizen || citizen.activity === 'atHome' || citizen.activity === 'planningTrip') return
     event.stopPropagation()
@@ -345,6 +421,19 @@ export function AgentLayer({
         <sphereGeometry args={[0.29, 6, 5]} />
         <meshStandardMaterial color="#ecdeca" emissive="#d0b999" emissiveIntensity={0.42} roughness={0.83} />
       </instancedMesh>
+      {farMaterials.map(({ presetId, material }) => (
+        <instancedMesh key={presetId} args={[farPlane, material, count]} frustumCulled={false}
+          ref={(mesh) => {
+            if (mesh) {
+              farMeshesRef.current.set(presetId, mesh)
+              mesh.count = 0
+              mesh.userData.agentIds ??= []
+              mesh.boundingSphere = new Sphere(new Vector3(), pickRadius)
+            } else farMeshesRef.current.delete(presetId)
+          }}
+          onPointerDown={interactive ? onPointerDown : undefined}
+          onClick={interactive ? onClick : undefined} />
+      ))}
       <instancedMesh ref={footlightRef} args={[undefined, undefined, count]} frustumCulled={false}>
         <circleGeometry args={[0.9, 12]} />
         <meshBasicMaterial color="#ffffff" map={footlightTexture} transparent opacity={0.8}
