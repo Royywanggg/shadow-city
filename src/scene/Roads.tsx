@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import type { CityModel, RoadNode } from '../city/model'
 import { InstancedBoxes, type BoxInstance } from './InstancedBoxes'
+import { surfaceTextures } from './SurfaceTextures'
 
 function roadBox(from: RoadNode, to: RoadNode, width: number, y: number, thickness: number): BoxInstance {
   const dx = to.x - from.x
@@ -13,6 +14,7 @@ function roadBox(from: RoadNode, to: RoadNode, width: number, y: number, thickne
 }
 
 export function Roads({ city }: { city: CityModel }) {
+  const surfaces = surfaceTextures()
   const geometry = useMemo(() => {
     const roads: BoxInstance[] = []
     const sidewalks: BoxInstance[] = []
@@ -90,9 +92,15 @@ export function Roads({ city }: { city: CityModel }) {
 
   return (
     <>
-      <InstancedBoxes items={geometry.roads} color="#2a394b" roughness={0.96} receiveShadow />
-      <InstancedBoxes items={geometry.curbs} roughness={0.94} receiveShadow />
-      <InstancedBoxes items={geometry.sidewalks} roughness={0.92} receiveShadow />
+      <InstancedBoxes items={geometry.roads} color="#344859" roughness={1} receiveShadow
+        map={surfaces.asphalt.color} normalMap={surfaces.asphalt.normal}
+        roughnessMap={surfaces.asphalt.roughness} textureWorldScale={5} />
+      <InstancedBoxes items={geometry.curbs} roughness={1} receiveShadow
+        map={surfaces.paving.color} normalMap={surfaces.paving.normal}
+        roughnessMap={surfaces.paving.roughness} textureWorldScale={8} />
+      <InstancedBoxes items={geometry.sidewalks} roughness={1} receiveShadow
+        map={surfaces.paving.color} normalMap={surfaces.paving.normal}
+        roughnessMap={surfaces.paving.roughness} textureWorldScale={8} />
       <InstancedBoxes items={geometry.marks} roughness={0.95} />
       <InstancedBoxes items={geometry.crosswalks} color="#aab7af" roughness={0.95} />
     </>

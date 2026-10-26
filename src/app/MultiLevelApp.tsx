@@ -1,4 +1,5 @@
 import { Canvas } from '@react-three/fiber'
+import { ACESFilmicToneMapping, AgXToneMapping, SRGBColorSpace } from 'three'
 import { memo, useEffect, useMemo, useState, useSyncExternalStore, type CSSProperties } from 'react'
 import { createCameraController } from '../camera/cameraController'
 import { FixedStepScheduler, browserFrameHost, type PlaybackSpeed } from '../playback/FixedStepScheduler'
@@ -191,6 +192,15 @@ function V5Panel({ session, selectedId, onSelect, cameraController, level, setLe
 
 export function MultiLevelApp() {
   const params = new URLSearchParams(window.location.search)
+  const renderQuality = params.get('quality') === 'low' ? 'low' : 'high'
+  const postprocessing = params.get('post') !== 'off'
+  const lighting = params.get('lighting') === 'day' ? 'day' : 'night'
+  const castShadows = params.get('shadows') !== 'off'
+  const ambientOcclusion = params.get('ao') === 'on'
+  const toneMapping = params.get('tone') === 'aces' ? ACESFilmicToneMapping : AgXToneMapping
+  const exposureParam = Number(params.get('exposure'))
+  const exposure = Number.isFinite(exposureParam) && exposureParam >= 0.75 && exposureParam <= 2
+    ? exposureParam : 1.2
   const prototype = params.get('world') === 'prototype'
   const seed = params.get('seed') || (prototype ? DEFAULT_WORLD_CONFIG_V2.seed :
     INTEGRATED_WORLD_CONFIG_V2.seed)
@@ -274,9 +284,13 @@ export function MultiLevelApp() {
       setSidebarOpen={setSidebarOpen} />
     <div className="v06-viewport">
       <Canvas orthographic camera={{ position: [245, 195, 245], near: 0.1, far: 1200, zoom: 1 }}
-        dpr={[1, 1.5]} shadows="percentage" gl={{ antialias: true, powerPreference: 'high-performance' }}>
+        dpr={renderQuality === 'low' ? 1 : [1, 1.5]} shadows="percentage"
+        gl={{ antialias: true, powerPreference: 'high-performance', outputColorSpace: SRGBColorSpace,
+          toneMapping, toneMappingExposure: exposure }}>
         <WorldCameraRig controller={cameraController} world={world} />
         <WorldSceneV2 world={world} level={level} cutaway={cutaway || selectedIndoor}
+          quality={renderQuality} postprocessing={postprocessing} lighting={lighting}
+          castShadows={castShadows} ambientOcclusion={ambientOcclusion}
           debugNavigation={debug} onPickSurface={(surfaceId) => {
             setPickedSurfaceId(surfaceId)
             const surface = world.surfaces.find((item) => item.id === surfaceId)

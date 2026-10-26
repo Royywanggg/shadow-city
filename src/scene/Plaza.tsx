@@ -1,7 +1,9 @@
 import type { CityModel } from '../city/model'
 import { InstancedBoxes, type BoxInstance } from './InstancedBoxes'
+import { surfaceTextures } from './SurfaceTextures'
 
 export function Plaza({ city }: { city: CityModel }) {
+  const paving = surfaceTextures().paving
   const { x, z, width, depth } = city.plaza
   const hasBridgePavilion = city.size > 212
   const treePositions: [number, number][] = [
@@ -51,10 +53,11 @@ export function Plaza({ city }: { city: CityModel }) {
           ))}
         </group>
       ))}
-      <mesh position={[x, 0.255, z]} receiveShadow>
-        <boxGeometry args={[width * 0.88, 0.04, depth * 0.88]} />
-        <meshStandardMaterial color="#516272" roughness={0.92} />
-      </mesh>
+      <InstancedBoxes items={[{ position: [x, 0.255, z],
+        scale: [width * 0.88, 0.04, depth * 0.88] }]}
+        color="#718392" roughness={1} receiveShadow
+        map={paving.color} normalMap={paving.normal}
+        roughnessMap={paving.roughness} textureWorldScale={8} />
       <InstancedBoxes items={planting} receiveShadow roughness={0.96} />
       <InstancedBoxes items={pavingLines} color="#9baaa7" roughness={0.9} />
       <mesh position={[x, 0.41, z]} castShadow receiveShadow>
