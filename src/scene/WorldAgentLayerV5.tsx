@@ -20,6 +20,8 @@ export function WorldAgentLayerV5({ session, selectedId, onSelect, playing, tick
     [profile.id, createCitizenIdentity(profile.id)])), [session])
   const profiles = useMemo(() => new Map(session.getProfiles().map((profile) =>
     [profile.id, profile])), [session])
+  const surfaces = useMemo(() => new Map(session.getWorld().surfaces.map((surface) =>
+    [surface.id, surface])), [session])
   const managerRef = useRef<CharacterManager | null>(null)
   const [manager, setManager] = useState<CharacterManager | null>(null)
   const [materials, setMaterials] = useState<ReadonlyMap<string, MeshBasicMaterial>>(new Map())
@@ -110,7 +112,7 @@ export function WorldAgentLayerV5({ session, selectedId, onSelect, playing, tick
       const previous = previousById.get(citizen.id)
       const visible = citizen.activity !== 'atHome' || citizen.id === selectedId
       if (!visible) continue
-      const surface = session.getWorld().surfaces.find((item) => item.id === citizen.surfaceId)
+      const surface = surfaces.get(citizen.surfaceId)
       if (level !== 'all' && surface?.levelId !== level && surface?.levelId !== 'L0-L1' &&
         citizen.id !== selectedId) continue
       const appearance = identities.get(citizen.id)!.appearance

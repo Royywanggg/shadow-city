@@ -11,6 +11,7 @@ import { SimulationSessionV5 } from '../simulation/sessionV5'
 import { DEFAULT_SIMULATION_CONFIG_V5 } from '../simulation/v5Types'
 import { DEFAULT_WORLD_CONFIG_V2 } from '../world/model'
 import { generateWorldV2 } from '../world/generation/generateWorldV2'
+import { generateIntegratedWorld, INTEGRATED_WORLD_CONFIG_V2 } from '../world/generation/generateIntegratedWorld'
 import { CameraControls } from './CameraControls'
 import './v06.css'
 
@@ -151,8 +152,8 @@ function V5Panel({ session, selectedId, onSelect, cameraController, level, setLe
       </>}
     </aside>
     <div className="v06-topbar">
-      <div><span className="eyebrow">SHADOW CITY / WORLD V2</span><h1>THE LIVING <em>CITY</em></h1>
-        <p>320 × 320 m · multi-level urban laboratory</p></div>
+      <div><span className="eyebrow">SHADOW CITY / WORLD V2</span><h1>SHADOW <em>CITY</em></h1>
+        <p>{session.getWorld().config.extentMm / 1000} × {session.getWorld().config.extentMm / 1000} m · multi-level urban laboratory</p></div>
       <a href="?world=legacy">OPEN LEGACY CITY ↗</a>
     </div>
     <div className="v06-world-controls">
@@ -190,11 +191,14 @@ function V5Panel({ session, selectedId, onSelect, cameraController, level, setLe
 
 export function MultiLevelApp() {
   const params = new URLSearchParams(window.location.search)
-  const seed = params.get('seed') || DEFAULT_WORLD_CONFIG_V2.seed
+  const prototype = params.get('world') === 'prototype'
+  const seed = params.get('seed') || (prototype ? DEFAULT_WORLD_CONFIG_V2.seed :
+    INTEGRATED_WORLD_CONFIG_V2.seed)
   const populationParam = Number(params.get('population') ?? DEFAULT_SIMULATION_CONFIG_V5.populationSize)
   const populationSize = Number.isSafeInteger(populationParam) && populationParam >= 0 && populationParam <= 200
     ? populationParam : DEFAULT_SIMULATION_CONFIG_V5.populationSize
-  const world = useMemo(() => generateWorldV2({ ...DEFAULT_WORLD_CONFIG_V2, seed }), [seed])
+  const world = useMemo(() => prototype ? generateWorldV2({ ...DEFAULT_WORLD_CONFIG_V2, seed }) :
+    generateIntegratedWorld(seed), [prototype, seed])
   const session = useMemo(() => {
     const next = new SimulationSessionV5(world, { ...DEFAULT_SIMULATION_CONFIG_V5, populationSize })
     for (let tick = 0; tick < 100; tick += 1) next.advanceOneTick()
@@ -269,12 +273,14 @@ export function MultiLevelApp() {
     <div className="v06-viewport">
       <Canvas orthographic camera={{ position: [245, 195, 245], near: 0.1, far: 1200, zoom: 1 }}
         dpr={[1, 1.5]} shadows="percentage" gl={{ antialias: true, powerPreference: 'high-performance' }}>
-        <WorldCameraRig controller={cameraController} />
+        <WorldCameraRig controller={cameraController} world={world} />
         <WorldSceneV2 world={world} level={level} cutaway={cutaway || selectedIndoor}
           debugNavigation={debug} onPickSurface={(surfaceId) => {
             setPickedSurfaceId(surfaceId)
             const surface = world.surfaces.find((item) => item.id === surfaceId)
-            if (surface?.indoor) setLevel(surface.levelId as 'L0' | 'L1')
+            if (surface?.indoor && (surface.levelId === 'L0' || surface.levelId === 'L1')) {
+              setLevel(surface.levelId)
+            }
           }} />
         <WorldAgentLayerV5 session={session} selectedId={selectedId} onSelect={selectAgent}
           playing={playing} ticksPerSecond={4 * speed} level={level} />

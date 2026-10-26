@@ -4,6 +4,8 @@ import { useCallback, useLayoutEffect, useMemo, useRef } from 'react'
 import { OrthographicCamera, TOUCH } from 'three'
 import type { MapControls as MapControlsType } from 'three-stdlib'
 import type { CameraController } from '../camera/cameraController'
+import { INITIAL_CAMERA_POSITION, INITIAL_CAMERA_TARGET } from '../camera/viewState'
+import type { WorldModelV2 } from '../world/model'
 import { bearingFromOffset, clampPitch, MAX_PITCH_DEG, MIN_PITCH_DEG, normalizeBearing,
   pitchFromOffset, type CameraTarget } from '../camera/viewState'
 
@@ -11,13 +13,18 @@ const HOME_POSITION: CameraTarget = [245, 195, 245]
 const HOME_TARGET: CameraTarget = [15, 0, 0]
 const TOUCH_MAPPING = { ONE: TOUCH.PAN, TWO: TOUCH.DOLLY_PAN }
 
-export function WorldCameraRig({ controller }: { controller: CameraController }) {
+export function WorldCameraRig({ controller, world }: { controller: CameraController; world: WorldModelV2 }) {
   const { camera, size, invalidate } = useThree()
   const controls = useRef<MapControlsType>(null)
   const previousBaseZoom = useRef(0)
   const tracking = useRef<CameraTarget | null>(null)
   const wantedZoom = useRef<number | null>(null)
-  const baseZoom = Math.min(size.width / 500, size.height / 390)
+  const integrated = Boolean(world.baseCity)
+  const homePosition = integrated ? INITIAL_CAMERA_POSITION : HOME_POSITION
+  const homeTarget = integrated ? INITIAL_CAMERA_TARGET : HOME_TARGET
+  const half = world.config.extentMm / 2000
+  const baseZoom = integrated ? Math.min(size.width / 325, size.height / 235) :
+    Math.min(size.width / 500, size.height / 390)
   const publish = useCallback(() => {
     if (!controls.current) return
     const target = controls.current.target
@@ -29,24 +36,24 @@ export function WorldCameraRig({ controller }: { controller: CameraController })
       zoomRatio: camera.zoom / baseZoom })
   }, [baseZoom, camera, controller])
   const clampTarget = useCallback((target: CameraTarget): CameraTarget => [
-    Math.max(-145, Math.min(145, target[0])), Math.max(0, Math.min(42, target[1])),
-    Math.max(-145, Math.min(145, target[2])),
-  ], [])
+    Math.max(-half - 10, Math.min(half + 10, target[0])), Math.max(0, Math.min(42, target[1])),
+    Math.max(-half - 10, Math.min(half + 10, target[2])),
+  ], [half])
   useLayoutEffect(() => {
     if (!(camera instanceof OrthographicCamera)) return
     const previous = previousBaseZoom.current
     camera.zoom = previous > 0 ? baseZoom * camera.zoom / previous : baseZoom
     if (previous === 0) {
-      camera.position.set(...HOME_POSITION)
-      camera.lookAt(...HOME_TARGET)
-      controls.current?.target.set(...HOME_TARGET)
+      camera.position.set(...homePosition)
+      camera.lookAt(...homeTarget)
+      controls.current?.target.set(...homeTarget)
     }
     previousBaseZoom.current = baseZoom
     camera.updateProjectionMatrix()
     controls.current?.update()
     publish()
     invalidate()
-  }, [camera, invalidate, publish, baseZoom])
+  }, [camera, invalidate, publish, baseZoom, homePosition, homeTarget])
   useLayoutEffect(() => {
     const control = controls.current
     if (!control) return
@@ -80,8 +87,8 @@ export function WorldCameraRig({ controller }: { controller: CameraController })
     const resetView = () => {
       tracking.current = null
       wantedZoom.current = null
-      control.target.set(...HOME_TARGET)
-      camera.position.set(...HOME_POSITION)
+      control.target.set(...homeTarget)
+      camera.position.set(...homePosition)
       camera.zoom = baseZoom
       camera.lookAt(control.target)
       camera.updateProjectionMatrix()
@@ -91,7 +98,7 @@ export function WorldCameraRig({ controller }: { controller: CameraController })
       inspectTarget: (target) => { setTarget(target, false); wantedZoom.current = baseZoom * 8 },
       exitInspectMode: () => { wantedZoom.current = baseZoom * 4 },
       cancelTarget: () => { tracking.current = null; wantedZoom.current = null }, resetView })
-  }, [baseZoom, camera, clampTarget, controller, invalidate, publish])
+  }, [baseZoom, camera, clampTarget, controller, homePosition, homeTarget, invalidate, publish])
   useFrame((_, delta) => {
     const control = controls.current
     if (!control) return

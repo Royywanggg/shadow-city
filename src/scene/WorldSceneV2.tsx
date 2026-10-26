@@ -7,6 +7,8 @@ import { metres } from '../world/model'
 import { createNavigationIndexV2, orientedEdgePath } from '../world/navigation/routeV2'
 import type { CitizenStateV5, SimulationStateV5 } from '../simulation/v5Types'
 import { reportIdForOffence } from '../simulation/offending/opportunityV5'
+import { CityStaticScene } from './CityScene'
+import { RenderDiagnostics } from './RenderDiagnostics'
 
 function roadBoxes(world: WorldModelV2): WorldBox[] {
   const nodes = new Map(world.roadNodes.map((node) => [node.id, node]))
@@ -84,7 +86,7 @@ export function WorldSceneV2({ world, level, cutaway, debugNavigation, onPickSur
   onPickSurface: (surfaceId: string | null) => void
 }) {
   const groups = useMemo(() => {
-    const candidates = [...roadBoxes(world), ...world.boxes].filter((box) => {
+    const candidates = [...(world.baseCity ? [] : roadBoxes(world)), ...world.boxes].filter((box) => {
       if (cutaway && box.roofFor === 'central-galleria') return false
       if (level === 'L0' && box.levelId === 'L1' &&
         (box.placeId === 'central-galleria' || box.roofFor === 'central-galleria')) return false
@@ -116,6 +118,10 @@ export function WorldSceneV2({ world, level, cutaway, debugNavigation, onPickSur
     onPickSurface(surfaceId)
   }
   return <>
+    {world.baseCity ? <>
+      <CityStaticScene city={world.baseCity} />
+      {import.meta.env.DEV && <RenderDiagnostics />}
+    </> : <>
     <color attach="background" args={['#101c2a']} />
     <fog attach="fog" args={['#101c2a', 240, 650]} />
     <ambientLight intensity={1.05} color="#9db5cc" />
@@ -132,6 +138,7 @@ export function WorldSceneV2({ world, level, cutaway, debugNavigation, onPickSur
       <boxGeometry args={[332, 0.22, 332]} />
       <meshStandardMaterial color="#5a8d9c" emissive="#153d52" emissiveIntensity={0.7} />
     </mesh>
+    </>}
     {groups.map(([kind, boxes]) => <InstancedWorldBoxes key={kind} boxes={boxes} onPick={pick} />)}
     {debugNavigation && debugEdges.map((edge) => <Line key={edge.id}
       points={edge.path.map((point) => metres(point))} color={edge.kind === 'portal' ? '#e0ab75' :
