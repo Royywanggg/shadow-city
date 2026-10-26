@@ -65,6 +65,8 @@ export class PlaybackController {
 
   getSnapshot = (): PlaybackSnapshot => this.snapshot
 
+  getInterpolationAlpha = (): number => this.scheduler.getInterpolationAlpha()
+
   play(): void {
     if (this.session.getSnapshot().isInspecting) {
       this.scheduler.pause('Return Live before playing.')

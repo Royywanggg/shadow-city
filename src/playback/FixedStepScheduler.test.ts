@@ -44,6 +44,19 @@ function runAtFrameRate(fps: number): number {
 }
 
 describe('FixedStepScheduler', () => {
+  it('exposes a clamped render-only phase and snaps when playback stops', () => {
+    const host = new TestFrameHost()
+    const scheduler = new FixedStepScheduler(host, () => {}, () => {})
+    expect(scheduler.getInterpolationAlpha()).toBe(1)
+    scheduler.play()
+    host.time = 50
+    expect(scheduler.getInterpolationAlpha()).toBeCloseTo(0.5)
+    host.advance(50)
+    expect(scheduler.getInterpolationAlpha()).toBe(0)
+    scheduler.pause()
+    expect(scheduler.getInterpolationAlpha()).toBe(1)
+  })
+
   it('executes the same number of logical ticks at 30, 60, and 120 fps', () => {
     expect(runAtFrameRate(30)).toBe(20)
     expect(runAtFrameRate(60)).toBe(20)

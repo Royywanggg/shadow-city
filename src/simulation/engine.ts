@@ -2,17 +2,17 @@ import { createRandomStream, hashSeed, nextRandom } from './rng'
 import type {
   CommandEnvelope,
   ScheduledDiagnosticAction,
-  SimulationConfig,
-  SimulationEvent,
-  SimulationState,
-  SimulationTransition,
+  SimulationConfigV1,
+  DiagnosticProbeSampledEvent,
+  SimulationStateV1,
+  SimulationTransitionV1,
   StaticCity,
 } from './types'
 
 export const MAX_PROBE_DELAY_TICKS = 100_000
 export const SIMULATION_ENGINE_VERSION = '0.2.0'
 
-export function validateConfig(config: SimulationConfig): void {
+export function validateConfig(config: SimulationConfigV1): void {
   if (config.version !== 1 || !config.simulationSeed ||
       !Number.isSafeInteger(config.logicalSecondsPerTick) || config.logicalSecondsPerTick <= 0) {
     throw new Error('Invalid simulation configuration')
@@ -31,7 +31,7 @@ export function validateCommand(envelope: CommandEnvelope): void {
   }
 }
 
-export function createInitialState(config: SimulationConfig): SimulationState {
+export function createInitialState(config: SimulationConfigV1): SimulationStateV1 {
   validateConfig(config)
   return {
     version: 1,
@@ -56,10 +56,10 @@ function compareActions(a: ScheduledDiagnosticAction, b: ScheduledDiagnosticActi
 
 export function stepSimulation(
   city: StaticCity,
-  config: SimulationConfig,
-  state: SimulationState,
+  config: SimulationConfigV1,
+  state: SimulationStateV1,
   commandsForTick: readonly CommandEnvelope[],
-): SimulationTransition {
+): SimulationTransitionV1 {
   validateConfig(config)
   if (state.version !== 1 || !Number.isSafeInteger(state.tick) || state.tick < 0) {
     throw new Error('Invalid simulation state')
@@ -98,7 +98,7 @@ export function stepSimulation(
   }
   actions.sort(compareActions)
   const pendingActions: ScheduledDiagnosticAction[] = []
-  const events: SimulationEvent[] = []
+  const events: DiagnosticProbeSampledEvent[] = []
   let nextEventSequence = state.nextEventSequence
   let diagnosticRng = state.rng.diagnostic
   let diagnosticSampleCount = state.diagnosticSampleCount

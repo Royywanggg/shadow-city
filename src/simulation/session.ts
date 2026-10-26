@@ -1,4 +1,6 @@
 import { createInitialState, stepSimulation, validateCommand, validateConfig } from './engine'
+import { createInitialCitizenState, stepCitizenSimulation } from './engineV2'
+import { createSimulationEnvironment, validateCitizenConfig } from './environment'
 import { replayToTick } from './replay'
 import { DEFAULT_SIMULATION_CONFIG } from './types'
 import type {
@@ -7,6 +9,7 @@ import type {
   SimulationCommand,
   SimulationConfig,
   SimulationEvent,
+  SimulationEnvironment,
   SimulationSnapshot,
   SimulationState,
   StaticCity,
@@ -30,6 +33,15 @@ function freezeState(state: SimulationState): SimulationState {
   for (const action of state.pendingActions) Object.freeze(action)
   Object.freeze(state.pendingActions)
   Object.freeze(state.rng)
+  if (state.version === 2) {
+    for (const citizen of state.citizens) {
+      Object.freeze(citizen.position)
+      for (const step of citizen.route) Object.freeze(step)
+      Object.freeze(citizen.route)
+      Object.freeze(citizen)
+    }
+    Object.freeze(state.citizens)
+  }
   return Object.freeze(state)
 }
 
@@ -42,9 +54,11 @@ function validateLimits(limits: SimulationHistoryLimits): void {
 export class SimulationSession {
   readonly city: StaticCity
   readonly config: SimulationConfig
+  readonly environment: SimulationEnvironment | null
   readonly limits: SimulationHistoryLimits
 
   private liveState: SimulationState
+  private previousLiveState: SimulationState | null = null
   private commandHistory: CommandEnvelope[] = []
   private commandsByTick = new Map<number, CommandEnvelope[]>()
   private eventHistory: SimulationEvent[] = []
@@ -57,16 +71,24 @@ export class SimulationSession {
     config: SimulationConfig = DEFAULT_SIMULATION_CONFIG,
     limits: SimulationHistoryLimits = DEFAULT_HISTORY_LIMITS,
   ) {
-    validateConfig(config)
+    if (config.version === 1) validateConfig(config)
+    else validateCitizenConfig(config)
     validateLimits(limits)
     this.city = city
     this.config = Object.freeze({ ...config })
     this.limits = Object.freeze({ ...limits })
-    this.liveState = freezeState(createInitialState(this.config))
+    this.environment = this.config.version === 2 ? createSimulationEnvironment(city, this.config) : null
+    this.liveState = freezeState(this.config.version === 2
+      ? createInitialCitizenState(this.environment!, this.config)
+      : createInitialState(this.config))
     this.snapshot = this.buildSnapshot()
   }
 
   getSnapshot = (): SimulationSnapshot => this.snapshot
+
+  getPreviousLiveState(): SimulationState | null {
+    return this.previousLiveState
+  }
 
   subscribe = (listener: () => void): (() => void) => {
     this.listeners.add(listener)
@@ -125,11 +147,16 @@ export class SimulationSession {
     }
     const nextTick = this.liveState.tick + 1
     const commands = this.commandsByTick.get(nextTick) ?? []
-    const transition = stepSimulation(this.city, this.config, this.liveState, commands)
+    const transition = this.config.version === 2 && this.liveState.version === 2
+      ? stepCitizenSimulation(this.environment!, this.config, this.liveState, commands)
+      : this.config.version === 1 && this.liveState.version === 1
+        ? stepSimulation(this.city, this.config, this.liveState, commands)
+        : (() => { throw new Error('Simulation config and state version mismatch') })()
     if (this.eventHistory.length + transition.events.length > this.limits.maxEvents ||
         transition.state.pendingActions.length > this.limits.maxPendingActions) {
       throw new Error('Simulation history limit reached; reset simulation to continue')
     }
+    this.previousLiveState = this.liveState
     this.liveState = freezeState(transition.state)
     this.eventHistory.push(...transition.events.map((event) => Object.freeze(event)))
     this.publish()
@@ -139,7 +166,7 @@ export class SimulationSession {
     if (!Number.isSafeInteger(tick) || tick < 0 || tick > this.liveState.tick) {
       throw new Error('Inspection tick must be within the live history')
     }
-    const replay = replayToTick(this.city, this.config, this.commandHistory, tick)
+    const replay = replayToTick(this.city, this.config, this.commandHistory, tick, this.environment)
     this.inspected = {
       state: freezeState(replay.state),
       events: Object.freeze(replay.events.map((event) => Object.freeze(event))),
@@ -150,11 +177,15 @@ export class SimulationSession {
   returnLive(): void {
     if (this.inspected === null) return
     this.inspected = null
+    this.previousLiveState = null
     this.publish()
   }
 
   reset(): void {
-    this.liveState = freezeState(createInitialState(this.config))
+    this.liveState = freezeState(this.config.version === 2
+      ? createInitialCitizenState(this.environment!, this.config)
+      : createInitialState(this.config))
+    this.previousLiveState = null
     this.commandHistory = []
     this.commandsByTick.clear()
     this.eventHistory = []

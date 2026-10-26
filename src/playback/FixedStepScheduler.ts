@@ -65,6 +65,14 @@ export class FixedStepScheduler {
     return { status: this.status, speed: this.speed, reason: this.reason }
   }
 
+  /** Render-only progress between fixed ticks; never enters domain state. */
+  getInterpolationAlpha(): number {
+    if (this.status !== 'playing') return 1
+    const elapsedMs = Math.max(0, this.host.now() - this.lastTime)
+    const phase = this.accumulatorTicks + elapsedMs * this.baseTicksPerSecond * this.speed / 1000
+    return Math.max(0, Math.min(1, phase))
+  }
+
   play(): void {
     if (this.status === 'playing') return
     if (this.host.isHidden()) {
