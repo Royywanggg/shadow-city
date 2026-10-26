@@ -8,6 +8,12 @@ import {
   ResearchExperimentPanel,
   ResearchIncidentScene,
 } from './ExperimentSurface'
+import {
+  ObservedExperimentPanelV4,
+  ObservedOffenceSceneV4,
+  ResearchExperimentPanelV4,
+  ResearchOffenceSceneV4,
+} from './ExperimentSurfaceV4'
 import type { ObservationMode, ReportingScenarioId } from './ExperimentControls'
 import { SimulationControls } from './SimulationControls'
 import { createAgentSelectionController } from './agentSelection'
@@ -19,6 +25,7 @@ import { AgentLayer } from '../scene/AgentLayer'
 import { SimulationSession } from '../simulation/session'
 import { DEFAULT_SIMULATION_CONFIG, type SimulationConfig } from '../simulation/types'
 import { DEFAULT_V3_SCENARIO_CONFIG, V04_REVIEW_SCENARIO_CONFIG } from '../simulation/v3Types'
+import { DEFAULT_V4_SCENARIO_CONFIG, V05_REVIEW_SCENARIO_CONFIG } from '../simulation/v4Types'
 import './styles.css'
 
 declare global {
@@ -29,6 +36,17 @@ declare global {
       getEvents(): ReturnType<SimulationSession['getEventHistory']>
     }
     __shadowCityV04?: {
+      advanceToTick(targetTick: number): number[]
+      inspectTick(targetTick: number): number
+      returnLive(): void
+      getPublicSnapshot(): {
+        tick: number
+        liveTick: number
+        isInspecting: boolean
+        availableReportCount: number
+      }
+    }
+    __shadowCityV05?: {
       advanceToTick(targetTick: number): number[]
       inspectTick(targetTick: number): number
       returnLive(): void
@@ -52,6 +70,8 @@ export function App() {
   const parameters = new URLSearchParams(window.location.search)
   const seed = parameters.get('seed') || HERO_SEED
   const modelV2 = parameters.get('model') === 'v2'
+  const modelV3 = parameters.get('model') === 'v3'
+  const modelV4 = !modelV2 && !modelV3
   const reviewScenario = parameters.get('review') === '1'
   const testHarness = parameters.get('test') === '1'
   const requestedScenario = parameters.get('scenario')
@@ -68,17 +88,29 @@ export function App() {
   const agentSelection = useMemo(createAgentSelectionController, [])
   const simulationConfig = useMemo<SimulationConfig>(() => {
     if (modelV2) return { ...DEFAULT_SIMULATION_CONFIG, populationSize }
-    const base = reviewScenario ? V04_REVIEW_SCENARIO_CONFIG : DEFAULT_V3_SCENARIO_CONFIG
+    if (modelV3) {
+      const base = reviewScenario ? V04_REVIEW_SCENARIO_CONFIG : DEFAULT_V3_SCENARIO_CONFIG
+      return {
+        version: 3,
+        citizen: { ...base.citizen, populationSize },
+        incident: base.incident,
+        observation: { ...base.observation, globalProbability: REPORTING_PROBABILITIES[scenario] },
+      }
+    }
+    const base = reviewScenario ? V05_REVIEW_SCENARIO_CONFIG : DEFAULT_V4_SCENARIO_CONFIG
     return {
-      version: 3,
+      version: 4,
       citizen: { ...base.citizen, populationSize },
-      incident: base.incident,
+      offending: base.offending,
       observation: { ...base.observation, globalProbability: REPORTING_PROBABILITIES[scenario] },
     }
-  }, [modelV2, populationSize, reviewScenario, scenario])
+  }, [modelV2, modelV3, populationSize, reviewScenario, scenario])
   const simulationSession = useMemo(() => new SimulationSession(city, simulationConfig), [city, simulationConfig])
   const playbackController = useMemo(() => new PlaybackController(simulationSession), [simulationSession])
-  const observerPort = useMemo(() => modelV2 ? null : simulationSession.createObserverPort(), [modelV2, simulationSession])
+  const observerPortV3 = useMemo(() => modelV3 ? simulationSession.createObserverPort() : null,
+    [modelV3, simulationSession])
+  const observerPortV4 = useMemo(() => modelV4 ? simulationSession.createObserverPortV4() : null,
+    [modelV4, simulationSession])
 
   useEffect(() => playbackController.connect(), [playbackController])
 
@@ -108,7 +140,7 @@ export function App() {
   }, [modelV2, simulationSession])
 
   useEffect(() => {
-    if (!import.meta.env.DEV || modelV2 || !testHarness) return
+    if (!import.meta.env.DEV || !modelV3 || !testHarness) return
     const fixture = {
       advanceToTick(targetTick: number) {
         const currentTick = simulationSession.getSnapshot().liveTick
@@ -136,7 +168,7 @@ export function App() {
           tick: snapshot.tick,
           liveTick: snapshot.liveTick,
           isInspecting: snapshot.isInspecting,
-          availableReportCount: observerPort!.getView().availableReportCount,
+          availableReportCount: observerPortV3!.getView().availableReportCount,
         }
       },
     }
@@ -144,13 +176,60 @@ export function App() {
     return () => {
       if (window.__shadowCityV04 === fixture) delete window.__shadowCityV04
     }
-  }, [modelV2, observerPort, simulationSession, testHarness])
+  }, [modelV3, observerPortV3, simulationSession, testHarness])
+
+  useEffect(() => {
+    if (!import.meta.env.DEV || !modelV4 || !testHarness) return
+    const fixture = {
+      advanceToTick(targetTick: number) {
+        const currentTick = simulationSession.getSnapshot().liveTick
+        if (!Number.isSafeInteger(targetTick) || targetTick < currentTick || targetTick > 1_000 ||
+            simulationSession.getSnapshot().isInspecting) {
+          throw new Error('Development fixture target must be a live future tick at most 1000')
+        }
+        const durations: number[] = []
+        while (simulationSession.getSnapshot().liveTick < targetTick) {
+          const startedAt = performance.now()
+          simulationSession.advanceOneTick()
+          durations.push(performance.now() - startedAt)
+        }
+        return durations
+      },
+      inspectTick(targetTick: number) {
+        const startedAt = performance.now()
+        simulationSession.inspectTick(targetTick)
+        return performance.now() - startedAt
+      },
+      returnLive: () => simulationSession.returnLive(),
+      getPublicSnapshot() {
+        const snapshot = simulationSession.getSnapshot()
+        return {
+          tick: snapshot.tick,
+          liveTick: snapshot.liveTick,
+          isInspecting: snapshot.isInspecting,
+          availableReportCount: observerPortV4!.getView().availableReportCount,
+        }
+      },
+    }
+    window.__shadowCityV05 = fixture
+    return () => {
+      if (window.__shadowCityV05 === fixture) delete window.__shadowCityV05
+    }
+  }, [modelV4, observerPortV4, simulationSession, testHarness])
 
   const changeScenario = (next: ReportingScenarioId) => {
     if (next === scenario) return
     playbackController.pause()
     agentSelection.select(null)
     setScenario(next)
+  }
+
+  const changeObservationMode = (next: ObservationMode) => {
+    if (next === 'observed') {
+      agentSelection.select(null)
+      if (modelV4 && import.meta.env.DEV) delete window.__shadowCityAgentDiagnostics
+    }
+    setObservationMode(next)
   }
 
   return (
@@ -165,15 +244,18 @@ export function App() {
         fallback={<div className="canvas-fallback">This city needs a browser with WebGL support.</div>}
       >
         <CityScene city={city} cameraController={cameraController} />
-        <AgentLayer
+        {(!modelV4 || observationMode !== 'observed') && <AgentLayer
           session={simulationSession}
           playback={playbackController}
           selection={agentSelection}
           graph={city.pedestrian}
-        />
-        {observerPort && (observationMode === 'observed'
-          ? <ObservedIncidentScene port={observerPort} />
-          : <ResearchIncidentScene session={simulationSession} port={observerPort} mode={observationMode} />)}
+        />}
+        {observerPortV3 && (observationMode === 'observed'
+          ? <ObservedIncidentScene port={observerPortV3} />
+          : <ResearchIncidentScene session={simulationSession} port={observerPortV3} mode={observationMode} />)}
+        {observerPortV4 && (observationMode === 'observed'
+          ? <ObservedOffenceSceneV4 port={observerPortV4} />
+          : <ResearchOffenceSceneV4 session={simulationSession} port={observerPortV4} mode={observationMode} />)}
       </Canvas>
       <div className="scene-vignette" aria-hidden="true" />
       <header className="masthead">
@@ -183,13 +265,20 @@ export function App() {
       </header>
       <CameraControls controller={cameraController} />
       <SimulationControls controller={playbackController} populationSize={populationSize}
-        observerPort={observerPort ?? undefined} />
-      <AgentInspector session={simulationSession} selection={agentSelection} graph={city.pedestrian} />
-      {observerPort && (observationMode === 'observed'
-        ? <ObservedExperimentPanel port={observerPort} scenario={scenario}
-            onModeChange={setObservationMode} onScenarioChange={changeScenario} />
-        : <ResearchExperimentPanel session={simulationSession} port={observerPort} mode={observationMode}
-            scenario={scenario} onModeChange={setObservationMode} onScenarioChange={changeScenario} />)}
+        observerPort={observerPortV4 ?? observerPortV3 ?? undefined} />
+      {(!modelV4 || observationMode !== 'observed') &&
+        <AgentInspector session={simulationSession} selection={agentSelection} graph={city.pedestrian}
+          researcherV4={modelV4} />}
+      {observerPortV3 && (observationMode === 'observed'
+        ? <ObservedExperimentPanel port={observerPortV3} scenario={scenario}
+            onModeChange={changeObservationMode} onScenarioChange={changeScenario} />
+        : <ResearchExperimentPanel session={simulationSession} port={observerPortV3} mode={observationMode}
+            scenario={scenario} onModeChange={changeObservationMode} onScenarioChange={changeScenario} />)}
+      {observerPortV4 && (observationMode === 'observed'
+        ? <ObservedExperimentPanelV4 port={observerPortV4} scenario={scenario}
+            onModeChange={changeObservationMode} onScenarioChange={changeScenario} />
+        : <ResearchExperimentPanelV4 session={simulationSession} port={observerPortV4} mode={observationMode}
+            scenario={scenario} onModeChange={changeObservationMode} onScenarioChange={changeScenario} />)}
       <div className="scene-meta" aria-label={`City seed ${seed}`}>
         <span className="meta-rule" />
         <span>FIELD STUDY 001</span>

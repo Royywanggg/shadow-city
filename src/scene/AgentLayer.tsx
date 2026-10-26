@@ -1,5 +1,5 @@
 import { useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
-import { useCallback, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from 'react'
 import { CanvasTexture, Color, DoubleSide, DynamicDrawUsage, Object3D, Sphere, Vector3, type InstancedMesh, type Mesh } from 'three'
 import type { PedestrianNetwork } from '../city/model'
 import type { AgentSelectionController } from '../app/agentSelection'
@@ -75,6 +75,10 @@ export function AgentLayer({
   const lastDebugTick = useRef(-1)
   const lastRenderedTick = useRef<number | null>(null)
   const lastPlaybackStatus = useRef(playbackSnapshot.status)
+
+  useEffect(() => () => {
+    if (import.meta.env.DEV) delete window.__shadowCityAgentDiagnostics
+  }, [])
 
   const draw = useCallback((alpha: number, updateDebug = false) => {
     const body = bodyRef.current

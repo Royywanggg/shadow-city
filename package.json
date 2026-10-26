@@ -12,7 +12,8 @@
     "visual:check": "node scripts/visual-check.mjs",
     "visual:v02": "node scripts/v02-check.mjs",
     "visual:v03": "node scripts/v03-check.mjs",
-    "visual:v04": "node scripts/v04-check.mjs"
+    "visual:v04": "node scripts/v04-check.mjs",
+    "visual:v05": "node scripts/v05-check.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.9",

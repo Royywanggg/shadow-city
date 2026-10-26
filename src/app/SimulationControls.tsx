@@ -1,17 +1,20 @@
 import { useState, useSyncExternalStore, type FormEvent } from 'react'
 import { type PlaybackController } from '../playback/PlaybackController'
 import { type PlaybackSpeed } from '../playback/FixedStepScheduler'
-import type { ObserverPort } from '../simulation/v3Types'
+interface AvailableReportPort {
+  getView(): { readonly availableReportCount: number }
+  subscribe(listener: () => void): () => void
+}
 
 interface SimulationControlsProps {
   controller: PlaybackController
   populationSize: number
-  observerPort?: ObserverPort
+  observerPort?: AvailableReportPort
 }
 
 const SPEEDS: readonly PlaybackSpeed[] = [1, 2, 4]
 
-function AvailableReportReadout({ port, populationSize }: { port: ObserverPort; populationSize: number }) {
+function AvailableReportReadout({ port, populationSize }: { port: AvailableReportPort; populationSize: number }) {
   const view = useSyncExternalStore(port.subscribe, port.getView, port.getView)
   return <span className="simulation-events">{populationSize} synthetic citizens · {view.availableReportCount} available reports</span>
 }
