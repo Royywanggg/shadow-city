@@ -1,16 +1,20 @@
 import { Line } from '@react-three/drei'
 import { useThree } from '@react-three/fiber'
 import { useLayoutEffect, useMemo, useRef } from 'react'
-import { Color, Object3D, type InstancedMesh } from 'three'
+import { Color, InstancedBufferAttribute, Object3D, type InstancedMesh } from 'three'
 import type { WorldBox, WorldModelV2, WorldPointMm } from '../world/model'
 import { metres } from '../world/model'
 import { createNavigationIndexV2, orientedEdgePath } from '../world/navigation/routeV2'
 import type { CitizenStateV5, SimulationStateV5 } from '../simulation/v5Types'
 import { reportIdForOffence } from '../simulation/offending/opportunityV5'
-import { CityStaticScene } from './CityScene'
+import { CityStaticScene, type LightingDiagnostic, type LookDevMode,
+  type RenderingQuality } from './CityScene'
 import { RenderDiagnostics } from './RenderDiagnostics'
 import { WalkwayStructures } from './WalkwayStructures'
 import { GalleriaCanopy } from './GalleriaCanopy'
+import { GalleriaArchitecturalSkin } from './GalleriaArchitecturalSkin'
+import { surfaceTextures } from './SurfaceTextures'
+import { applyInstanceTextureScale } from './InstancedBoxes'
 
 function roadBoxes(world: WorldModelV2): WorldBox[] {
   const nodes = new Map(world.roadNodes.map((node) => [node.id, node]))
@@ -45,8 +49,8 @@ function roadBoxes(world: WorldModelV2): WorldBox[] {
   })
 }
 
-function InstancedWorldBoxes({ boxes, onPick }: { boxes: readonly WorldBox[];
-  onPick: (box: WorldBox) => void }) {
+function InstancedWorldBoxes({ boxes, onPick, quality }: { boxes: readonly WorldBox[];
+  onPick: (box: WorldBox) => void; quality: RenderingQuality }) {
   const ref = useRef<InstancedMesh>(null)
   const helper = useMemo(() => new Object3D(), [])
   const color = useMemo(() => new Color(), [])
@@ -61,34 +65,66 @@ function InstancedWorldBoxes({ boxes, onPick }: { boxes: readonly WorldBox[];
       mesh.setMatrixAt(index, helper.matrix)
       mesh.setColorAt(index, color.set(box.color))
     })
+    if (quality === 'high' && (boxes[0]?.kind === 'road' || boxes[0]?.kind === 'path' ||
+      boxes[0]?.kind === 'floor')) {
+      const tileMm = boxes[0].kind === 'road' ? 5_000 : 8_000
+      mesh.geometry.setAttribute('instanceUvScale', new InstancedBufferAttribute(
+        new Float32Array(boxes.flatMap((box) => [box.size.x / tileMm, box.size.y / tileMm,
+          box.size.z / tileMm])), 3))
+    }
     mesh.instanceMatrix.needsUpdate = true
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
     mesh.computeBoundingSphere()
-  }, [boxes, color, helper])
+  }, [boxes, color, helper, quality])
   if (boxes.length === 0) return null
+  const kind = boxes[0].kind
+  const surfaces = quality === 'high' ? surfaceTextures() : null
   return <instancedMesh ref={ref} args={[undefined, undefined, boxes.length]}
-    castShadow={boxes[0]?.kind === 'building'} receiveShadow
+    castShadow={kind === 'building' || kind === 'roof'} receiveShadow
     onClick={(event) => {
       if (event.instanceId === undefined) return
       event.stopPropagation()
       onPick(boxes[event.instanceId])
     }}>
     <boxGeometry args={[1, 1, 1]} />
-    {boxes[0]?.kind === 'accent' || boxes[0]?.kind === 'darkWindow'
+    {kind === 'accent' || kind === 'darkWindow'
       ? <meshBasicMaterial color="#ffffff" />
-      : boxes[0]?.kind === 'glass'
-        ? <meshStandardMaterial color="#ffffff" roughness={0.25} metalness={0.25}
-          transparent opacity={0.58} depthWrite={false} />
-      : <meshStandardMaterial color="#ffffff" roughness={0.78} metalness={0.07} />}
+      : kind === 'glass'
+        ? <meshStandardMaterial color="#ffffff" roughness={0.24} metalness={0.08}
+          envMapIntensity={1.15} transparent opacity={0.72} depthWrite={false} />
+      : kind === 'road' || kind === 'path' || kind === 'floor'
+        ? <meshStandardMaterial color="#ffffff"
+          onBeforeCompile={applyInstanceTextureScale}
+          map={kind === 'road' ? surfaces?.asphalt.color : surfaces?.paving.color}
+          normalMap={kind === 'road' ? surfaces?.asphalt.normal : surfaces?.paving.normal}
+          roughnessMap={kind === 'road' ? surfaces?.asphalt.roughness : surfaces?.paving.roughness}
+          roughness={kind === 'road' ? 0.96 : 0.88} metalness={0} />
+      : kind === 'rail' || kind === 'step' || kind === 'trim'
+        ? <meshStandardMaterial color="#ffffff" roughness={kind === 'rail' ? 0.39 : 0.58}
+          metalness={kind === 'rail' ? 0.63 : 0.3} envMapIntensity={0.8} />
+      : kind === 'roof'
+        ? <meshStandardMaterial color="#ffffff" roughness={0.73} metalness={0.07} />
+      : kind === 'building'
+        ? <meshStandardMaterial color="#ffffff" roughness={0.84} metalness={0.02} />
+      : <meshStandardMaterial color="#ffffff" roughness={0.79} metalness={0.08} />}
   </instancedMesh>
 }
 
-export function WorldSceneV2({ world, level, cutaway, debugNavigation, onPickSurface }: {
+export function WorldSceneV2({ world, level, cutaway, debugNavigation, onPickSurface,
+  quality = 'high', postprocessing = true, lighting = 'night', castShadows = true,
+  ambientOcclusion = false, lookdev = 'final', bloomEnabled = false }: {
   world: WorldModelV2
   level: 'all' | 'L0' | 'L1'
   cutaway: boolean
   debugNavigation: boolean
   onPickSurface: (surfaceId: string | null) => void
+  quality?: RenderingQuality
+  postprocessing?: boolean
+  lighting?: LightingDiagnostic
+  castShadows?: boolean
+  ambientOcclusion?: boolean
+  lookdev?: LookDevMode
+  bloomEnabled?: boolean
 }) {
   const groups = useMemo(() => {
     const candidates = [...(world.baseCity ? [] : roadBoxes(world)), ...world.boxes].filter((box) => {
@@ -131,7 +167,9 @@ export function WorldSceneV2({ world, level, cutaway, debugNavigation, onPickSur
   }
   return <>
     {world.baseCity ? <>
-      <CityStaticScene city={world.baseCity} />
+      <CityStaticScene city={world.baseCity} quality={quality} postprocessing={postprocessing}
+        lighting={lighting} castShadows={castShadows} ambientOcclusion={ambientOcclusion}
+        lookdev={lookdev} bloomEnabled={bloomEnabled} />
       {import.meta.env.DEV && <RenderDiagnostics />}
     </> : <>
     <color attach="background" args={['#101c2a']} />
@@ -151,8 +189,10 @@ export function WorldSceneV2({ world, level, cutaway, debugNavigation, onPickSur
       <meshStandardMaterial color="#5a8d9c" emissive="#153d52" emissiveIntensity={0.7} />
     </mesh>
     </>}
-    {groups.map(([kind, boxes]) => <InstancedWorldBoxes key={kind} boxes={boxes} onPick={pick} />)}
+    {groups.map(([kind, boxes]) => <InstancedWorldBoxes key={kind} boxes={boxes} onPick={pick}
+      quality={quality} />)}
     <WalkwayStructures world={world} onPickSurface={onPickSurface} />
+    <GalleriaArchitecturalSkin world={world} showRoof={!cutaway && level !== 'L0'} />
     <GalleriaCanopy world={world} visible={!cutaway && level !== 'L0'} />
     {debugNavigation && debugEdges.map((edge) => <Line key={edge.id}
       points={edge.path.map((point) => metres(point))} color={edge.kind === 'portal' ? '#e0ab75' :

@@ -18,6 +18,8 @@
     "visual:v0511": "node scripts/v0511-playback-check.mjs",
     "visual:v052": "node scripts/v052-check.mjs",
     "visual:v06": "node scripts/v06-check.mjs",
+    "visual:architecture": "node scripts/architecture-check.mjs",
+    "visual:lookdev": "node scripts/lookdev-check.mjs",
     "experiment:v06": "node scripts/v06-experiments.mjs",
     "assets:bake-impostors": "node scripts/bake-character-impostors.mjs"
   },

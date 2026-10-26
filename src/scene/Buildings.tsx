@@ -2,6 +2,13 @@ import { useMemo } from 'react'
 import type { Building, BuildingKind, CityModel } from '../city/model'
 import { InstancedBoxes, type BoxInstance } from './InstancedBoxes'
 import { RoofPrisms } from './RoofPrisms'
+import { HeroDistrictArchitecture } from './architecture/HeroDistrictArchitecture'
+import { ArchitecturalAssetDetails } from './architecture/ArchitecturalAssetDetails'
+import { architecturalTextures } from './architecture/ArchitecturalTextures'
+import { selectHeroBuildings } from './architecture/heroDistrict'
+import { LookDevArchitecture } from './lookdev/LookDevArchitecture'
+import { selectLookDevArea } from './lookdev/selectLookDevArea'
+import type { LookDevMode } from './CityScene'
 
 const facades: Record<BuildingKind, string[]> = {
   residential: ['#5e6974', '#667078', '#6e6d70'],
@@ -19,6 +26,9 @@ const trim = ['#607889', '#718897', '#586f80']
 
 interface BuildingGeometry {
   shells: BoxInstance[]
+  heroBrickShells: BoxInstance[]
+  heroStoneShells: BoxInstance[]
+  heroConcreteShells: BoxInstance[]
   ledges: BoxInstance[]
   parapets: BoxInstance[]
   roofPrisms: BoxInstance[]
@@ -40,7 +50,7 @@ function box(position: [number, number, number], scale: [number, number, number]
   return { position, scale, color }
 }
 
-function addMassing(building: Building, geometry: BuildingGeometry) {
+function addMassing(building: Building, geometry: BuildingGeometry, hero: boolean) {
   const wallColor = facades[building.kind][building.facadeTone % 3]
   const roofColor = building.kind === 'residential' ? '#4c5964' : roofs[building.roofTone]
   const trimColor = trim[building.accentTone]
@@ -51,7 +61,12 @@ function addMassing(building: Building, geometry: BuildingGeometry) {
     const pz = building.z + part.offsetZ
     const top = part.baseY + part.height
     const color = part.role === 'base' ? '#354a5a' : part.role === 'crown' ? '#6c8290' : wallColor
-    geometry.shells.push(box([px, part.baseY + part.height / 2, pz], [part.width, part.height, part.depth],
+    const shells = !hero ? geometry.shells
+      : building.kind === 'residential' || building.kind === 'corner' || building.kind === 'commercial'
+        ? geometry.heroBrickShells
+        : building.kind === 'civic' || building.kind === 'industrial'
+          ? geometry.heroConcreteShells : geometry.heroStoneShells
+    shells.push(box([px, part.baseY + part.height / 2, pz], [part.width, part.height, part.depth],
       building.kind === 'civic' && index === 0 ? '#77858b' : color))
 
     const cap = pitched ? 0.18 : 0.24
@@ -130,7 +145,7 @@ function addMassing(building: Building, geometry: BuildingGeometry) {
   }
 }
 
-function addWindows(building: Building, geometry: BuildingGeometry) {
+function addWindows(building: Building, geometry: BuildingGeometry, hero: boolean) {
   for (const window of building.windows) {
     const px = building.x + window.offsetX
     const pz = building.z + window.offsetZ
@@ -145,7 +160,11 @@ function addWindows(building: Building, geometry: BuildingGeometry) {
     const panePosition: [number, number, number] = window.face === 'x'
       ? [px + 0.025, window.y, pz]
       : [px, window.y, pz + 0.025]
-    const target = window.light === 1 ? geometry.warmWindows : window.light === 2 ? geometry.coolWindows : geometry.darkWindows
+    const shopGround = hero && (building.kind === 'commercial' || building.kind === 'corner'
+      || building.kind === 'tower') && window.y < 5.3
+    const target = shopGround ? geometry.darkWindows
+      : window.light === 1 ? geometry.warmWindows
+        : window.light === 2 ? geometry.coolWindows : geometry.darkWindows
     target.push(box(panePosition, paneScale))
   }
 }
@@ -219,27 +238,49 @@ function addFacadeFeatures(building: Building, geometry: BuildingGeometry) {
   }
 }
 
-function addBuilding(building: Building, geometry: BuildingGeometry) {
-  addMassing(building, geometry)
-  addWindows(building, geometry)
-  addStreetFront(building, geometry)
+function addBuilding(building: Building, geometry: BuildingGeometry, hero: boolean) {
+  addMassing(building, geometry, hero)
+  addWindows(building, geometry, hero)
+  if (!hero) addStreetFront(building, geometry)
   addFacadeFeatures(building, geometry)
 }
 
-export function Buildings({ city }: { city: CityModel }) {
+export function Buildings({ city, lookdev = 'final' }: { city: CityModel;
+  lookdev?: LookDevMode }) {
+  const area = useMemo(() => selectLookDevArea(city), [city])
+  const replacement = useMemo(() => (lookdev === 'geometry' || lookdev === 'final') && area
+    ? new Set([area.civic.id, area.commercial.id]) : null, [area, lookdev])
+  const heroBuildings = useMemo(() => selectHeroBuildings(city)
+    .filter((building) => !replacement?.has(building.id)), [city, replacement])
+  const maps = useMemo(() => architecturalTextures(), [])
   const geometry = useMemo(() => {
     const result: BuildingGeometry = {
-      shells: [], ledges: [], parapets: [], roofPrisms: [], roofEquipment: [], facadeRibs: [],
+      shells: [], heroBrickShells: [], heroStoneShells: [], heroConcreteShells: [],
+      ledges: [], parapets: [], roofPrisms: [], roofEquipment: [], facadeRibs: [],
       balconySlabs: [], balconyRails: [], entries: [], windowFrames: [], darkWindows: [],
       warmWindows: [], coolWindows: [], storefronts: [], warmSigns: [], coolAccents: [],
     }
-    city.buildings.forEach((building) => addBuilding(building, result))
+    const heroIds = new Set(heroBuildings.map((building) => building.id))
+    city.buildings.forEach((building) => {
+      if (!replacement?.has(building.id)) addBuilding(building, result, heroIds.has(building.id))
+    })
     return result
-  }, [city])
+  }, [city, heroBuildings, replacement])
 
   return (
     <>
-      <InstancedBoxes items={geometry.shells} castShadow receiveShadow roughness={0.82} metalness={0.13} />
+      <InstancedBoxes items={geometry.shells} castShadow receiveShadow roughness={0.87}
+        metalness={0.04} map={maps.concrete.color} normalMap={maps.concrete.normal}
+        roughnessMap={maps.concrete.roughness} textureWorldScale={6} />
+      <InstancedBoxes items={geometry.heroBrickShells} castShadow receiveShadow roughness={0.92}
+        metalness={0} map={maps.brick.color} normalMap={maps.brick.normal}
+        roughnessMap={maps.brick.roughness} textureWorldScale={3} />
+      <InstancedBoxes items={geometry.heroStoneShells} castShadow receiveShadow roughness={0.9}
+        metalness={0} map={maps.stone.color} normalMap={maps.stone.normal}
+        roughnessMap={maps.stone.roughness} textureWorldScale={8} />
+      <InstancedBoxes items={geometry.heroConcreteShells} castShadow receiveShadow roughness={0.9}
+        metalness={0} map={maps.concrete.color} normalMap={maps.concrete.normal}
+        roughnessMap={maps.concrete.roughness} textureWorldScale={6} />
       <InstancedBoxes items={geometry.ledges} castShadow roughness={0.74} metalness={0.21} />
       <InstancedBoxes items={geometry.parapets} castShadow roughness={0.8} />
       <RoofPrisms items={geometry.roofPrisms} />
@@ -255,6 +296,9 @@ export function Buildings({ city }: { city: CityModel }) {
       <InstancedBoxes items={geometry.storefronts} roughness={0.32} metalness={0.45} />
       <InstancedBoxes items={geometry.warmSigns} color="#e6ab73" emissive="#dd8e4f" emissiveIntensity={1.45} />
       <InstancedBoxes items={geometry.coolAccents} color="#9ed8d3" emissive="#4bb3ad" emissiveIntensity={1.15} />
+      <HeroDistrictArchitecture buildings={heroBuildings} />
+      <ArchitecturalAssetDetails buildings={heroBuildings} />
+      {replacement && area && <LookDevArchitecture area={area} />}
     </>
   )
 }

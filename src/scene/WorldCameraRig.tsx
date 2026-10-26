@@ -20,6 +20,8 @@ export function WorldCameraRig({ controller, world }: { controller: CameraContro
   const tracking = useRef<CameraTarget | null>(null)
   const wantedZoom = useRef<number | null>(null)
   const integrated = Boolean(world.baseCity)
+  const diagnosticStreetPitch = new URLSearchParams(window.location.search)
+    .get('cameraDiagnostic') === 'street'
   const homePosition = integrated ? INITIAL_CAMERA_POSITION : HOME_POSITION
   const homeTarget = integrated ? INITIAL_CAMERA_TARGET : HOME_TARGET
   const half = world.config.extentMm / 2000
@@ -141,7 +143,8 @@ export function WorldCameraRig({ controller, world }: { controller: CameraContro
   void unused
   return <MapControls ref={controls} makeDefault enableRotate enableDamping dampingFactor={0.085}
     rotateSpeed={0.7} screenSpacePanning={false} touches={TOUCH_MAPPING}
-    minPolarAngle={MIN_PITCH_DEG * Math.PI / 180} maxPolarAngle={MAX_PITCH_DEG * Math.PI / 180}
+    minPolarAngle={MIN_PITCH_DEG * Math.PI / 180}
+    maxPolarAngle={(diagnosticStreetPitch ? 82 : MAX_PITCH_DEG) * Math.PI / 180}
     minZoom={baseZoom * 0.48} maxZoom={baseZoom * 9}
     onStart={() => controller.beginDirectInteraction()} onChange={onChange} />
 }

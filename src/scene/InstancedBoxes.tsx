@@ -1,11 +1,30 @@
-import { useLayoutEffect, useRef } from 'react'
-import { Color, Object3D, type InstancedMesh } from 'three'
+import { useLayoutEffect, useMemo, useRef } from 'react'
+import { Color, InstancedBufferAttribute, Object3D, type InstancedMesh, type Texture,
+  type WebGLProgramParametersWithUniforms } from 'three'
 
 export interface BoxInstance {
   position: [number, number, number]
   scale: [number, number, number]
   color?: string
   rotationY?: number
+}
+
+export function applyInstanceTextureScale(shader: WebGLProgramParametersWithUniforms): void {
+  shader.vertexShader = shader.vertexShader.replace('#include <common>',
+    '#include <common>\nattribute vec3 instanceUvScale;')
+  shader.vertexShader = shader.vertexShader.replace('#include <uv_vertex>',
+    `#include <uv_vertex>
+     vec2 faceUvScale = abs(normal.x) > 0.5 ? instanceUvScale.zy :
+       (abs(normal.y) > 0.5 ? instanceUvScale.xz : instanceUvScale.xy);
+     #ifdef USE_MAP
+       vMapUv *= faceUvScale;
+     #endif
+     #ifdef USE_NORMALMAP
+       vNormalMapUv *= faceUvScale;
+     #endif
+     #ifdef USE_ROUGHNESSMAP
+       vRoughnessMapUv *= faceUvScale;
+     #endif`)
 }
 
 interface InstancedBoxesProps {
@@ -15,6 +34,11 @@ interface InstancedBoxesProps {
   emissiveIntensity?: number
   metalness?: number
   roughness?: number
+  map?: Texture
+  normalMap?: Texture
+  roughnessMap?: Texture
+  /** Repeat surface maps in world metres on the horizontal faces of each box. */
+  textureWorldScale?: number
   castShadow?: boolean
   receiveShadow?: boolean
 }
@@ -26,10 +50,16 @@ export function InstancedBoxes({
   emissiveIntensity = 0,
   metalness = 0.1,
   roughness = 0.82,
+  map,
+  normalMap,
+  roughnessMap,
+  textureWorldScale,
   castShadow = false,
   receiveShadow = false,
 }: InstancedBoxesProps) {
   const meshRef = useRef<InstancedMesh>(null)
+  const applyWorldTextureScale = useMemo(() => textureWorldScale ?
+    applyInstanceTextureScale : undefined, [textureWorldScale])
 
   useLayoutEffect(() => {
     const mesh = meshRef.current
@@ -47,8 +77,17 @@ export function InstancedBoxes({
     })
     mesh.instanceMatrix.needsUpdate = true
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
+    if (textureWorldScale) {
+      const scales = new Float32Array(items.length * 3)
+      items.forEach((item, index) => {
+        scales[index * 3] = item.scale[0] / textureWorldScale
+        scales[index * 3 + 1] = item.scale[1] / textureWorldScale
+        scales[index * 3 + 2] = item.scale[2] / textureWorldScale
+      })
+      mesh.geometry.setAttribute('instanceUvScale', new InstancedBufferAttribute(scales, 3))
+    }
     mesh.computeBoundingSphere()
-  }, [items])
+  }, [items, textureWorldScale])
 
   if (items.length === 0) return null
   return (
@@ -60,6 +99,10 @@ export function InstancedBoxes({
         emissiveIntensity={emissiveIntensity}
         metalness={metalness}
         roughness={roughness}
+        map={map}
+        normalMap={normalMap}
+        roughnessMap={roughnessMap}
+        onBeforeCompile={applyWorldTextureScale}
       />
     </instancedMesh>
   )
