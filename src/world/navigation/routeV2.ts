@@ -1,4 +1,4 @@
-import type { NavEdgeV2, NavNodeV2, WorldModelV2, WorldPointMm } from '../model'
+import type { NavEdgeV2, NavNodeV2, WalkableSurface, WorldModelV2, WorldPointMm } from '../model'
 
 export type AccessMode = 'open' | 'entryClosed' | 'closed'
 
@@ -32,6 +32,7 @@ export interface NavigationIndexV2 {
   readonly world: WorldModelV2
   readonly nodeById: ReadonlyMap<string, NavNodeV2>
   readonly edgeById: ReadonlyMap<string, NavEdgeV2>
+  readonly surfaceById: ReadonlyMap<string, WalkableSurface>
   readonly adjacency: ReadonlyMap<string, readonly Neighbour[]>
 }
 
@@ -43,6 +44,7 @@ export const DEFAULT_TRAVELLER_COSTS: TravellerCosts = Object.freeze({
 export function createNavigationIndexV2(world: WorldModelV2): NavigationIndexV2 {
   const nodeById = new Map(world.navNodes.map((node) => [node.id, node]))
   const edgeById = new Map(world.navEdges.map((edge) => [edge.id, edge]))
+  const surfaceById = new Map(world.surfaces.map((surface) => [surface.id, surface]))
   if (nodeById.size !== world.navNodes.length || edgeById.size !== world.navEdges.length) {
     throw new Error('Duplicate multi-level navigation ID')
   }
@@ -59,7 +61,7 @@ export function createNavigationIndexV2(world: WorldModelV2): NavigationIndexV2 
   for (const neighbours of adjacency.values()) {
     neighbours.sort((a, b) => a.edgeId.localeCompare(b.edgeId) || a.toNodeId.localeCompare(b.toNodeId))
   }
-  return { world, nodeById, edgeById, adjacency }
+  return { world, nodeById, edgeById, surfaceById, adjacency }
 }
 
 export function canTraverseV2(index: NavigationIndexV2, edge: NavEdgeV2, fromNodeId: string,
@@ -139,9 +141,11 @@ export function findRoutesFromV2(index: NavigationIndexV2, originNodeId: string,
   costs: TravellerCosts = DEFAULT_TRAVELLER_COSTS,
   accessModes: ReadonlyMap<string, AccessMode> = new Map(),
   priorCrowd: ReadonlyMap<string, number> = new Map(),
-  stopAtNodeId?: string): Readonly<{ routeTo(destinationNodeId: string): RouteResultV2 }> {
+  stopAtNodeId?: string): Readonly<{ routeTo(destinationNodeId: string): RouteResultV2;
+    costTo(destinationNodeId: string): number | null }> {
   if (!index.nodeById.has(originNodeId)) return {
     routeTo: () => ({ status: 'unreachable', reason: 'unknown-node' }),
+    costTo: () => null,
   }
   const costsByNode = new Map<string, number>([[originNodeId, 0]])
   const previous = new Map<string, { fromNodeId: string; edgeId: string }>()
@@ -170,7 +174,8 @@ export function findRoutesFromV2(index: NavigationIndexV2, originNodeId: string,
       }
     }
   }
-  return { routeTo(destinationNodeId: string): RouteResultV2 {
+  return { costTo: (destinationNodeId: string) => costsByNode.get(destinationNodeId) ?? null,
+    routeTo(destinationNodeId: string): RouteResultV2 {
     if (!index.nodeById.has(destinationNodeId)) return { status: 'unreachable', reason: 'unknown-node' }
     const costMs = costsByNode.get(destinationNodeId)
     if (costMs === undefined) return { status: 'unreachable', reason: 'disconnected' }
@@ -208,11 +213,17 @@ export function orientedEdgePath(index: NavigationIndexV2, step: RouteStepV5): r
 
 export function pointAlongEdge(index: NavigationIndexV2, step: RouteStepV5,
   distanceMm: number): WorldPointMm {
-  const path = orientedEdgePath(index, step)
+  const edge = index.edgeById.get(step.edgeId)
+  if (!edge) throw new Error(`Missing route edge ${step.edgeId}`)
+  const forward = step.fromNodeId === edge.fromNodeId && step.toNodeId === edge.toNodeId
+  const reverse = step.fromNodeId === edge.toNodeId && step.toNodeId === edge.fromNodeId &&
+    edge.direction === 'both'
+  if (!forward && !reverse) throw new Error(`Invalid route direction ${step.edgeId}`)
+  const path = edge.path
   let remaining = Math.max(0, Math.min(step.lengthMm, distanceMm))
   for (let index = 1; index < path.length; index += 1) {
-    const a = path[index - 1]
-    const b = path[index]
+    const a = forward ? path[index - 1] : path[path.length - index]
+    const b = forward ? path[index] : path[path.length - index - 1]
     const segment = Math.round(Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z))
     if (remaining <= segment || index === path.length - 1) {
       const fraction = segment === 0 ? 1 : remaining / segment
@@ -222,5 +233,5 @@ export function pointAlongEdge(index: NavigationIndexV2, step: RouteStepV5,
     }
     remaining -= segment
   }
-  return path.at(-1)!
+  return forward ? path.at(-1)! : path[0]
 }

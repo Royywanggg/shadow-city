@@ -39,7 +39,14 @@ export function updateOpportunityV5(state: SimulationStateV5,
   const exposure = new Map<string, { offender: string; target: OpportunityTargetV5;
     surfaceId: string; placeId: string | null; position: WorldPointMm; seconds: number;
     guardianship: number }>()
-  const resources = environment.world.resources
+  const resourcesBySurface = new Map<string, typeof environment.world.resources[number][]>()
+  for (const resource of environment.world.resources) {
+    const items = resourcesBySurface.get(resource.surfaceId) ?? []
+    items.push(resource)
+    resourcesBySurface.set(resource.surfaceId, items)
+  }
+  const propensityById = new Map([...activeIds].map((id) =>
+    [id, unit(`${environment.config.offendingSeed}:propensity:${id}`)]))
   const profileById = new Map(environment.profiles.map((profile) => [profile.id, profile]))
   for (let second = 1; second <= environment.config.logicalSecondsPerTick; second += 1) {
     const points = bySecond.get(second) ?? []
@@ -51,7 +58,7 @@ export function updateOpportunityV5(state: SimulationStateV5,
       cells.set(key, group)
     }
     for (const offender of points) {
-      const probability = unit(`${environment.config.offendingSeed}:propensity:${offender.agentId}`)
+      const probability = propensityById.get(offender.agentId)!
       if (probability < 0.55) continue
       const cx = Math.floor(offender.position.x / 3_000)
       const cz = Math.floor(offender.position.z / 3_000)
@@ -65,7 +72,7 @@ export function updateOpportunityV5(state: SimulationStateV5,
         .filter((item) => item.agentId !== offender.agentId &&
           distance(item.position, offender.position) <= 1_800)
         .map((item) => ({ target: { kind: 'citizen', id: item.agentId }, point: item.position }))
-      for (const resource of resources) if (resource.surfaceId === offender.surfaceId &&
+      for (const resource of resourcesBySurface.get(offender.surfaceId) ?? []) if (
         distance(resource.position, offender.position) <= 1_800) {
         targets.push({ target: { kind: 'placeResource', id: resource.id }, point: resource.position })
       }

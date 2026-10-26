@@ -9,7 +9,7 @@ function edgeSpatial(edge: NavEdgeV2, position: WorldPointMm, index: NavigationI
   const surfaceId = edge.connectorId && distance < edge.lengthMm
     ? `connector:${edge.connectorId}` : edge.surfaceId ?? (distance < edge.lengthMm / 2
     ? index.nodeById.get(step.fromNodeId)!.surfaceId : index.nodeById.get(step.toNodeId)!.surfaceId)
-  const surface = index.world.surfaces.find((item) => item.id === surfaceId)
+  const surface = index.surfaceById.get(surfaceId)
   if (!surface) throw new Error(`Unknown surface ${surfaceId}`)
   void position
   return { surfaceId, placeId: surface.placeId }

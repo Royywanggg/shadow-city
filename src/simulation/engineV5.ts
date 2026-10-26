@@ -94,10 +94,10 @@ function chooseDestination(citizen: CitizenStateV5, profile: CitizenProfileV5,
       (accessModes.get('mall-entry') === 'open' || !place.id.startsWith('galleria-') &&
         place.id !== 'central-galleria') && placeIsOpen(place, environment.config, tick))
   let best: { place: SemanticPlace; slotId: string;
-    route: ReturnType<typeof findRouteV2> & { status: 'ok' }; activityKind: ActivityKind;
+    activityKind: ActivityKind;
     score: number } | null = null
   const routes = findRoutesFromV2(index, citizen.currentNodeId!, profile.travellerCosts,
-    accessModes, priorEdgeCrowd)
+    accessModes, priorEdgeCrowd, returnHome ? profile.homeSlotNodeId : undefined)
   for (const place of candidates) {
     const slots = place.kind === 'home' ? [profile.homeSlotNodeId] :
       place.slotNodeIds.filter((id) => !occupied.has(id))
@@ -107,21 +107,24 @@ function chooseDestination(citizen: CitizenStateV5, profile: CitizenProfileV5,
       activityDemand(b, localMinute(environment.config, tick)) * profile.preferences[b] ? a : b)
     const chosenSlot = returnHome ? profile.homeSlotNodeId :
       slots[hashSeed(`${environment.config.simulationSeed}:${citizen.id}:${tick}:${place.id}:slot`) % slots.length]
-    const route = routes.routeTo(chosenSlot)
-    if (route.status !== 'ok') continue
+    const routeCostMs = routes.costTo(chosenSlot)
+    if (routeCostMs === null) continue
     const familiarity = profile.workPlaceId === place.id ? 0.35 : 0
-    const score = returnHome ? -route.costMs :
+    const score = returnHome ? -routeCostMs :
       activityDemand(tag, localMinute(environment.config, tick)) *
       profile.preferences[tag] * (environment.config.placeAttractiveness?.[place.id] ??
         place.attractiveness) * 130_000 + familiarity * 100_000 -
-      route.costMs * 0.55 - (priorPlaceCrowd.get(place.id) ?? 0) /
+      routeCostMs * 0.55 - (priorPlaceCrowd.get(place.id) ?? 0) /
         Math.max(1, place.capacity) * 25_000 +
       unit(`${environment.config.simulationSeed}:${citizen.id}:${citizen.tripOrdinal}:${place.id}`) * 25_000
     if (!best || score > best.score || score === best.score && place.id < best.place.id) {
-      best = { place, slotId: chosenSlot, route, activityKind: tag, score }
+      best = { place, slotId: chosenSlot, activityKind: tag, score }
     }
   }
-  return best
+  if (!best) return null
+  const route = routes.routeTo(best.slotId)
+  if (route.status !== 'ok') throw new Error('Selected destination became unreachable')
+  return { place: best.place, slotId: best.slotId, route, activityKind: best.activityKind }
 }
 
 function beginTrip(citizen: CitizenStateV5, destination: NonNullable<ReturnType<typeof chooseDestination>>,
@@ -166,6 +169,7 @@ export function advanceStateV5(state: SimulationStateV5, environment: Simulation
   }
   const events: CitizenEventV5[] = []
   const traces: MovementTracePoint[] = []
+  const tracedCitizenIds = new Set<string>()
   const priority = [...state.citizens].sort((a, b) =>
     hashSeed(`${environment.config.simulationSeed}:${tick}:${a.id}:priority`) -
     hashSeed(`${environment.config.simulationSeed}:${tick}:${b.id}:priority`) || a.id.localeCompare(b.id))
@@ -202,6 +206,7 @@ export function advanceStateV5(state: SimulationStateV5, environment: Simulation
           environment.config.logicalSecondsPerTick, connectorAvailability)
         citizen = result.citizen
         traces.push(...result.trace)
+        if (result.trace.length > 0) tracedCitizenIds.add(citizen.id)
         if (result.blocked === 'capacity') {
           events.push(event(tick, citizen, 'TripDeferred', citizen.destinationPlaceId,
             'Connector at capacity'))
@@ -233,7 +238,7 @@ export function advanceStateV5(state: SimulationStateV5, environment: Simulation
         events.push(event(tick, citizen, 'DestinationReached', place.id))
       }
     }
-    if (!traces.some((trace) => trace.agentId === citizen.id)) {
+    if (!tracedCitizenIds.has(citizen.id)) {
       traces.push(initialTrace(citizen))
       for (let second = 1; second <= environment.config.logicalSecondsPerTick; second += 1) {
         traces.push({ ...initialTrace(citizen), second })
