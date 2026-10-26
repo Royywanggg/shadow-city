@@ -9,7 +9,8 @@
     "test": "vitest run",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "visual:check": "node scripts/visual-check.mjs"
+    "visual:check": "node scripts/visual-check.mjs",
+    "visual:v02": "node scripts/v02-check.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.9",

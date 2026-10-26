@@ -47,13 +47,20 @@ This roadmap is milestone-based, not date-based. Each milestone should leave a u
 
 **Review gate:** Type checking, tests, build, road connectivity, camera interaction, and browser error checks must pass. Compare both fixed-seed 1440 × 900 screenshots and record visible gains and remaining repetition. The user decides whether the art direction is accepted and whether v0.2 can begin.
 
-## v0.2 — Deterministic simulation foundation
+## v0.2 — Simulation foundation and map camera
 
-**Goal:** Introduce a simulation loop without changing the static city contract.
+**Goal:** Establish a reproducible simulation clock and complete orthographic map navigation while preserving the static city and its hero composition.
 
-**In scope:** A deterministic clock, simulation state snapshots or equivalent replayable state, a minimal event log, and run/pause/restart controls. `SimulationEngine` reads `CityModel` and emits dynamic state consumed separately by the renderer.
+**In scope:** A pure fixed-tick transition over read-only `CityModel`; separate simulation seed and explicit serializable RNG state; typed diagnostic commands and events with stable ordering; scheduled actions; live state, event and command history; replay from tick zero and read-only time inspection. A browser scheduler provides Play, Pause, Single-Step, Reset Simulation, and 1×/2×/4× speed. The camera adds bounded bearing and pitch, pan and zoom, compass, keyboard and touch fallbacks, North-up, and full Reset View. Camera and playback controls are separate, compact overlays.
 
-**Exit criteria:** The same seed, configuration, and inputs produce the same state sequence; replay and reset work; static city data remains unchanged; dynamic rendering is visibly isolated from city generation.
+**Out of scope:** Agents, crime, policing, pathfinding, dashboards, backend services, databases, workers, and speculative dynamic city effects. Diagnostic events must be named as diagnostics and must not imply those systems exist.
+
+**Exit criteria:**
+
+- The same static city, simulation config and seed, engine version, and ordered command history produce identical state and event sequences for a tested JavaScript environment. Replay at a target tick reconstructs state and events; time inspection does not overwrite the live run. Speed changes alter scheduling only. Pause, one-tick Step, and Reset have exact semantics, and hidden-tab or long-gap behavior does not silently skip logical ticks.
+- Tests cover seed and command determinism, event order and IDs, scheduled actions, replay, static-city immutability, scheduler frame patterns and catch-up limits, and camera angle conventions and limits. Type checking and production build pass.
+- The orthographic camera can rotate through 360° about its current target. Bearing 0° points north-up with X east and negative Z north. North-up preserves target, pitch, and zoom; Reset View restores the initial full pose. Camera motion and Reset Simulation do not change each other's state.
+- The fixed `shadow-city-hero-01` city at 1440 × 900 is inspected in a browser against the preserved v0.1.2 screenshot. Capture the hero view and cardinal bearings, check pan/zoom/pitch/reset and a narrow viewport, and record browser, DPR, screenshots, errors, and representative rendering diagnostics. If browser inspection is unavailable, visual acceptance remains pending.
 
 ## v0.3 — Urban agents and movement
 

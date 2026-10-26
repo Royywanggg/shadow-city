@@ -38,3 +38,19 @@ The final headless renderer reported 131 draw calls and 92,033 triangles. Its ac
 - Browser checks: hero and close view, pan, zoom, reset, 390 × 844 viewport, and two alternate seeds; no page errors were reported
 
 The final headless pass reported 131 draw calls and 84,529 triangles. Its active frame interval used only four sampled frames, so it is not a reliable frame-rate benchmark. Compared with v0.1.1, the plaza edges, asymmetric offices, and varied rooflines read more clearly at hero scale. The regular street lattice and many boxlike buildings remain visible; local illumination still has limited contrast. User visual approval remains pending.
+
+## v0.2 camera and simulation review capture
+
+`v02-hero-1440x900.png` preserves the fixed hero seed and initial 315° bearing as a separate v0.2 review image. `v02-bearing-000.png`, `v02-bearing-090.png`, `v02-bearing-180.png`, and `v02-bearing-270.png` show actual camera rotations at the four cardinal map bearings. `v02-narrow-390x844.png` records the touch-size layout.
+
+- Date: 2026-10-26 (Europe/London)
+- Browser: Google Chrome 155, headless, macOS; WebGL via ANGLE SwiftShader Vulkan software renderer
+- Viewports: 1440 × 900 and 390 × 844 CSS pixels; device pixel ratio: 1
+- City seed: `shadow-city-hero-01`; simulation seed: `shadow-city-sim-01`
+- Commands: `npm run visual:check` and `npm run visual:v02` against the local Vite server
+
+I inspected the browser screenshots. The initial city composition, plaza, skyline, and night palette match the v0.1.2 candidate; the compact overlays sit in the surrounding negative space and no building is clipped in the hero view. The cardinal captures show true rotation around the city, with the plaza remaining near the center and no platform clipping. North/east/south/west facades have uneven light and some reverse views are darker and flatter; this is a remaining visual limitation of the static lighting, not a camera orientation failure. At 390 × 844, the title, camera controls, city, seed line, and simulation controls remain separate, though the city is small because the inherited orthographic fit prioritizes the full platform.
+
+The browser script exercised Step, Play/Pause, speed selection, a diagnostic command and its event, replay inspection and Return Live, compass north-up, the four cardinal bearings and 360° wrap, right-drag rotation, pitch limits, pan/zoom, reset isolation, keyboard focus handling, resize preservation, a touch bearing button, one-finger pan, and two-finger pinch zoom. It also checks for page errors.
+
+The final headless SwiftShader run reported 131 draw calls and 84,529 triangles, matching the v0.1.2 scene geometry. During 1× simulation plus a 100-step mouse rotation, it rendered 100 frames in 36.78 seconds (about 2.7 rendered frames/s under this software-rendered automation workload) while the simulation advanced from tick 6 to 381 without suspension. The median interval of just 14 close-spaced frames was 33.3 ms; that filtered statistic cannot represent the full interaction. The idle frame count stayed at one across an 800 ms sample, confirming demand rendering did not run continuously while still. These numbers are environment-specific and are not a hardware FPS benchmark. No page errors occurred; Chrome reported a Three.js clock deprecation warning and screenshot-related WebGL readback stalls.

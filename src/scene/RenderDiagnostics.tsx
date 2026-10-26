@@ -8,6 +8,7 @@ declare global {
       triangles: number
       medianActiveFrameMs: number | null
       sampledFrames: number
+      renderedFrames: number
     }
   }
 }
@@ -15,6 +16,7 @@ declare global {
 export function RenderDiagnostics() {
   const gl = useThree((state) => state.gl)
   const activeIntervals = useRef<number[]>([])
+  const renderedFrames = useRef(0)
 
   useEffect(() => {
     const previous = gl.info.autoReset
@@ -23,6 +25,7 @@ export function RenderDiagnostics() {
   }, [gl])
 
   useFrame((_, delta) => {
+    renderedFrames.current += 1
     gl.info.reset()
     const interval = delta * 1000
     if (interval > 0 && interval < 100) {
@@ -36,6 +39,7 @@ export function RenderDiagnostics() {
         triangles: gl.info.render.triangles,
         medianActiveFrameMs: sorted.length ? sorted[Math.floor(sorted.length / 2)] : null,
         sampledFrames: sorted.length,
+        renderedFrames: renderedFrames.current,
       }
     })
   }, -100)
