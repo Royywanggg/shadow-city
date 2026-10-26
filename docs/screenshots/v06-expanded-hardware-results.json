@@ -1,0 +1,123 @@
+{
+  "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+  "hardwareRequested": true,
+  "viewport": "1440x900",
+  "dpr": 1,
+  "scene": "expanded",
+  "worldSeed": "shadow-city-hero-01",
+  "population": 200,
+  "initialCounts": {
+    "atDestination": 158,
+    "travelling": 42
+  },
+  "finalCounts": {
+    "atHome": 82,
+    "atDestination": 96,
+    "returningHome": 6,
+    "travelling": 16
+  },
+  "allLevelAgents": {
+    "visibleCount": 118,
+    "farCount": 118,
+    "mediumCount": 0,
+    "closeCount": 0
+  },
+  "mapSelectionId": "citizen-0004",
+  "upstairsId": "citizen-0012",
+  "focusY": 5.334841871219588,
+  "galleriaId": "citizen-0012",
+  "replayBenchmark": {
+    "durationMs": 2503.900000002235,
+    "fingerprint": "world-v2:heritage-extension-v2:297ef5e8:sim-v5:ac79e30e",
+    "offences": 0
+  },
+  "fps": 60.28915938058737,
+  "frameP95": 31.399999998509884,
+  "bearings": {
+    "0": 0,
+    "90": 90,
+    "180": 180,
+    "270": 270
+  },
+  "bridgeClosed": "entryClosed",
+  "narrowSelected": "citizen-0001 · L0",
+  "legacyOpen": "SHADOW CITY",
+  "alternateSeed": "shadow-city-hero-02",
+  "cameraNavigation": {
+    "zoomRatio": 1.0526315789473684,
+    "pannedTarget": [
+      -26.386160830961888,
+      1.1298739672993765e-15,
+      2.398741893723808
+    ],
+    "pitch": 49.999999999999986,
+    "navigationStart": {
+      "target": [
+        0,
+        0,
+        0
+      ],
+      "bearingDeg": 315,
+      "pitchDeg": 57.71191812041317,
+      "zoomRatio": 1
+    },
+    "navigationReset": {
+      "target": [
+        0,
+        0,
+        0
+      ],
+      "bearingDeg": 315,
+      "pitchDeg": 57.71191812041317,
+      "zoomRatio": 1
+    }
+  },
+  "tickDurationsMs": {
+    "count": 400,
+    "p95": 21.599999997764826,
+    "median": 6.399999998509884
+  },
+  "result": {
+    "visibleAgents": {
+      "tick": 519,
+      "visibleCount": 125,
+      "farCount": 125,
+      "mediumCount": 0,
+      "closeCount": 0
+    },
+    "rendering": {
+      "drawCalls": 227,
+      "triangles": 164953,
+      "geometries": 244,
+      "textures": 53,
+      "medianActiveFrameMs": 16.699999999254942,
+      "p50ActiveFrameMs": 16.699999999254942,
+      "p95ActiveFrameMs": 17.300000000745058,
+      "sampledFrames": 120,
+      "renderedFrames": 1457
+    },
+    "snapshot": {
+      "tick": 519,
+      "offences": 0,
+      "reports": 0
+    },
+    "usedHeap": 195030062,
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36"
+  },
+  "screenshots": [
+    "v06-expanded-hero-200-tick100-1440x900",
+    "v06-expanded-bridge-close-tick100-1440x900",
+    "v06-expanded-hero-200-tick500-1440x900",
+    "v06-expanded-upper-agent-focus-tick500-1440x900",
+    "v06-expanded-galleria-upper-tick500-1440x900",
+    "v06-expanded-galleria-interior-close-tick500-1440x900",
+    "v06-expanded-replay-tick100-1440x900",
+    "v06-expanded-bearing-000-tick518-1440x900",
+    "v06-expanded-bearing-090-tick518-1440x900",
+    "v06-expanded-bearing-180-tick518-1440x900",
+    "v06-expanded-bearing-270-tick518-1440x900",
+    "v06-expanded-narrow-200-tick100-390x844",
+    "v06-expanded-alternate-seed-tick100-1440x900"
+  ],
+  "errors": []
+}

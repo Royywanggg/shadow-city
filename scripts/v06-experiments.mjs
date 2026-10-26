@@ -18,7 +18,7 @@ try {
   const { createEnvironmentV5, createInitialStateV5, advanceStateV5 } =
     await vite.ssrLoadModule('/src/simulation/engineV5.ts')
   const { DEFAULT_SIMULATION_CONFIG_V5 } = await vite.ssrLoadModule('/src/simulation/v5Types.ts')
-  const scene = process.env.V06_EXPERIMENT_SCENE === 'prototype' ? 'prototype' : 'integrated'
+  const scene = process.env.V06_EXPERIMENT_SCENE === 'prototype' ? 'prototype' : 'expanded'
   const world = scene === 'prototype' ? generateWorldV2() : generateIntegratedWorld()
   const index = createNavigationIndexV2(world)
   const levelBySurface = new Map(world.surfaces.map((surface) => [surface.id, surface.levelId]))

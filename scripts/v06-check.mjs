@@ -13,7 +13,7 @@ const browser = await chromium.launch({ headless: true,
   args: hardware ? ['--enable-webgl'] : ['--enable-webgl', '--use-gl=angle', '--use-angle=swiftshader'] })
 const errors = []
 const screenshots = []
-const scene = process.env.SHADOW_CITY_SCENE === 'prototype' ? 'prototype' : 'integrated'
+const scene = process.env.SHADOW_CITY_SCENE === 'prototype' ? 'prototype' : 'expanded'
 const evidencePrefix = `v06-${scene}`
 let page
 try {
@@ -45,6 +45,12 @@ try {
     screenshots.push(recordedName)
   }
   await screenshot('v06-hero-200-tick100-1440x900')
+  if (scene === 'expanded') {
+    await page.evaluate(() => window.__shadowCityV06.focusAtWorld(27, 5.5, 0))
+    await page.waitForTimeout(1200)
+    await screenshot('v06-bridge-close-tick100-1440x900')
+    await page.getByRole('button', { name: 'RESET VIEW' }).click()
+  }
   const advanceDurations = await page.evaluate(() => window.__shadowCityV06.advanceToTick(500))
   await page.waitForFunction(() => window.__shadowCityV06Agents?.tick === 500)
   const allLevelAgents = await page.evaluate(() => ({
@@ -168,7 +174,7 @@ try {
   const narrowSelected = await narrow.locator('.v06-inspector>small').textContent()
   await narrow.close()
   const legacy = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 })
-  await legacy.goto('http://127.0.0.1:5173/?world=legacy&model=v4', { waitUntil: 'networkidle' })
+  await legacy.goto(new URL('/?world=legacy&model=v4', url).toString(), { waitUntil: 'networkidle' })
   const legacyOpen = await legacy.locator('.masthead h1').textContent()
   await legacy.close()
   const alternate = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 })
