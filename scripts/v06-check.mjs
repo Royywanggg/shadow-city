@@ -53,6 +53,15 @@ try {
     })
     await page.waitForTimeout(1200)
     await screenshot('v06-bridge-close-tick100-1440x900')
+    await page.getByRole('button', { name: 'Compass: north up' }).click()
+    for (let index = 0; index < 6; index += 1) {
+      await page.getByRole('button', { name: 'Rotate right 15 degrees' }).click()
+    }
+    await page.waitForTimeout(250)
+    await screenshot('v06-bridge-side-close-tick100-1440x900')
+    await page.getByRole('button', { name: 'HIDE ROOF' }).click()
+    await screenshot('v06-bridge-side-cutaway-tick100-1440x900')
+    await page.getByRole('button', { name: 'SHOW ROOF' }).click()
     await page.getByRole('button', { name: 'RESET VIEW' }).click()
   }
   const advanceDurations = await page.evaluate(() => window.__shadowCityV06.advanceToTick(500))
