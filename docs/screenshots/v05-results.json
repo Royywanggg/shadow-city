@@ -81,49 +81,49 @@
   },
   "tickDurationsMs": {
     "population80": {
-      "p50": 0.5,
-      "p95": 1
+      "p50": 0.30000000074505806,
+      "p95": 0.6000000014901161
     },
     "population100": {
-      "p50": 0.5,
-      "p95": 0.8999999985098839
+      "p50": 0.3999999985098839,
+      "p95": 0.6000000014901161
     }
   },
   "replay500Ms": {
-    "population80": 188.2000000011176,
-    "population100": 224.09999999962747
+    "population80": 126.30000000074506,
+    "population100": 160.90000000037253
   },
   "heroDiagnostics": {
-    "drawCalls": 132,
-    "triangles": 95861,
-    "medianActiveFrameMs": 66.69999999925494,
-    "p50ActiveFrameMs": 66.69999999925494,
-    "p95ActiveFrameMs": 67,
-    "sampledFrames": 6,
-    "renderedFrames": 59
+    "drawCalls": 139,
+    "triangles": 117821,
+    "medianActiveFrameMs": 35,
+    "p50ActiveFrameMs": 35,
+    "p95ActiveFrameMs": 98.90000000037253,
+    "sampledFrames": 11,
+    "renderedFrames": 61
   },
   "hundredDiagnostics": {
     "drawCalls": 139,
     "triangles": 121693,
-    "medianActiveFrameMs": 90.5,
-    "p50ActiveFrameMs": 90.5,
-    "p95ActiveFrameMs": 90.5,
+    "medianActiveFrameMs": 81.19999999925494,
+    "p50ActiveFrameMs": 81.19999999925494,
+    "p95ActiveFrameMs": 81.19999999925494,
     "sampledFrames": 1,
     "renderedFrames": 3
   },
   "hundredActiveDrag": {
     "renderedFrames": 36,
-    "seconds": 13.458400000000372,
-    "fps": 2.674909350294166,
-    "advancedTicks": 134,
-    "frameTimeP50Ms": 15.400000000372529,
-    "frameTimeP95Ms": 90.5,
+    "seconds": 10.464900000000373,
+    "fps": 3.4400710948025033,
+    "advancedTicks": 104,
+    "frameTimeP50Ms": 11.5,
+    "frameTimeP95Ms": 81.19999999925494,
     "sampledFrames": 4
   },
   "warnings": [
     "THREE.Clock: This module has been deprecated. Please use THREE.Timer instead.",
-    "[.WebGL-0x104000e0400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
-    "[.WebGL-0x104000e0400]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+    "[.WebGL-0x13c000daa00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[.WebGL-0x13c000daa00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
   ],
   "issues": []
 }
