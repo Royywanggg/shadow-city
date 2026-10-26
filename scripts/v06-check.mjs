@@ -14,7 +14,7 @@ const browser = await chromium.launch({ headless: true,
 const errors = []
 const screenshots = []
 const scene = process.env.SHADOW_CITY_SCENE === 'prototype' ? 'prototype' : 'expanded'
-const evidencePrefix = `v06-${scene}`
+const evidencePrefix = process.env.SHADOW_CITY_EVIDENCE_PREFIX ?? `v06-${scene}`
 let page
 try {
   page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 })
@@ -46,7 +46,11 @@ try {
   }
   await screenshot('v06-hero-200-tick100-1440x900')
   if (scene === 'expanded') {
-    await page.evaluate(() => window.__shadowCityV06.focusAtWorld(27, 5.5, 0))
+    await page.evaluate(() => {
+      const bridge = window.__shadowCityV06.getWorld().navEdges.find((edge) => edge.id === 'bridge:deck')
+      const middle = bridge.path[Math.floor(bridge.path.length / 2)]
+      window.__shadowCityV06.inspectAtWorld(middle.x / 1000, middle.y / 1000, middle.z / 1000)
+    })
     await page.waitForTimeout(1200)
     await screenshot('v06-bridge-close-tick100-1440x900')
     await page.getByRole('button', { name: 'RESET VIEW' }).click()
