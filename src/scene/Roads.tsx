@@ -21,8 +21,9 @@ export function Roads({ city }: { city: CityModel }) {
     const crosswalks: BoxInstance[] = []
     const nodes = new Map(city.roads.nodes.map((node) => [node.id, node]))
     const nodeWidths = new Map<string, number>()
+    const roadEdges = new Map(city.roads.edges.map((edge) => [edge.id, edge]))
 
-    city.roads.edges.forEach((edge, edgeIndex) => {
+    city.roads.edges.forEach((edge) => {
       const from = nodes.get(edge.from)!
       const to = nodes.get(edge.to)!
       roads.push(roadBox(from, to, edge.width, 0.025, 0.08))
@@ -32,23 +33,6 @@ export function Roads({ city }: { city: CityModel }) {
       if (edge.kind === 'avenue') {
         const length = Math.hypot(to.x - from.x, to.z - from.z)
         const count = Math.max(2, Math.floor(length / 5))
-        const directionX = (to.x - from.x) / length
-        const directionZ = (to.z - from.z) / length
-        const crossingNearPlaza = Math.abs(from.x) < 30 && Math.abs(from.z) < 30
-        if (edgeIndex % 5 === 0 && !crossingNearPlaza && length > 17) {
-          const crossingDistance = Math.min(7.2, length * 0.28)
-          const crossX = from.x + directionX * crossingDistance
-          const crossZ = from.z + directionZ * crossingDistance
-          const stripeCount = Math.max(5, Math.floor(edge.width / 1.05))
-          for (let stripe = 0; stripe < stripeCount; stripe += 1) {
-            const across = (stripe - (stripeCount - 1) / 2) * 1.05
-            crosswalks.push({
-              position: [crossX - directionZ * across, 0.084, crossZ + directionX * across],
-              scale: [0.68, 0.012, 1.65],
-              rotationY: Math.atan2(to.x - from.x, to.z - from.z),
-            })
-          }
-        }
         for (let index = 0; index < count; index += 1) {
           const t = (index + 0.5) / count
           const x = from.x + (to.x - from.x) * t
@@ -79,15 +63,26 @@ export function Roads({ city }: { city: CityModel }) {
         scale: [block.width + 2.8, 0.15, block.depth + 2.8],
         color: '#687b8b',
       })
-      if (block.isPlaza) {
-        const insetX = block.width / 2 + 3.2
-        const insetZ = block.depth / 2 + 3.2
-        for (const sign of [-1, 1]) {
-          for (let index = -2; index <= 2; index += 1) {
-            crosswalks.push({ position: [block.x + index * 0.85, 0.081, block.z + sign * insetZ], scale: [0.42, 0.012, 2.5] })
-            crosswalks.push({ position: [block.x + sign * insetX, 0.081, block.z + index * 0.85], scale: [2.5, 0.012, 0.42] })
-          }
-        }
+    }
+
+    const pedestrianNodes = new Map(city.pedestrian.nodes.map((node) => [node.id, node]))
+    for (const crossing of city.pedestrian.edges.filter((edge) => edge.kind === 'crossing')) {
+      const from = pedestrianNodes.get(crossing.from)!
+      const to = pedestrianNodes.get(crossing.to)!
+      const road = roadEdges.get(crossing.sourceRoadEdgeId!)!
+      const acrossX = Math.abs(to.x - from.x) > Math.abs(to.z - from.z)
+      const count = road.kind === 'avenue' ? 6 : 3
+      const span = Math.max(1, crossing.length - 0.75)
+      const stripeWidth = Math.min(0.48, span / count * 0.56)
+      const stripeLength = road.kind === 'avenue' ? 2.05 : 1.35
+      for (let index = 0; index < count; index += 1) {
+        const along = -span / 2 + (index + 0.5) * span / count
+        crosswalks.push({
+          position: [(from.x + to.x) / 2 + (acrossX ? along : 0), 0.086,
+            (from.z + to.z) / 2 + (acrossX ? 0 : along)],
+          scale: acrossX ? [stripeWidth, 0.012, stripeLength] : [stripeLength, 0.012, stripeWidth],
+          color: road.kind === 'avenue' ? '#aab7af' : '#748c90',
+        })
       }
     }
     return { roads, sidewalks, curbs, marks, crosswalks }

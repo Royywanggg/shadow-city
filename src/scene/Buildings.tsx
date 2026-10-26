@@ -154,6 +154,8 @@ function addStreetFront(building: Building, geometry: BuildingGeometry) {
   const front = building.masses[0]
   const fx = building.x + front.offsetX
   const fz = building.z + front.offsetZ + front.depth / 2
+  const doorwayX = building.entrance.x
+  const doorwayZ = building.entrance.z - 0.36
   const right = building.x + front.offsetX + front.width / 2
   const shop = building.kind === 'commercial' || building.kind === 'corner' || building.kind === 'tower'
   if (shop) {
@@ -161,8 +163,9 @@ function addStreetFront(building: Building, geometry: BuildingGeometry) {
     geometry.storefronts.push(box([right + 0.11, 3.0, building.z + front.offsetZ], [0.12, 3.25, front.depth * 0.7], '#274c5a'))
     geometry.ledges.push(box([fx, 4.75, fz + 0.52], [front.width * 0.89, 0.29, 1.05], '#879aa2'))
     geometry.warmSigns.push(box([fx, 4.29, fz + 0.2], [Math.min(4.8, front.width * 0.44), 0.24, 0.12]))
+    geometry.entries.push(box([doorwayX, 1.85, doorwayZ + 0.2], [1.5, 2.45, 0.15], '#1d3743'))
   } else if (building.kind === 'industrial') {
-    geometry.entries.push(box([fx, 2.95, fz + 0.1], [Math.min(5, front.width * 0.52), 3.6, 0.11], '#2b4856'))
+    geometry.entries.push(box([doorwayX, 2.95, doorwayZ + 0.1], [Math.min(5, front.width * 0.52), 3.6, 0.11], '#2b4856'))
     geometry.ledges.push(box([fx, 5.0, fz + 0.28], [Math.min(5.5, front.width * 0.57), 0.3, 0.55], '#8b9699'))
   } else if (building.kind === 'civic') {
     const count = Math.max(5, Math.min(11, Math.round(front.width / 4.2)))
@@ -171,10 +174,10 @@ function addStreetFront(building: Building, geometry: BuildingGeometry) {
       geometry.facadeRibs.push(box([x, 4.0, fz + 0.9], [0.65, 6.0, 0.65], '#bcc7c4'))
     }
     geometry.ledges.push(box([fx, 7.12, fz + 0.95], [front.width * 0.94, 0.58, 1.9], '#acb9b8'))
-    geometry.entries.push(box([fx, 2.65, fz + 0.35], [Math.min(4.6, front.width * 0.17), 3.3, 0.2], '#1e3542'))
+    geometry.entries.push(box([doorwayX, 2.65, doorwayZ + 0.35], [Math.min(4.6, front.width * 0.17), 3.3, 0.2], '#1e3542'))
   } else {
-    geometry.entries.push(box([fx + front.width * 0.18, 1.9, fz + 0.09], [1.65, 2.15, 0.12], '#243b4a'))
-    geometry.ledges.push(box([fx + front.width * 0.18, 3.15, fz + 0.42], [2.1, 0.18, 0.86], '#8b9ca5'))
+    geometry.entries.push(box([doorwayX, 1.9, doorwayZ + 0.09], [1.65, 2.15, 0.12], '#243b4a'))
+    geometry.ledges.push(box([doorwayX, 3.15, doorwayZ + 0.42], [2.1, 0.18, 0.86], '#8b9ca5'))
   }
 }
 

@@ -194,12 +194,19 @@ export function createBuilding(
   const height = targetHeight(random, kind, column, row)
   const roofDetail = Math.floor(random() * 4)
   const masses = createMassing(kind, width, depth, height, roofDetail)
+  const x = parcel.x + between(random, -0.14, 0.14)
+  const z = parcel.z + between(random, -0.14, 0.14)
+  const front = masses[0]
+  const centeredEntrance = kind === 'commercial' || kind === 'corner' || kind === 'tower'
+    || kind === 'industrial' || kind === 'civic'
+  const entranceX = x + front.offsetX + (centeredEntrance ? 0 : front.width * 0.18)
+  const entranceZ = z + front.offsetZ + front.depth / 2 + 0.36
   return {
     id: `building-${parcel.id}`,
     parcelId: parcel.id,
     kind,
-    x: parcel.x + between(random, -0.14, 0.14),
-    z: parcel.z + between(random, -0.14, 0.14),
+    x,
+    z,
     width,
     depth,
     height,
@@ -210,5 +217,6 @@ export function createBuilding(
     masses,
     windows: createWindows(random, kind, masses),
     roofDetail,
+    entrance: { x: entranceX, z: entranceZ, face: 'south' },
   }
 }

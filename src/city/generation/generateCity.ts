@@ -2,6 +2,7 @@ import type { Building, CityBlock, CityModel, DistrictKind, Parcel, RoadEdge, Ro
 import { between, createRandom } from './random'
 import { createBuilding } from './buildings'
 import { generateStreetFeatures } from './streetFeatures'
+import { derivePedestrianNetwork } from '../pedestrian/derivePedestrianNetwork'
 
 export const HERO_SEED = 'shadow-city-hero-01'
 
@@ -111,7 +112,7 @@ export function generateCity(seed = HERO_SEED): CityModel {
   }
 
   const centralBlock = blocks.find((block) => block.isPlaza)!
-  return {
+  const city = {
     seed,
     size: tileSize,
     roads: { nodes, edges },
@@ -126,4 +127,5 @@ export function generateCity(seed = HERO_SEED): CityModel {
     },
     streetFeatures: generateStreetFeatures(seed, { nodes, edges }, blocks, centralBlock),
   }
+  return { ...city, pedestrian: derivePedestrianNetwork(city) }
 }

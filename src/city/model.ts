@@ -68,6 +68,14 @@ export interface Building {
   masses: BuildingMass[]
   windows: BuildingWindow[]
   roofDetail: number
+  entrance: BuildingEntrance
+}
+
+export interface BuildingEntrance {
+  /** World-space doorstep, just outside the ground-floor frontage. */
+  x: number
+  z: number
+  face: 'south'
 }
 
 export interface BuildingMass {
@@ -106,6 +114,38 @@ export interface StreetFeature {
   scale: number
 }
 
+export interface PedestrianNode {
+  id: string
+  x: number
+  z: number
+  surfaceY: number
+  kind: 'sidewalk' | 'entrance' | 'publicSpace' | 'crossing'
+}
+
+export interface PedestrianEdge {
+  id: string
+  from: string
+  to: string
+  length: number
+  costMm: number
+  kind: 'sidewalk' | 'access' | 'crossing' | 'publicSpace'
+  sourceRoadEdgeId?: string
+}
+
+export interface PedestrianAnchor {
+  id: string
+  nodeId: string
+  kind: 'building' | 'plaza' | 'park'
+  buildingId?: string
+  blockId?: string
+}
+
+export interface PedestrianNetwork {
+  nodes: PedestrianNode[]
+  edges: PedestrianEdge[]
+  anchors: PedestrianAnchor[]
+}
+
 export interface CityModel {
   seed: string
   size: number
@@ -115,4 +155,5 @@ export interface CityModel {
   buildings: Building[]
   plaza: Plaza
   streetFeatures: StreetFeature[]
+  pedestrian: PedestrianNetwork
 }
