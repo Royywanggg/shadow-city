@@ -1,5 +1,5 @@
 import {
-  AnimationClip, AnimationMixer, Box3, Color, Group, Mesh, MeshStandardMaterial, Object3D, SkinnedMesh,
+  AnimationClip, AnimationMixer, Box3, Color, Group, Mesh, MeshStandardMaterial, Object3D, SkinnedMesh, Vector3,
   type KeyframeTrack,
 } from 'three'
 import { GLTFLoader, type GLTF } from 'three/addons/loaders/GLTFLoader.js'
@@ -30,6 +30,7 @@ export interface CharacterDiagnostics {
 interface LoadedAsset {
   readonly definition: CharacterAsset
   readonly scene: Object3D
+  readonly mediumScene: Object3D
   readonly clips: ReadonlyMap<string, AnimationClip>
   readonly scale: number
   readonly feetOffset: number
@@ -78,6 +79,41 @@ export function stripHorizontalRootMotion(source: AnimationClip): AnimationClip 
   return clip
 }
 
+/** Convert a sampled skinned pose into shared static geometry for medium-distance residents. */
+export function bakeStaticPose(scene: Object3D, idleClip: AnimationClip): Object3D {
+  const posed = cloneSkeleton(scene)
+  const mixer = new AnimationMixer(posed)
+  mixer.clipAction(idleClip).play()
+  mixer.setTime(Math.min(0.3, idleClip.duration * 0.25))
+  posed.updateMatrixWorld(true)
+  const staticRoot = new Group()
+  const vertex = new Vector3()
+  posed.traverse((object) => {
+    if (!(object instanceof Mesh)) return
+    const geometry = object.geometry.clone()
+    if (object instanceof SkinnedMesh) {
+      const source = object.geometry.getAttribute('position')
+      const positions = geometry.getAttribute('position')
+      for (let index = 0; index < source.count; index += 1) {
+        vertex.fromBufferAttribute(source, index)
+        object.applyBoneTransform(index, vertex)
+        positions.setXYZ(index, vertex.x, vertex.y, vertex.z)
+      }
+      positions.needsUpdate = true
+    }
+    geometry.applyMatrix4(object.matrixWorld)
+    geometry.computeVertexNormals()
+    geometry.computeBoundingBox()
+    geometry.computeBoundingSphere()
+    const mesh = new Mesh(geometry, object.material)
+    mesh.name = object.name
+    staticRoot.add(mesh)
+  })
+  mixer.stopAllAction()
+  mixer.uncacheRoot(posed)
+  return staticRoot
+}
+
 function prepareAsset(definition: CharacterAsset, gltf: GLTF): LoadedAsset {
   const bounds = new Box3().setFromObject(gltf.scene)
   const height = bounds.max.y - bounds.min.y
@@ -89,7 +125,8 @@ function prepareAsset(definition: CharacterAsset, gltf: GLTF): LoadedAsset {
     throw new Error(`Missing movement clips: ${definition.presetId}`)
   }
   const scale = 1.76 / height
-  return { definition, scene: gltf.scene, clips, scale, feetOffset: -bounds.min.y * scale }
+  const mediumScene = bakeStaticPose(gltf.scene, clips.get('Idle')!)
+  return { definition, scene: gltf.scene, mediumScene, clips, scale, feetOffset: -bounds.min.y * scale }
 }
 
 let characterAssetPromise: Promise<ReadonlyMap<string, LoadedAsset>> | null = null
@@ -111,20 +148,7 @@ export function loadCharacterAssets(): Promise<ReadonlyMap<string, LoadedAsset>>
 }
 
 function createInstance(asset: LoadedAsset, tier: 'medium' | 'close'): CharacterInstance {
-  const rig = tier === 'close' ? cloneSkeleton(asset.scene) : asset.scene.clone(true)
-  if (tier === 'medium') {
-    const skinnedMeshes: SkinnedMesh[] = []
-    rig.traverse((object) => { if (object instanceof SkinnedMesh) skinnedMeshes.push(object) })
-    for (const skinned of skinnedMeshes) {
-      const staticMesh = new Mesh(skinned.geometry, skinned.material)
-      staticMesh.name = skinned.name
-      staticMesh.position.copy(skinned.position)
-      staticMesh.quaternion.copy(skinned.quaternion)
-      staticMesh.scale.copy(skinned.scale)
-      skinned.parent?.add(staticMesh)
-      skinned.parent?.remove(skinned)
-    }
-  }
+  const rig = tier === 'close' ? cloneSkeleton(asset.scene) : asset.mediumScene.clone(true)
   const root = new Group()
   rig.scale.setScalar(asset.scale)
   rig.position.y = asset.feetOffset
