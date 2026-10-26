@@ -212,6 +212,90 @@ body { min-width: 320px; }
 .agent-inspector dd { margin: 0; color: #c4d6d8; overflow-wrap: anywhere; }
 .agent-inspector-note { margin: 0; padding-top: 8px; border-top: 1px solid rgba(134, 177, 188, .16); color: #829da6; font-size: 8px; letter-spacing: .04em; }
 
+.experiment-panel {
+  position: absolute;
+  top: clamp(174px, 20vh, 204px);
+  left: clamp(26px, 5vw, 84px);
+  z-index: 2;
+  width: 252px;
+  max-height: min(358px, calc(100vh - 290px));
+  overflow-y: auto;
+  padding: 12px 13px 10px;
+  border: 1px solid rgba(134, 177, 188, .3);
+  border-radius: 2px;
+  color: #bcd4d4;
+  background: rgba(8, 20, 33, .82);
+  box-shadow: 0 8px 30px rgba(0, 4, 12, .19);
+  backdrop-filter: blur(8px);
+  scrollbar-width: thin;
+  scrollbar-color: #365362 transparent;
+}
+.experiment-heading { display: grid; gap: 3px; margin-bottom: 11px; }
+.experiment-kicker, .experiment-label {
+  color: #83aaa9;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: .15em;
+}
+.experiment-heading strong { color: #e3eded; font: 500 15px 'Space Grotesk', Arial, sans-serif; }
+.experiment-mode-group, .experiment-scenario > div { display: flex; gap: 3px; }
+.experiment-panel button {
+  border: 1px solid rgba(134, 177, 188, .29);
+  border-radius: 2px;
+  color: #9fbfc2;
+  background: rgba(22, 42, 56, .68);
+  cursor: pointer;
+  font: 600 8px 'DM Sans', Arial, sans-serif;
+  letter-spacing: .08em;
+}
+.experiment-panel button:hover, .experiment-panel button:focus-visible {
+  border-color: #9bd0cf;
+  color: #f0f8f5;
+  outline: none;
+}
+.experiment-panel button[aria-pressed='true'] {
+  border-color: #83bcbc;
+  color: #e1f5f1;
+  background: rgba(48, 82, 91, .81);
+}
+.experiment-mode-group button { flex: 1; min-height: 25px; padding: 4px 3px; }
+.experiment-scenario { display: grid; gap: 5px; margin-top: 11px; }
+.experiment-scenario button { display: flex; align-items: baseline; justify-content: center; gap: 4px; flex: 1; min-height: 26px; padding: 4px; }
+.experiment-scenario button strong { color: #d4e9e7; font-size: 10px; }
+.experiment-scenario button span { color: #8daeb4; font-size: 8px; }
+.experiment-scenario p, .experiment-observed p, .experiment-truth-note {
+  margin: 0;
+  color: #849fa9;
+  font-size: 8px;
+  line-height: 1.35;
+}
+.experiment-research, .experiment-observed { margin-top: 11px; padding-top: 9px; border-top: 1px solid rgba(134, 177, 188, .18); }
+.experiment-stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px 7px; }
+.experiment-stat-grid > div { display: grid; gap: 2px; }
+.experiment-stat-grid span, .experiment-observed > span:not(.experiment-label), .experiment-comparison span {
+  color: #8eabb3;
+  font-size: 8px;
+  letter-spacing: .07em;
+}
+.experiment-stat-grid strong { color: #e5ece9; font: 500 17px 'Space Grotesk', Arial, sans-serif; }
+.experiment-stat-grid > div:first-child strong { color: #d4968d; }
+.experiment-stat-grid > div:nth-child(2) strong { color: #9ad2d0; }
+.experiment-severity { display: flex; justify-content: space-between; gap: 5px; margin-top: 8px; color: #8eabb3; font-size: 7px; letter-spacing: .04em; }
+.experiment-observed { display: grid; gap: 3px; }
+.experiment-observed > strong { color: #9ad2d0; font: 500 24px 'Space Grotesk', Arial, sans-serif; }
+.experiment-observed p { margin-top: 3px; }
+.experiment-comparison { display: grid; gap: 5px; margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(134, 177, 188, .18); }
+.experiment-comparison > span { display: flex; justify-content: space-between; }
+.experiment-comparison strong { color: #d7e8e5; font-weight: 600; }
+.experiment-comparison .experiment-confirmed-count { color: #82b7ba; font-size: 8px; letter-spacing: 0; }
+.experiment-districts { display: grid; gap: 3px; margin-top: 3px; }
+.experiment-districts > div { display: flex; justify-content: space-between; }
+.experiment-districts > div span { font-size: 7px; }
+.experiment-districts strong { font-size: 8px; }
+.experiment-districts small { color: #7898a3; font-size: 7px; text-align: right; }
+.experiment-truth-note { margin-top: 9px; }
+.experiment-panel footer { margin-top: 10px; padding-top: 7px; border-top: 1px solid rgba(134, 177, 188, .18); color: #789aa2; font-size: 7px; letter-spacing: .12em; }
+
 .scene-meta {
   position: absolute;
   left: clamp(26px, 5vw, 84px);
@@ -270,4 +354,14 @@ body { min-width: 320px; }
   .agent-inspector dl { grid-template-columns: 1fr 1fr; gap: 5px 8px; margin: 8px 0; }
   .agent-inspector dl > div { grid-template-columns: auto; gap: 2px; }
   .agent-inspector-note { padding-top: 5px; }
+  .experiment-panel { top: auto; left: 12px; right: 12px; bottom: 174px; width: auto; max-height: 190px; padding: 8px 10px; }
+  .experiment-heading { margin-bottom: 6px; }
+  .experiment-heading strong { font-size: 13px; }
+  .experiment-mode-group button { min-height: 22px; }
+  .experiment-scenario { margin-top: 7px; }
+  .experiment-scenario button { min-height: 22px; }
+  .experiment-research, .experiment-observed { margin-top: 7px; padding-top: 6px; }
+  .experiment-stat-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px; }
+  .experiment-stat-grid span { font-size: 7px; letter-spacing: .02em; }
+  .experiment-stat-grid strong { font-size: 14px; }
 }

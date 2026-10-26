@@ -1,7 +1,7 @@
 import { useMemo, useSyncExternalStore } from 'react'
 import type { PedestrianNetwork } from '../city/model'
 import type { SimulationSession } from '../simulation/session'
-import { isCitizenSimulationState } from '../simulation/types'
+import { getCitizenSimulationState } from '../simulation/types'
 import type { AgentSelectionController } from './agentSelection'
 
 const ACTIVITY_LABELS = {
@@ -26,8 +26,9 @@ export function AgentInspector({
   const anchorNames = useMemo(() => new Map(graph.anchors.map((anchor) => [anchor.id,
     anchor.kind === 'building' ? `Building ${anchor.buildingId ?? anchor.id}`
       : anchor.kind === 'plaza' ? 'Central plaza' : `Park ${anchor.blockId ?? anchor.id}`])), [graph])
-  if (!selectedId || !isCitizenSimulationState(snapshot.state)) return null
-  const agent = snapshot.state.citizens.find((citizen) => citizen.id === selectedId)
+  const citizenState = getCitizenSimulationState(snapshot.state)
+  if (!selectedId || !citizenState) return null
+  const agent = citizenState.citizens.find((citizen) => citizen.id === selectedId)
   if (!agent) return null
   const currentEdge = agent.route[agent.routeIndex]
   const destination = agent.destinationAnchorId

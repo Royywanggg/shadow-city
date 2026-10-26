@@ -5,7 +5,7 @@ import type { PedestrianNetwork } from '../city/model'
 import type { AgentSelectionController } from '../app/agentSelection'
 import type { PlaybackController } from '../playback/PlaybackController'
 import type { SimulationSession } from '../simulation/session'
-import { isCitizenSimulationState, type SimulationStateV2 } from '../simulation/types'
+import { getCitizenSimulationState, type SimulationStateV2 } from '../simulation/types'
 import { createPedestrianLookup, interpolateAgentPose, type AgentRenderPose } from './agentInterpolation'
 import { SelectedRoute } from './SelectedRoute'
 
@@ -57,7 +57,7 @@ export function AgentLayer({
   const snapshot = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot)
   const playbackSnapshot = useSyncExternalStore(playback.subscribe, playback.getSnapshot, playback.getSnapshot)
   const selectedId = useSyncExternalStore(selection.subscribe, selection.getSnapshot, selection.getSnapshot)
-  const state = isCitizenSimulationState(snapshot.state) ? snapshot.state : null
+  const state = getCitizenSimulationState(snapshot.state)
   const selected = state?.citizens.find((citizen) => citizen.id === selectedId) ?? null
   const lookup = useMemo(() => createPedestrianLookup(graph), [graph])
   const pickRadius = useMemo(() => Math.max(20, ...graph.nodes.map((node) => Math.hypot(node.x, node.z))) + 8, [graph])
@@ -165,11 +165,12 @@ export function AgentLayer({
   useLayoutEffect(() => {
     const current = state
     const previousState = session.getPreviousLiveState()
-    const previous = previousState && isCitizenSimulationState(previousState) && current &&
+    const previousCitizen = previousState ? getCitizenSimulationState(previousState) : null
+    const previous = previousCitizen && current &&
       playbackSnapshot.status === 'playing' && lastPlaybackStatus.current === 'playing' &&
       lastRenderedTick.current !== null && current.tick === lastRenderedTick.current + 1 &&
       !snapshot.isInspecting &&
-      previousState.tick === current.tick - 1 ? previousState : null
+      previousCitizen.tick === current.tick - 1 ? previousCitizen : null
     pairRef.current = { previous, current }
     draw(previous ? playback.getInterpolationAlpha() : 1, true)
     lastRenderedTick.current = current?.tick ?? null

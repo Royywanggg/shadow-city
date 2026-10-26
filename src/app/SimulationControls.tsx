@@ -1,15 +1,22 @@
 import { useState, useSyncExternalStore, type FormEvent } from 'react'
 import { type PlaybackController } from '../playback/PlaybackController'
 import { type PlaybackSpeed } from '../playback/FixedStepScheduler'
+import type { ObserverPort } from '../simulation/v3Types'
 
 interface SimulationControlsProps {
   controller: PlaybackController
   populationSize: number
+  observerPort?: ObserverPort
 }
 
 const SPEEDS: readonly PlaybackSpeed[] = [1, 2, 4]
 
-export function SimulationControls({ controller, populationSize }: SimulationControlsProps) {
+function AvailableReportReadout({ port, populationSize }: { port: ObserverPort; populationSize: number }) {
+  const view = useSyncExternalStore(port.subscribe, port.getView, port.getView)
+  return <span className="simulation-events">{populationSize} synthetic citizens · {view.availableReportCount} available reports</span>
+}
+
+export function SimulationControls({ controller, populationSize, observerPort }: SimulationControlsProps) {
   const snapshot = useSyncExternalStore(controller.subscribe, controller.getSnapshot, controller.getSnapshot)
   const [targetTick, setTargetTick] = useState('')
 
@@ -37,7 +44,9 @@ export function SimulationControls({ controller, populationSize }: SimulationCon
           TICK {snapshot.tick.toLocaleString('en-US')}
           {snapshot.isInspecting && <span className="simulation-live-tick"> / LIVE {snapshot.liveTick.toLocaleString('en-US')}</span>}
         </span>
-        <span className="simulation-events">{populationSize} synthetic citizens · {snapshot.eventCount} events · {snapshot.commandCount} probes</span>
+        {observerPort
+          ? <AvailableReportReadout port={observerPort} populationSize={populationSize} />
+          : <span className="simulation-events">{populationSize} synthetic citizens · {snapshot.eventCount} events · {snapshot.commandCount} probes</span>}
       </div>
       <div className="simulation-actions">
         <button
