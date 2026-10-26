@@ -224,12 +224,15 @@ export function WorldOffenceLayer({ state, mode, observationSeed }: { state: Sim
     <meshBasicMaterial color="#e0c183" />
   </mesh>)}</>
   const observed = new Set(state.reports.map((report) => report.id))
+  const reportedOffences = new Set((state.social?.reportLinks ?? [])
+    .filter((link) => observed.has(link.reportId)).map((link) => link.offenceId))
   return <>{state.offences.map((offence) => <mesh key={offence.id}
     position={[offence.position.x / 1000, offence.position.y / 1000 + 0.26,
       offence.position.z / 1000]}>
     <sphereGeometry args={[0.32, 8, 8]} />
     <meshBasicMaterial color={mode === 'compare' &&
-      observed.has(reportIdForOffence(offence, observationSeed)) ? '#f7ce85' : '#eb8393'} />
+      (reportedOffences.has(offence.id) ||
+        observed.has(reportIdForOffence(offence, observationSeed))) ? '#f7ce85' : '#eb8393'} />
   </mesh>)}</>
 }
 

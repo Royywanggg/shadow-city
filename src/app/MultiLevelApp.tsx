@@ -6,8 +6,12 @@ import { FixedStepScheduler, browserFrameHost, type PlaybackSpeed } from '../pla
 import { WorldCameraRig } from '../scene/WorldCameraRig'
 import { WorldSceneV2, WorldOffenceLayer, WorldSelectedRoute } from '../scene/WorldSceneV2'
 import { WorldAgentLayerV5 } from '../scene/WorldAgentLayerV5'
+import { EncounterLayerV1 } from '../scene/EncounterLayerV1'
 import { CharacterPortraitV5 } from '../scene/character/CharacterPortraitV5'
 import { createCitizenIdentity } from '../simulation/population'
+import { DEFAULT_ENCOUNTER_SCENARIO_V1 } from '../simulation/encounter/config'
+import { relationshipCategoryV1 } from '../simulation/encounter/relationships'
+import { createSocialProfileV1 } from '../simulation/encounter/socialProfiles'
 import { SimulationSessionV5 } from '../simulation/sessionV5'
 import { DEFAULT_SIMULATION_CONFIG_V5 } from '../simulation/v5Types'
 import { DEFAULT_WORLD_CONFIG_V2 } from '../world/model'
@@ -25,8 +29,9 @@ const ResidentRow = memo(function ResidentRow({ id, name, activity, selected,
   </button>
 })
 
-function DynamicWorldOverlays({ session, selectedId, mode }: {
-  session: SimulationSessionV5; selectedId: string | null;
+function DynamicWorldOverlays({ session, selectedId, selectedEncounterId, level, mode }: {
+  session: SimulationSessionV5; selectedId: string | null; selectedEncounterId: string | null;
+  level: 'all' | 'L0' | 'L1';
   mode: 'truth' | 'observed' | 'compare'
 }) {
   const snapshot = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot)
@@ -35,13 +40,18 @@ function DynamicWorldOverlays({ session, selectedId, mode }: {
     <WorldSelectedRoute world={session.getWorld()} citizen={selected} />
     <WorldOffenceLayer state={snapshot.state} mode={mode}
       observationSeed={session.getConfig().observationSeed} />
+    <EncounterLayerV1 state={snapshot.state} world={session.getWorld()}
+      episodeId={selectedEncounterId} level={level} />
   </>
 }
 
-function V5Panel({ session, selectedId, onSelect, cameraController, level, setLevel,
+function V5Panel({ session, selectedId, onSelect, selectedEncounterId, onSelectEncounter,
+  cameraController, level, setLevel,
   cutaway, setCutaway, debug, setDebug, mode, setMode, playing, setPlaying,
   speed, setSpeed, step, sidebarOpen, setSidebarOpen }: {
   session: SimulationSessionV5; selectedId: string | null; onSelect: (id: string | null) => void;
+  selectedEncounterId: string | null;
+  onSelectEncounter: (episodeId: string | null, tick?: number) => void;
   cameraController: ReturnType<typeof createCameraController>;
   level: 'all' | 'L0' | 'L1'; setLevel: (level: 'all' | 'L0' | 'L1') => void;
   cutaway: boolean; setCutaway: (value: boolean) => void; debug: boolean; setDebug: (value: boolean) => void;
@@ -55,7 +65,8 @@ function V5Panel({ session, selectedId, onSelect, cameraController, level, setLe
     () => cameraController.getFollowing())
   const [query, setQuery] = useState('')
   const [activityFilter, setActivityFilter] = useState('all')
-  const [tab, setTab] = useState<'profile' | 'activity' | 'history'>('profile')
+  const [tab, setTab] = useState<'profile' | 'activity' | 'history' | 'relationships' |
+    'encounters' | 'memory' | 'timeline'>('profile')
   const identities = useMemo(() => new Map(session.getProfiles().map((profile) =>
     [profile.id, createCitizenIdentity(profile.id)])), [session])
   useEffect(() => {
@@ -66,6 +77,49 @@ function V5Panel({ session, selectedId, onSelect, cameraController, level, setLe
   const selected = snapshot.state.citizens.find((citizen) => citizen.id === selectedId) ?? null
   const profile = session.getProfiles().find((item) => item.id === selectedId)
   const identity = selected ? identities.get(selected.id)! : null
+  const social = snapshot.state.social
+  const socialProfile = selected && session.getConfig().encounter ?
+    createSocialProfileV1(selected.id, session.getConfig().encounter!.social.seed) : null
+  const relationships = social?.relationships.filter((item) => item.ownerAgentId === selectedId)
+    .sort((a, b) => b.familiarity - a.familiarity ||
+      a.referentAgentId.localeCompare(b.referentAgentId)) ?? []
+  const encounters = social ? [...social.encounters.active, ...social.encounters.completed]
+    .filter((item) => item.participantIds.includes(selectedId ?? ''))
+    .sort((a, b) => b.startedTick - a.startedTick || a.id.localeCompare(b.id)) : []
+  const memories = social?.memories.filter((item) => item.ownerAgentId === selectedId)
+    .sort((a, b) => b.createdTick - a.createdTick || a.id.localeCompare(b.id)) ?? []
+  const knowledge = social?.knowledge.filter((item) => item.ownerAgentId === selectedId)
+    .sort((a, b) => b.acquiredTick - a.acquiredTick || a.id.localeCompare(b.id)) ?? []
+  const perceivedRisks = social?.perceivedPlaceRisks.filter((item) =>
+    item.ownerAgentId === selectedId).sort((a, b) =>
+      b.score - a.score || a.placeId.localeCompare(b.placeId)) ?? []
+  const selectedEpisode = encounters.find((item) => item.id === selectedEncounterId)
+  const selectedDecisions = social?.interactionDecisions.filter((item) =>
+    item.encounterId === selectedEncounterId) ?? []
+  const selectedTraces = social?.decisionTraces.filter((item) =>
+    item.episodeId === selectedEncounterId) ?? []
+  const timeline = selectedId ? [
+    ...snapshot.state.events.filter((item) => item.agentId === selectedId).map((item) => ({
+      id: item.id, tick: item.tick, label: item.type,
+      scope: 'OBJECTIVE' as const, episodeId: null as string | null,
+    })),
+    ...(social?.encounterEvents.filter((item) => encounters.some((episode) =>
+      episode.id === item.episodeId)).map((item) => ({
+      id: item.id, tick: item.tick, label: item.type,
+      scope: 'OBJECTIVE' as const, episodeId: item.episodeId,
+    })) ?? []),
+    ...(social?.interactionEvents.filter((item) => item.participantIds.includes(selectedId))
+      .map((item) => ({ id: item.id, tick: item.tick,
+        label: `Interaction ${item.type}`, scope: 'OBJECTIVE' as const,
+        episodeId: social.interactions.find((interaction) =>
+          interaction.id === item.interactionId)?.encounterId ?? null,
+      })) ?? []),
+    ...(social?.witnessObservations.filter((item) => item.ownerAgentId === selectedId)
+      .map((item) => ({ id: item.id, tick: item.observedTick,
+        label: `${item.source} observation`, scope: 'SUBJECTIVE' as const,
+        episodeId: null as string | null,
+      })) ?? []),
+  ].sort((a, b) => b.tick - a.tick || a.id.localeCompare(b.id)) : []
   const selectedSurface = selected ? session.getWorld().surfaces.find((item) => item.id === selected.surfaceId) : null
   const filtered = snapshot.state.citizens.filter((citizen) => {
     const name = identities.get(citizen.id)!.displayName
@@ -106,7 +160,7 @@ function V5Panel({ session, selectedId, onSelect, cameraController, level, setLe
           <select aria-label="Filter activity" value={activityFilter}
             onChange={(event) => setActivityFilter(event.target.value)}>
             <option value="all">All activities</option>
-            {['atHome', 'travelling', 'returningHome', 'atDestination', 'waitingForSpace'].map((activity) =>
+            {['atHome', 'travelling', 'returningHome', 'atDestination', 'interacting', 'waitingForSpace'].map((activity) =>
               <option key={activity} value={activity}>{activity}</option>)}
           </select>
         </div>
@@ -124,8 +178,9 @@ function V5Panel({ session, selectedId, onSelect, cameraController, level, setLe
             movementMode={selected.movementMode} logicalTime={snapshot.tick * 6} />
           <div className="v06-action-row"><button onClick={focus}>FOCUS</button>
             <button onClick={follow}>{status}</button></div>
-          <div className="v06-tabs">
-            {(['profile', 'activity', 'history'] as const).map((value) =>
+          <div className="v06-tabs" aria-label="Researcher resident sections">
+            {(['profile', 'activity', 'history', 'relationships', 'encounters',
+              'memory', 'timeline'] as const).map((value) =>
               <button key={value} className={tab === value ? 'active' : ''}
                 onClick={() => setTab(value)}>{value.toUpperCase()}</button>)}
           </div>
@@ -134,6 +189,8 @@ function V5Panel({ session, selectedId, onSelect, cameraController, level, setLe
             <dt>Work</dt><dd>{profile.workPlaceId ?? 'None'}</dd>
             <dt>Appearance</dt><dd>{identity.appearance.presetId}</dd>
             <dt>Outfit</dt><dd>{identity.appearance.primaryClothingColor ?? 'authored'} / {identity.appearance.secondaryClothingColor ?? 'authored'}</dd>
+            {socialProfile && <><dt>Sociability</dt><dd>{socialProfile.sociability.toFixed(2)}</dd>
+              <dt>Attention</dt><dd>{socialProfile.attention.toFixed(2)}</dd></>}
           </dl>}
           {tab === 'activity' && <dl>
             <dt>Current</dt><dd>{selected.activity}</dd>
@@ -148,6 +205,88 @@ function V5Panel({ session, selectedId, onSelect, cameraController, level, setLe
             {snapshot.state.offences.filter((offence) => offence.offenderAgentId === selected.id ||
               offence.target.kind === 'citizen' && offence.target.id === selected.id).map((offence) =>
               <p key={offence.id}>T{offence.tick} · TRUE OFFENCE · {offence.severity}</p>)}
+          </div>}
+          {tab === 'relationships' && <div className="v06-research-list">
+            <p className="v06-scope">SUBJECTIVE RELATIONSHIPS · RESEARCHER VIEW · {selected.id}</p>
+            {relationships.length === 0 && <p className="v06-empty">No relationship state yet.</p>}
+            {relationships.map((relation) => <div className="v06-research-card"
+              key={`${relation.ownerAgentId}:${relation.referentAgentId}`}>
+              <div className="v06-card-head"><strong>{identities.get(relation.referentAgentId)?.displayName ?? relation.referentAgentId}</strong>
+                <button onClick={() => onSelect(relation.referentAgentId)}>SELECT ↗</button></div>
+              <small>{relation.referentAgentId} · {relationshipCategoryV1(relation)}</small>
+              <dl><dt>Familiarity</dt><dd>{relation.familiarity.toFixed(2)}</dd>
+                <dt>Recognition</dt><dd>{relation.recognitionStrength.toFixed(2)}</dd>
+                <dt>Trust</dt><dd>{relation.trust.toFixed(2)}</dd>
+                <dt>Interactions</dt><dd>{relation.greetingCount} greetings · {relation.conversationCount} conversations</dd>
+                <dt>Name belief</dt><dd>{relation.believedIdentity ?? 'Unknown to resident'}</dd></dl>
+            </div>)}
+          </div>}
+          {tab === 'encounters' && <div className="v06-research-list">
+            <p className="v06-scope">OBJECTIVE ENCOUNTERS · TICK {snapshot.tick}</p>
+            {encounters.length === 0 && <p className="v06-empty">No encounters by this Tick.</p>}
+            {encounters.map((episode) => {
+              const otherId = episode.participantIds.find((id) => id !== selected.id)!
+              return <button className={`v06-encounter-row ${selectedEncounterId === episode.id ? 'active' : ''}`}
+                key={episode.id} data-encounter-id={episode.id}
+                onClick={() => onSelectEncounter(episode.id,
+                  episode.status === 'active' ? undefined : episode.startedTick)}>
+                <strong>{identities.get(otherId)?.displayName ?? otherId}</strong>
+                <small>T{episode.startedTick}{episode.endedTick === null ? ' · active' :
+                  `–${episode.endedTick}`} · {episode.contactSeconds}s contact</small>
+                <small>{episode.placeId ?? episode.surfaceId ?? 'walkable space'} · INSPECT ↗</small>
+              </button>
+            })}
+            {selectedEpisode && <div className="v06-research-card v06-decision">
+              <div className="v06-card-head"><p className="v06-scope">DECISION EXPLANATION</p>
+                <button onClick={() => onSelectEncounter(null)}>CLEAR</button></div>
+              <small>{selectedEpisode.id}</small>
+              <dl><dt>Contact</dt><dd>{selectedEpisode.contactSeconds}s · nearest {(selectedEpisode.minDistanceMm / 1000).toFixed(2)}m</dd>
+                <dt>Perceived by</dt><dd>{selectedEpisode.perceivedBy.join(', ') || 'No one'}</dd>
+                <dt>Decisions</dt><dd>{selectedDecisions.length === 0 ? 'No mutual decision' :
+                  selectedDecisions.map((decision) =>
+                    `T${decision.tick} ${decision.phase}: ${decision.type} (${decision.reason}; consent ${decision.firstAccepted ? 'yes' : 'no'} / ${decision.secondAccepted ? 'yes' : 'no'})`).join(' · ')}</dd>
+                <dt>Trace</dt><dd>{selectedTraces.length > 0 ?
+                  selectedTraces.map((trace) =>
+                    `T${trace.tick} · ${trace.spatialRule} · ${trace.perceptionModel}`).join(' · ') :
+                  'No diagnostic trace recorded'}</dd></dl>
+              {selectedEpisode.lastContactGlobalSecond !== snapshot.tick * 6 &&
+                <p className="v06-empty">Historical encounter. Map rings show inspected-Tick positions; no current contact link.</p>}
+            </div>}
+          </div>}
+          {tab === 'memory' && <div className="v06-research-list">
+            <p className="v06-scope">SUBJECTIVE MEMORY & KNOWLEDGE</p>
+            {memories.length === 0 && knowledge.length === 0 && perceivedRisks.length === 0 &&
+              <p className="v06-empty">No retained subjective records by this Tick.</p>}
+            {memories.map((memory) => <div className="v06-research-card" key={memory.id}>
+              <strong>T{memory.createdTick} · {memory.category}</strong>
+              <small>{memory.observationCode} · {memory.source}</small>
+              <small>{memory.subjectToken ?? 'No person reference'} · {memory.placeId ?? 'No place'}</small>
+              <small>confidence {memory.confidence.toFixed(2)} · salience {memory.salience.toFixed(2)}</small>
+              <button onClick={() => { setPlaying(false); session.inspectTick(memory.createdTick) }}>INSPECT T{memory.createdTick} ↗</button>
+            </div>)}
+            {knowledge.map((record) => <div className="v06-research-card" key={record.id}>
+              <strong>T{record.acquiredTick} · {record.kind}</strong>
+              <small>{record.subjectToken ?? 'No person reference'} · {record.source}</small>
+              <small>Believed name: {record.believedIdentity ?? 'Unknown'} · confidence {record.confidence.toFixed(2)}</small>
+            </div>)}
+            {perceivedRisks.length > 0 && <p className="v06-scope">PERCEIVED PLACE RISK · SUBJECTIVE</p>}
+            {perceivedRisks.map((risk) => <div className="v06-research-card"
+              key={`${risk.ownerAgentId}:${risk.placeId}`}>
+              <strong>{risk.placeId} · {risk.score.toFixed(2)}</strong>
+              <small>Updated T{risk.lastUpdatedTick} from {risk.sourceObservationId}</small>
+              <small>Personal observation state; route choice does not yet use this value.</small>
+            </div>)}
+          </div>}
+          {tab === 'timeline' && <div className="v06-research-list">
+            <p className="v06-scope">RECORDED HISTORY · OBJECTIVE / SUBJECTIVE</p>
+            {timeline.length === 0 && <p className="v06-empty">No recorded events by this Tick.</p>}
+            {timeline.slice(0, 50).map((item) => <button className="v06-timeline-row"
+              key={item.id} onClick={() => {
+                setPlaying(false); session.inspectTick(item.tick)
+                if (item.episodeId) onSelectEncounter(item.episodeId)
+              }}>
+              <span>T{item.tick} · {item.label}</span><small>{item.scope} · INSPECT ↗</small>
+            </button>)}
           </div>}
         </section>}
       </>}
@@ -185,7 +324,9 @@ function V5Panel({ session, selectedId, onSelect, cameraController, level, setLe
           <option value="observed">OBSERVED</option><option value="truth">TRUTH</option>
           <option value="compare">COMPARE</option>
         </select></div>
-      <span>{snapshot.state.offences.length} TRUE EVENTS · {snapshot.state.reports.length} REPORTS</span>
+      <span>{mode === 'truth' ? `${snapshot.state.offences.length} TRUE EVENTS` :
+        mode === 'compare' ? `${snapshot.state.offences.length} TRUE EVENTS · ${session.getObserverView().reports.length} REPORTS` :
+          `${session.getObserverView().reports.length} REPORTS`}</span>
     </div>
   </>
 }
@@ -214,12 +355,17 @@ export function MultiLevelApp() {
   const world = useMemo(() => prototype ? generateWorldV2({ ...DEFAULT_WORLD_CONFIG_V2, seed }) :
     generateIntegratedWorld(seed), [prototype, seed])
   const session = useMemo(() => {
-    const next = new SimulationSessionV5(world, { ...DEFAULT_SIMULATION_CONFIG_V5, populationSize })
+    const next = new SimulationSessionV5(world, { ...DEFAULT_SIMULATION_CONFIG_V5,
+      populationSize, encounter: { ...DEFAULT_ENCOUNTER_SCENARIO_V1,
+        social: { ...DEFAULT_ENCOUNTER_SCENARIO_V1.social,
+          greetingWillingness: 0.7, conversationWillingness: 0.85,
+          diagnosticTraces: true } } })
     for (let tick = 0; tick < 100; tick += 1) next.advanceOneTick()
     return next
   }, [populationSize, world])
   const cameraController = useMemo(createCameraController, [])
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedEncounterId, setSelectedEncounterId] = useState<string | null>(null)
   const [level, setLevel] = useState<'all' | 'L0' | 'L1'>('all')
   const [pickedSurfaceId, setPickedSurfaceId] = useState<string | null>(null)
   const [cutaway, setCutaway] = useState(false)
@@ -266,7 +412,30 @@ export function MultiLevelApp() {
     window.__shadowCityV06 = fixture
     return () => { if (window.__shadowCityV06 === fixture) delete window.__shadowCityV06 }
   }, [cameraController, session, world])
-  const selectAgent = (id: string | null) => { setSelectedId(id); if (id) setSidebarOpen(true) }
+  const selectAgent = (id: string | null) => {
+    setSelectedId(id)
+    setSelectedEncounterId(null)
+    if (id) setSidebarOpen(true)
+  }
+  const selectEncounter = (episodeId: string | null, tick?: number) => {
+    setSelectedEncounterId(episodeId)
+    if (episodeId) {
+      setPlaying(false)
+      const inspected = tick === undefined ? session.getSnapshot().state : session.inspectTick(tick)
+      const episode = [...(inspected.social?.encounters.active ?? []),
+        ...(inspected.social?.encounters.completed ?? [])]
+        .find((item) => item.id === episodeId)
+      if (episode) {
+        const pair = episode.participantIds.map((id) => inspected.citizens.find((item) =>
+          item.id === id))
+        if (pair[0] && pair[1]) cameraController.inspectAt([
+          (pair[0].position.x + pair[1].position.x) / 2000,
+          (pair[0].position.y + pair[1].position.y) / 2000,
+          (pair[0].position.z + pair[1].position.z) / 2000,
+        ])
+      }
+    }
+  }
   const step = () => {
     setPlaying(false)
     if (session.getSnapshot().isInspecting) session.returnLive()
@@ -281,6 +450,7 @@ export function MultiLevelApp() {
   }, [])
   return <main className="v06-app" style={{ '--v06-sidebar-width': `${sidebarWidth}px` } as CSSProperties}>
     <V5Panel session={session} selectedId={selectedId} onSelect={selectAgent}
+      selectedEncounterId={selectedEncounterId} onSelectEncounter={selectEncounter}
       cameraController={cameraController} level={level} setLevel={setLevel}
       cutaway={cutaway} setCutaway={setCutaway} debug={debug} setDebug={setDebug}
       mode={mode} setMode={setMode} playing={playing} setPlaying={setPlaying}
@@ -305,7 +475,8 @@ export function MultiLevelApp() {
           }} />
         <WorldAgentLayerV5 session={session} selectedId={selectedId} onSelect={selectAgent}
           playing={playing} ticksPerSecond={4 * speed} level={level} />
-        <DynamicWorldOverlays session={session} selectedId={selectedId} mode={mode} />
+        <DynamicWorldOverlays session={session} selectedId={selectedId}
+          selectedEncounterId={selectedEncounterId} level={level} mode={mode} />
       </Canvas>
       <div className="v06-vignette" />
       {pickedSurfaceId && <div className="v06-surface-chip" aria-label="Picked surface">
