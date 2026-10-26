@@ -61,7 +61,7 @@ export function CityScene({ city, cameraController }: { city: CityModel; cameraC
       <EffectComposer multisampling={0}>
         <Bloom intensity={0.23} luminanceThreshold={1.2} luminanceSmoothing={0.2} mipmapBlur />
       </EffectComposer>
-      <CameraRig controller={cameraController} />
+      <CameraRig controller={cameraController} city={city} />
       {import.meta.env.DEV && <RenderDiagnostics />}
     </>
   )
