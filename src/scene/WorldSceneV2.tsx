@@ -76,6 +76,9 @@ function InstancedWorldBoxes({ boxes, onPick }: { boxes: readonly WorldBox[];
     <boxGeometry args={[1, 1, 1]} />
     {boxes[0]?.kind === 'accent' || boxes[0]?.kind === 'darkWindow'
       ? <meshBasicMaterial color="#ffffff" />
+      : boxes[0]?.kind === 'glass'
+        ? <meshStandardMaterial color="#ffffff" roughness={0.25} metalness={0.25}
+          transparent opacity={0.58} depthWrite={false} />
       : <meshStandardMaterial color="#ffffff" roughness={0.78} metalness={0.07} />}
   </instancedMesh>
 }
@@ -89,10 +92,13 @@ export function WorldSceneV2({ world, level, cutaway, debugNavigation, onPickSur
 }) {
   const groups = useMemo(() => {
     const candidates = [...(world.baseCity ? [] : roadBoxes(world)), ...world.boxes].filter((box) => {
-      if (cutaway && box.roofFor === 'central-galleria') return false
+      if (cutaway && (box.roofFor === 'central-galleria' ||
+        box.id.startsWith('galleria-west-glass'))) return false
       if (level === 'L0' && box.levelId === 'L1' &&
         (box.placeId === 'central-galleria' || box.roofFor === 'central-galleria' ||
-          box.placeId?.startsWith('overpass-') || box.placeId === 'skybridge-walkway')) return false
+          box.placeId?.startsWith('overpass-') || world.overpasses?.some((bridge) =>
+            box.placeId === (bridge.id === 'bridge' ? 'skybridge-walkway' :
+              `${bridge.id}:skybridge-walkway`)))) return false
       return true
     })
     const map = new Map<WorldBox['kind'], WorldBox[]>()
@@ -103,8 +109,10 @@ export function WorldSceneV2({ world, level, cutaway, debugNavigation, onPickSur
     }
     return [...map.entries()]
   }, [cutaway, level, world])
-  const debugEdges = useMemo(() => world.navEdges.filter((edge) =>
-    edge.kind !== 'walk' || edge.id.startsWith('bridge:')), [world])
+  const debugEdges = useMemo(() => {
+    const overpassEdges = new Set(world.overpasses?.flatMap((bridge) => bridge.deckEdgeIds) ?? [])
+    return world.navEdges.filter((edge) => edge.kind !== 'walk' || overpassEdges.has(edge.id))
+  }, [world])
   const { gl } = useThree()
   if (import.meta.env.DEV) {
     window.__shadowCityV06Rendering = { drawCalls: gl.info.render.calls,

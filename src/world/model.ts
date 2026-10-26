@@ -11,7 +11,7 @@ export interface WorldConfigV2 {
   readonly version: 2
   readonly seed: string
   readonly extentMm: number
-  readonly generatorVersion: 'district-world-v1' | 'heritage-overlay-v1' | 'heritage-extension-v2' | 'heritage-extension-v3' | 'heritage-extension-v4'
+  readonly generatorVersion: 'district-world-v1' | 'heritage-overlay-v1' | 'heritage-extension-v2' | 'heritage-extension-v3' | 'heritage-extension-v4' | 'heritage-extension-v5'
 }
 
 export interface DistrictV2 {
@@ -91,7 +91,7 @@ export interface WorldBox {
   readonly center: WorldPointMm
   readonly size: WorldPointMm
   readonly kind: 'building' | 'floor' | 'roof' | 'rail' | 'step' | 'road' | 'path' |
-    'accent' | 'trim' | 'darkWindow' | 'furniture'
+    'accent' | 'trim' | 'darkWindow' | 'glass' | 'furniture'
   readonly districtId?: string
   readonly placeId?: string
   readonly surfaceId?: string
@@ -101,6 +101,18 @@ export interface WorldBox {
   readonly rotationY?: number
   readonly rotationX?: number
   readonly rotationZ?: number
+}
+
+/** Navigation IDs and dimensions used to render an overpass from its static world data. */
+export interface OverpassInstance {
+  readonly id: string
+  readonly widthMm: number
+  readonly deckEdgeIds: readonly string[]
+  readonly stairEdgeIds: readonly [string, string]
+  readonly landingSurfaceIds: readonly [string, string]
+  readonly surfaceId: string
+  readonly terminalPoint: WorldPointMm | null
+  readonly stairSide: -1 | 1
 }
 
 export interface WorldModelV2 {
@@ -118,6 +130,7 @@ export interface WorldModelV2 {
   readonly places: readonly SemanticPlace[]
   readonly resources: readonly PlaceResource[]
   readonly boxes: readonly WorldBox[]
+  readonly overpasses?: readonly OverpassInstance[]
 }
 
 export const DEFAULT_WORLD_CONFIG_V2: WorldConfigV2 = Object.freeze({

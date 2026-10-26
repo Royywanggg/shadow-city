@@ -6,6 +6,7 @@ import type { GroundPointMm, NavEdgeV2, SemanticPlace, WalkableSurface, WorldBox
   WorldConfigV2, WorldModelV2, WorldPointMm } from '../model'
 import { WorldBuilder } from './WorldBuilder'
 import { expandOriginalCity, EXPANDED_CITY_SIZE } from './expandOriginalCity'
+import { buildOverpass } from '../overpass/buildOverpass'
 
 const mm = (value: number) => Math.round(value * 1000)
 const point = (x: number, y: number, z: number): WorldPointMm => ({ x: mm(x), y: mm(y), z: mm(z) })
@@ -16,7 +17,7 @@ const rect = (x0: number, x1: number, z0: number, z1: number): readonly GroundPo
 
 export const INTEGRATED_WORLD_CONFIG_V2: WorldConfigV2 = Object.freeze({
   version: 2, seed: HERO_SEED, extentMm: EXPANDED_CITY_SIZE * 1000,
-  generatorVersion: 'heritage-extension-v4',
+  generatorVersion: 'heritage-extension-v5',
 })
 
 function surface(id: string, levelId: string, placeId: string | null,
@@ -72,15 +73,6 @@ function curvedPath(waypoints: readonly WorldPointMm[], samplesPerSegment = 5): 
   }
   result.push(waypoints.at(-1)!)
   return result
-}
-
-function linearPath(start: WorldPointMm, end: WorldPointMm, segments: number): WorldPointMm[] {
-  return Array.from({ length: segments + 1 }, (_, index) => {
-    const t = index / segments
-    return { x: Math.round(start.x + (end.x - start.x) * t),
-      y: Math.round(start.y + (end.y - start.y) * t),
-      z: Math.round(start.z + (end.z - start.z) * t) }
-  })
 }
 
 /** Adds multi-level places to the existing city's exact roads, blocks and pedestrian graph. */
@@ -200,19 +192,7 @@ export function generateIntegratedWorld(seed = HERO_SEED): WorldModelV2 {
   const bridgeZ = plaza.z - plaza.depth * 0.24
   const bridgeWest = plazaEast - 1.9
   const bridgeEast = mallWest - 0.12
-  const bridgeGalleria = minX + 0.5
   const stairFootZ = bridgeZ - 9.1
-  const stairTopZ = bridgeZ - 0.9
-  for (const [side, x] of [['west', bridgeWest], ['east', bridgeEast]] as const) {
-    builder.surface(surface(`overpass-${side}-foot`, 'L0', `overpass-${side}-access`,
-      rect(x - 1.25, x + 1.25, stairFootZ - 1.25, stairFootZ + 1.25), 250))
-    builder.surface(surface(`overpass-${side}-landing`, 'L1', `overpass-${side}-access`,
-      rect(x - 1.25, x + 1.25, bridgeZ - 1.65, bridgeZ + 1.35), 5_500))
-    builder.surface(surface(`connector:${side}-stair`, 'L0-L1', `overpass-${side}-access`,
-      rect(x - 1.25, x + 1.25, stairFootZ - 0.4, bridgeZ + 0.4), 250))
-  }
-  builder.surface(surface('skybridge', 'L1', 'skybridge-walkway',
-    rect(bridgeWest - 0.5, bridgeGalleria + 0.5, bridgeZ - 1.4, bridgeZ + 1.4), 5_500))
   const rampA = minX + 1.25
   const rampB = minX + 3.2
   builder.surface(surface('connector:east-ramp', 'L0-L1', mallId,
@@ -238,50 +218,16 @@ export function generateIntegratedWorld(seed = HERO_SEED): WorldModelV2 {
     l1West, 'walk', { surfaceId: 'galleria-l1' })
   edge(builder, 'portal:galleria-ground', 'mall:west-mid', l0West,
     'portal', { surfaceId: null, accessId: 'mall-entry' })
-  builder.node('bridge:west', point(bridgeWest, 5.5, bridgeZ), 'skybridge')
-  builder.node('bridge:east', point(bridgeEast, 5.5, bridgeZ), 'skybridge')
-  builder.node('bridge:galleria', point(bridgeGalleria, 5.5, bridgeZ), 'skybridge')
-  edge(builder, 'bridge:deck', 'bridge:west', 'bridge:east', 'walk', {
-    surfaceId: 'skybridge', path: linearPath(point(bridgeWest, 5.5, bridgeZ),
-      point(bridgeEast, 5.5, bridgeZ), 18),
-  })
-  edge(builder, 'bridge:galleria-approach', 'bridge:east', 'bridge:galleria',
-    'walk', { surfaceId: 'skybridge' })
-  edge(builder, 'portal:galleria-upper', 'bridge:galleria', l1West, 'portal',
-    { surfaceId: null, accessId: 'mall-entry', accessIds: ['mall-entry', 'bridge-entry'] })
   const plazaNodes = retainedCity.pedestrian.nodes.filter((node) => node.id.startsWith('ped-place-block-3-3'))
-  for (const [side, x, approachId, bridgeId] of [
-    ['west', bridgeWest, nearest(plazaNodes, bridgeWest, stairFootZ).id, 'bridge:west'],
-    ['east', bridgeEast, nearest(mallRing, bridgeEast, stairFootZ).id, 'bridge:east'],
-  ] as const) {
-    const foot = `overpass:${side}:foot`
-    const stairStart = `overpass:${side}:stair-start`
-    const stairEnd = `overpass:${side}:stair-end`
-    const landing = `overpass:${side}:landing`
-    builder.node(foot, point(x, 0.25, stairFootZ - 0.6), `overpass-${side}-foot`)
-    builder.node(stairStart, point(x, 0.25, stairFootZ), `overpass-${side}-foot`)
-    builder.node(stairEnd, point(x, 5.5, stairTopZ), `overpass-${side}-landing`)
-    builder.node(landing, point(x, 5.5, bridgeZ - 0.2), `overpass-${side}-landing`)
-    edge(builder, `portal:overpass-${side}-ground`, approachId, foot,
-      'portal', { surfaceId: null })
-    edge(builder, `overpass:${side}:foot-access`, foot, stairStart,
-      'walk', { surfaceId: `overpass-${side}-foot` })
-    edge(builder, `connector:${side}-stair`, stairStart, stairEnd, 'stair', {
-      surfaceId: null, connectorId: `${side}-stair`,
-      path: linearPath(point(x, 0.25, stairFootZ), point(x, 5.5, stairTopZ), 30),
-    })
-    edge(builder, `overpass:${side}:landing-access`, stairEnd, landing,
-      'walk', { surfaceId: `overpass-${side}-landing` })
-    edge(builder, `portal:overpass-${side}-bridge`, landing, bridgeId,
-      'portal', { surfaceId: null, accessId: 'bridge-entry' })
-    builder.places.push({ id: `overpass-${side}-access`,
-      name: `${side === 'west' ? 'Plaza' : 'Galleria'} Overpass Stair`, kind: 'walkway',
-      districtId: side === 'west' ? plaza.id : mallBlock.id,
-      surfaceIds: [`overpass-${side}-foot`, `overpass-${side}-landing`],
-      accessNodeIds: [foot, landing], slotNodeIds: [foot, landing],
-      activityTags: ['transfer'], openingHours: [{ openMinute: 0, closeMinute: 1440 }],
-      capacity: 2, attractiveness: 0.3, typicalVisitTicks: [5, 15] })
-  }
+  const overpass = buildOverpass(builder, { id: 'bridge',
+    start: point(bridgeWest, 5.5, bridgeZ), end: point(bridgeEast, 5.5, bridgeZ),
+    widthMm: 2_500, groundElevationMm: 250, stairRunMm: 8_200, stairSide: -1,
+    groundApproachNodeIds: [nearest(plazaNodes, bridgeWest, stairFootZ).id,
+      nearest(mallRing, bridgeEast, stairFootZ).id],
+    districtIds: [plaza.id, mallBlock.id],
+    terminal: { point: point(minX, 5.5, bridgeZ), indoorNodeId: l1West,
+      accessIds: ['mall-entry', 'bridge-entry'] },
+  })
   const rampLower = 'galleria:l0:ramp-lower'
   const rampUpper = 'galleria:l1:ramp-upper'
   builder.node(rampLower, point(rampA, 0.25, south), 'galleria-l0')
@@ -303,20 +249,11 @@ export function generateIntegratedWorld(seed = HERO_SEED): WorldModelV2 {
       path: [point(east, 0.25, south), point(east, 2.75, 0), point(east, 5.5, north)],
     })
   builder.connectors.push(
-    { id: 'west-stair', kind: 'stair', lowerSurfaceId: 'overpass-west-foot', upperSurfaceId: 'overpass-west-landing',
-      edgeIds: ['connector:west-stair'], capacity: 10 },
-    { id: 'east-stair', kind: 'stair', lowerSurfaceId: 'overpass-east-foot', upperSurfaceId: 'overpass-east-landing',
-      edgeIds: ['connector:east-stair'], capacity: 10 },
     { id: 'east-ramp', kind: 'ramp', lowerSurfaceId: 'galleria-l0', upperSurfaceId: 'galleria-l1',
       edgeIds: ['connector:east-ramp'], capacity: 10 },
     { id: 'galleria-escalator', kind: 'escalator', lowerSurfaceId: 'galleria-l0', upperSurfaceId: 'galleria-l1',
       edgeIds: ['connector:galleria-escalator'], capacity: 8 },
   )
-  builder.places.push({ id: 'skybridge-walkway', name: 'Civic Skybridge', kind: 'walkway',
-    districtId: mallBlock.id, surfaceIds: ['skybridge'],
-    accessNodeIds: ['bridge:west', 'bridge:east'], slotNodeIds: ['bridge:west', 'bridge:east'],
-    activityTags: ['transfer'], openingHours: [{ openMinute: 0, closeMinute: 1440 }],
-    capacity: 2, attractiveness: 0.3, typicalVisitTicks: [5, 15] })
   builder.places.push({ id: mallId, name: 'Central Galleria', kind: 'mall',
     districtId: mallBlock.id, surfaceIds: ['galleria-l0', 'galleria-l1'],
     accessNodeIds: [l0West, l1West],
@@ -356,23 +293,6 @@ export function generateIntegratedWorld(seed = HERO_SEED): WorldModelV2 {
   const boxes = builder.boxes
   boxes.push(box('integrated-crosswalk', 'path', (plazaEast + mallWest) / 2, 0.095, 0,
     mallWest - plazaEast - 0.5, 0.02, 1.55, '#aab7af', { surfaceId: 'ground' }))
-  for (const [side, x] of [['west', bridgeWest], ['east', bridgeEast]] as const) {
-    boxes.push(box(`overpass-${side}-footpad`, 'path', x, 0.2, stairFootZ - 0.2,
-      2.75, 0.12, 2.6, '#577484',
-      { placeId: `overpass-${side}-access`, levelId: 'L0', surfaceId: `overpass-${side}-foot` }))
-  }
-  for (const [side, x] of [['west', bridgeWest], ['east', minX - 0.15]] as const) {
-    for (const edgeSide of [-1, 1]) {
-      boxes.push(box(`overpass-${side}-pier-${edgeSide}`, 'trim', x, 2.6,
-        bridgeZ + edgeSide * 1.25, 0.3, 5.2, 0.3, '#177ba8',
-        { placeId: 'skybridge-walkway' }))
-      boxes.push(box(`overpass-${side}-footing-${edgeSide}`, 'trim', x, 0.16,
-        bridgeZ + edgeSide * 1.25, 0.65, 0.32, 0.65, '#3b6176',
-        { placeId: 'skybridge-walkway', levelId: 'L0' }))
-    }
-    boxes.push(box(`overpass-${side}-crosshead`, 'trim', x, 5.1, bridgeZ,
-      0.42, 0.3, 3.0, '#197fae', { placeId: 'skybridge-walkway', levelId: 'L1' }))
-  }
   boxes.push(box('galleria-ground-floor', 'floor', mallBlock.x, 0.15, 0,
     maxX - minX, 0.2, maxZ - minZ, '#4b6270',
     { placeId: mallId, levelId: 'L0', surfaceId: 'galleria-l0' }))
@@ -419,11 +339,23 @@ export function generateIntegratedWorld(seed = HERO_SEED): WorldModelV2 {
         'trim', minX, 5.8, z, 0.42, 9.4, 0.32, '#738c99', { placeId: mallId }))
     }
   }
-  for (const side of [-1, 1]) boxes.push(box(`galleria-bridge-jamb-${side}`,
-    'trim', minX - 0.1, 7.1, bridgeZ + side * 1.5,
-    0.5, 3.2, 0.4, '#197fae', { placeId: mallId, levelId: 'L1' }))
-  boxes.push(box('galleria-bridge-lintel', 'trim', minX - 0.1, 8.7,
-    bridgeZ, 0.5, 0.35, 3.3, '#197fae', { placeId: mallId, levelId: 'L1' }))
+  const portalHalfWidth = overpass.widthMm / 2_000 + 0.18
+  for (const [id, z0, z1] of [
+    ['bridge-north', minZ + 0.35, bridgeZ - portalHalfWidth],
+    ['bridge-south', bridgeZ + portalHalfWidth, -3.2],
+    ['ground-south', 3.2, maxZ - 0.35],
+  ] as const) {
+    if (z1 - z0 < 0.3) continue
+    boxes.push(box(`galleria-west-glass-${id}`, 'glass', minX + 0.06, 7.1,
+      (z0 + z1) / 2, 0.08, 3.2, z1 - z0, '#55798b',
+      { placeId: mallId, levelId: 'L1' }))
+    boxes.push(box(`galleria-west-transom-${id}`, 'trim', minX + 0.02, 8.72,
+      (z0 + z1) / 2, 0.18, 0.12, z1 - z0, '#7297a8',
+      { placeId: mallId, levelId: 'L1' }))
+  }
+  boxes.push(box('galleria-overpass-threshold', 'trim', minX, 5.505, bridgeZ,
+    0.1, 0.03, overpass.widthMm / 1000, '#8fb9c8',
+    { placeId: mallId, levelId: 'L1', surfaceId: 'galleria-l1' }))
   for (const side of [-1, 1]) {
     boxes.push(box(`galleria-portal-column-${side}`, 'trim', minX - 0.12, 4.2,
       side * 2.85, 0.7, 8.4, 0.72, '#829ba3', { placeId: mallId }))
@@ -463,5 +395,5 @@ export function generateIntegratedWorld(seed = HERO_SEED): WorldModelV2 {
       from: road.from, to: road.to, widthMm: mm(road.width) })),
     surfaces: builder.surfaces, navNodes: builder.nodes, navEdges: builder.edges,
     connectors: builder.connectors, places: builder.places, resources: builder.resources,
-    boxes }
+    boxes, overpasses: [overpass] }
 }

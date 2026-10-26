@@ -23,7 +23,7 @@ export function worldFingerprintV5(world: WorldModelV2, config: SimulationConfig
     districts: world.districts, roadNodes: world.roadNodes, roadEdges: world.roadEdges,
     surfaces: world.surfaces, navNodes: world.navNodes, navEdges: world.navEdges,
     connectors: world.connectors, places: world.places,
-    resources: world.resources, boxes: world.boxes }))
+    resources: world.resources, boxes: world.boxes, overpasses: world.overpasses }))
   const modelHash = hashSeed(JSON.stringify({ config, commands }))
   return `world-v2:${world.config.generatorVersion}:${worldHash.toString(16)}:sim-v5:${modelHash.toString(16)}`
 }

@@ -3,7 +3,8 @@ import { generateCity, HERO_SEED } from '../../city/generation/generateCity'
 import { createEnvironmentV5, createInitialStateV5 } from '../../simulation/engineV5'
 import { DEFAULT_SIMULATION_CONFIG_V5 } from '../../simulation/v5Types'
 import { createNavigationIndexV2, findRouteV2 } from '../navigation/routeV2'
-import { createWalkwayDeckGeometry } from '../../scene/WalkwayStructures'
+import { createWalkwayDeckGeometry, overpassDeckPath,
+  overpassGuardPaths } from '../../scene/WalkwayStructures'
 import { generateIntegratedWorld } from './generateIntegratedWorld'
 
 describe('original-city v0.6 integration', () => {
@@ -152,5 +153,39 @@ describe('original-city v0.6 integration', () => {
 
   it('reproduces the same integrated static world from the same original seed', () => {
     expect(generateIntegratedWorld()).toEqual(generateIntegratedWorld())
+  })
+
+  it('ends the blue deck at the Galleria facade with guards on both exposed sides', () => {
+    const world = generateIntegratedWorld()
+    const bridge = world.overpasses![0]
+    const edges = new Map(world.navEdges.map((item) => [item.id, item]))
+    const deck = overpassDeckPath(bridge, edges)
+    const guards = overpassGuardPaths(bridge, edges)
+    const mall = world.surfaces.find((surface) => surface.id === 'galleria-l1')!
+    const facadeX = Math.min(...mall.polygonXZ.map((point) => point.x))
+    expect(bridge.terminalPoint!.x).toBe(facadeX)
+    expect(deck.at(-1)!.x).toBe(facadeX)
+    expect(deck.every((point) => point.x <= facadeX)).toBe(true)
+    expect(guards.full.at(-1)!.x).toBe(facadeX)
+    expect(guards.stairSide.at(-1)!.at(-1)!.x).toBe(facadeX)
+    expect(guards.stairSide).toHaveLength(2)
+    const blue = createWalkwayDeckGeometry(deck, bridge.widthMm / 1000)
+    blue.computeBoundingBox()
+    expect(blue.boundingBox!.max.x).toBeCloseTo(facadeX / 1000, 3)
+    blue.dispose()
+    expect(world.boxes.filter((box) => box.id.startsWith('overpass-terminal-jamb-')))
+      .toHaveLength(2)
+    expect(world.boxes.some((box) => box.id === 'overpass-terminal-lintel')).toBe(true)
+    const portalZ = bridge.terminalPoint!.z
+    const openingHalfWidth = bridge.widthMm / 2
+    for (const pane of world.boxes.filter((box) => box.id.startsWith('galleria-west-glass-'))) {
+      const paneMinZ = pane.center.z - pane.size.z / 2
+      const paneMaxZ = pane.center.z + pane.size.z / 2
+      expect(paneMaxZ <= portalZ - openingHalfWidth ||
+        paneMinZ >= portalZ + openingHalfWidth).toBe(true)
+    }
+    const threshold = world.boxes.find((box) => box.id === 'galleria-overpass-threshold')!
+    expect(threshold.center.x).toBe(facadeX)
+    expect(Math.abs(threshold.center.y - bridge.terminalPoint!.y)).toBeLessThan(30)
   })
 })
