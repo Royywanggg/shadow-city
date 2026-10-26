@@ -92,15 +92,31 @@ This roadmap is milestone-based, not date-based. Each milestone should leave a u
 - Tick 500 Replay, historical inspection, Reset, Pause, Step, speed, and camera isolation preserve the same incident, report, and citizen facts. Tests cover zero/one reporting probability, delay boundaries, counterfactual invariance, information isolation, event ordering, spatial legality, and zero-denominator metrics. Type checking and production build pass.
 - At `shadow-city-hero-01`, 1440 × 900 CSS pixels and DPR 1, inspect browser screenshots at Tick 0, 100, and 500 for all three modes, a close marker view, cardinal bearings, and a narrow viewport. Use documented synthetic scenario parameters that produce real events; do not insert presentation-only incidents. Record browser errors, tick/replay cost, event growth, draw calls, triangles, FPS/frame-time samples, and software-versus-hardware rendering limits.
 
-## v0.5 — Policing strategies
+## v0.5A — Offender behaviour foundation
 
-**Goal:** Compare strategies under transparent model assumptions.
+**Goal:** Replace anonymous synthetic incident trials in a new, versioned model with explicit agent decisions while preserving v0.4 as a separate legacy model.
 
-**In scope:** Configurable police behavior and allocation policies, strategy inputs, and outcome measures that do not confuse reported activity with underlying events.
+**In scope:** Stable per-citizen behavioural profiles, tunable minor/serious propensity association, legal pedestrian opportunity snapshots, one mutually exclusive No Offence/Minor/Serious decision per eligible agent and Tick, private offender attribution, distinct offence and incident IDs, isolated RNG streams, reporting integration, and exact replay. Profiles are synthetic research parameters, not labels displayed on citizens or estimates from real crime data.
 
-**Exit criteria:** Strategies can run against the same seeded scenario; parameters and assumptions are visible; outputs distinguish ground truth from observations.
+**Exit criteria:** No opportunity produces no offence; generated locations coincide with legal post-movement citizen positions; every offender-driven incident links to exactly one attributed offence and one truth event; changing only reporting leaves citizen and ground-truth histories unchanged; Tick 500 Replay and Reset reproduce all state; v0.4 legacy runs remain identical; focused tests, type checking, and production build pass.
 
-## v0.6 — Experiment comparison
+## v0.5B — Investigative information readiness
+
+**Goal:** Make observer knowledge and researcher truth separately inspectable without implying that a named suspect is a proven offender.
+
+**In scope:** Unknown or evidence-backed named suspect leads, a small explicitly synthetic witness/identity-observation process, safe observer read models, researcher-only offence history and behavioural profiles, descriptive minor/serious overlap metrics, and grounded incident symbols in the cinematic city. Keep existing camera, playback, and three observation views.
+
+**Exit criteria:** No public view, tooltip, agent selection, or development fixture exposes hidden offender identity or future evidence; named leads have a visible source and availability Tick and may be inaccurate; zero-denominator and reporting-bias cases are handled explicitly. Browser review at the fixed hero seed and 1440 × 900 covers Tick 0/100/500, views, close markers, cardinal bearings, narrow layout, replay, and 100 citizens; record performance and visual limitations. Legacy v0.4 browser regression, tests, type checking, and build pass.
+
+## v0.6 — Policing strategy design and implementation
+
+**Goal:** Compare explicit police decision strategies under transparent model assumptions.
+
+**In scope:** Configurable investigative actions and costs, lawful observation inputs, attribution decisions, and carefully defined SSP, hotspot, and baseline comparisons. Policy interventions may change later ground truth; share initial conditions and exogenous random samples without forcing outcomes to be identical.
+
+**Exit criteria:** Strategies consume only permitted knowledge, use reproducible decisions, and report detection and cost metrics only when corresponding mechanisms exist.
+
+## v0.7 — Experiment comparison
 
 **Goal:** Make repeated experiments understandable and shareable.
 
