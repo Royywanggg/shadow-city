@@ -1,0 +1,95 @@
+{
+  "seed": "shadow-city-hero-01",
+  "simulationSeed": "shadow-city-sim-01",
+  "tick": 100,
+  "viewport": "1440x900",
+  "dpr": 1,
+  "browser": "156.0.8078.48",
+  "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+  "targets": {
+    "civic": {
+      "id": "building-block-3-2-0-0",
+      "x": 0.003928287336602804,
+      "z": -41.448944280138235,
+      "entrance": {
+        "x": 0.003928287336602804,
+        "z": -36.506681816885525,
+        "face": "south"
+      }
+    },
+    "commercial": {
+      "id": "building-block-3-4-0-0",
+      "x": 0.01704306598752736,
+      "z": 39.413687190255146,
+      "entrance": {
+        "x": 0.01704306598752736,
+        "z": 43.1898435041944,
+        "face": "south"
+      }
+    }
+  },
+  "stages": {
+    "final-no-shadows": {
+      "averageFps": 60.021607778764576,
+      "frameP50Ms": 16.69999999552965,
+      "frameP95Ms": 27.299999997019768,
+      "frameSamples": 149,
+      "rendering": {
+        "drawCalls": 210,
+        "triangles": 223359,
+        "geometries": 302,
+        "textures": 36,
+        "geometryBufferBytes": 421796,
+        "instanceBufferBytes": 1496820,
+        "textureSourceBytesEstimated": 5745328,
+        "medianActiveFrameMs": 16.69999999552965,
+        "p50ActiveFrameMs": 16.69999999552965,
+        "p95ActiveFrameMs": 17.600000001490116,
+        "sampledFrames": 120,
+        "renderedFrames": 673
+      }
+    },
+    "final": {
+      "averageFps": 58.75064945442327,
+      "frameP50Ms": 16.69999999552965,
+      "frameP95Ms": 31.5,
+      "frameSamples": 146,
+      "rendering": {
+        "drawCalls": 316,
+        "triangles": 312945,
+        "geometries": 290,
+        "textures": 38,
+        "geometryBufferBytes": 421796,
+        "instanceBufferBytes": 1496820,
+        "textureSourceBytesEstimated": 5745328,
+        "medianActiveFrameMs": 16.69999999552965,
+        "p50ActiveFrameMs": 16.69999999552965,
+        "p95ActiveFrameMs": 23.400000005960464,
+        "sampledFrames": 120,
+        "renderedFrames": 1358
+      }
+    },
+    "final-bloom-on": {
+      "averageFps": 57.18856228754249,
+      "frameP50Ms": 16.700000002980232,
+      "frameP95Ms": 36,
+      "frameSamples": 142,
+      "rendering": {
+        "drawCalls": 332,
+        "triangles": 312961,
+        "geometries": 302,
+        "textures": 54,
+        "geometryBufferBytes": 421796,
+        "instanceBufferBytes": 1496820,
+        "textureSourceBytesEstimated": 5745328,
+        "medianActiveFrameMs": 16.69999999552965,
+        "p50ActiveFrameMs": 16.69999999552965,
+        "p95ActiveFrameMs": 29.600000001490116,
+        "sampledFrames": 120,
+        "renderedFrames": 510
+      }
+    }
+  },
+  "errors": [],
+  "timerQueryAvailable": true
+}
