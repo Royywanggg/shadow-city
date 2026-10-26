@@ -15,7 +15,18 @@ export const MIN_PITCH_DEG = 25
 export const MAX_PITCH_DEG = 65
 export const MIN_ZOOM_RATIO = 0.72
 export const MAX_ZOOM_RATIO = 2.8
+export const MAX_INSPECT_ZOOM_RATIO = 9
 export const MAX_TARGET_OFFSET = 66
+
+/** Allow programmatic tracking to reach legal city edge positions without leaving the city unbounded. */
+export function clampCityCameraTarget(target: CameraTarget, citySize: number): CameraTarget {
+  const limit = Math.max(MAX_TARGET_OFFSET, citySize / 2 + 8)
+  return [
+    Math.max(-limit, Math.min(limit, target[0])),
+    0,
+    Math.max(-limit, Math.min(limit, target[2])),
+  ]
+}
 
 export function normalizeBearing(degrees: number): number {
   if (!Number.isFinite(degrees)) return 0

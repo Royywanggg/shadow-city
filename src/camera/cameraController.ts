@@ -1,12 +1,17 @@
 import {
   INITIAL_CAMERA_VIEW,
   normalizeBearing,
+  type CameraTarget,
   type CameraViewState,
 } from './viewState'
 
 export interface CameraAdapter {
   setBearing(degrees: number): void
   setPitch(degrees: number): void
+  setTarget(target: CameraTarget, preserveZoom?: boolean): void
+  inspectTarget(target: CameraTarget): void
+  exitInspectMode(): void
+  cancelTarget(): void
   resetView(): void
 }
 
@@ -14,9 +19,14 @@ export class CameraController {
   private snapshot: CameraViewState = INITIAL_CAMERA_VIEW
   private adapter: CameraAdapter | null = null
   private requestedBearing: number | null = null
+  private followTarget: (() => CameraTarget | null) | null = null
+  private inspectingCharacter = false
   private readonly listeners = new Set<() => void>()
 
   getSnapshot = (): CameraViewState => this.snapshot
+  getFollowing = (): boolean => this.followTarget !== null
+  getInspectingCharacter = (): boolean => this.inspectingCharacter
+  getFollowTarget = (): CameraTarget | null => this.followTarget?.() ?? null
 
   subscribe = (listener: () => void): (() => void) => {
     this.listeners.add(listener)
@@ -60,14 +70,54 @@ export class CameraController {
 
   beginDirectInteraction(): void {
     this.requestedBearing = null
+    this.stopFollowing()
+    this.adapter?.cancelTarget()
   }
 
   setPitch(degrees: number): void {
     this.adapter?.setPitch(degrees)
   }
 
+  focusAt(target: CameraTarget): void {
+    this.stopFollowing()
+    this.exitInspectMode()
+    this.adapter?.setTarget(target)
+  }
+
+  inspectAt(target: CameraTarget): void {
+    this.stopFollowing()
+    if (!this.inspectingCharacter) {
+      this.inspectingCharacter = true
+      this.listeners.forEach((listener) => listener())
+    }
+    this.adapter?.inspectTarget(target)
+  }
+
+  exitInspectMode(): void {
+    if (!this.inspectingCharacter) return
+    this.inspectingCharacter = false
+    this.adapter?.exitInspectMode()
+    this.listeners.forEach((listener) => listener())
+  }
+
+  follow(getTarget: () => CameraTarget | null): void {
+    this.followTarget = getTarget
+    const target = getTarget()
+    if (target) this.adapter?.setTarget(target, true)
+    this.listeners.forEach((listener) => listener())
+  }
+
+  stopFollowing(): void {
+    if (!this.followTarget) return
+    this.followTarget = null
+    this.listeners.forEach((listener) => listener())
+  }
+
   resetView(): void {
     this.requestedBearing = null
+    this.stopFollowing()
+    this.exitInspectMode()
+    this.adapter?.cancelTarget()
     this.adapter?.resetView()
   }
 }
