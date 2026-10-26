@@ -154,4 +154,40 @@ describe('v4 offender-driven scenario', () => {
     expect(captured.config.observation.identity.accuracyProbability).toBeGreaterThan(0)
     expect(Object.isFrozen(captured.config.offending.baseOddsPerEligibleAgentHour)).toBe(true)
   })
+
+  it('defines empty-population metrics and rejects history overflow atomically', () => {
+    const empty = new SimulationSession(city, {
+      ...scenario(0.6), citizen: { ...scenario(0.6).citizen, populationSize: 0 },
+    })
+    advance(empty, 100)
+    const metrics = empty.getGroundTruthViewV4().metrics
+    expect(metrics.totalOffences).toBe(0)
+    expect(metrics.frequency).toEqual({ zero: 0, one: 0, twoOrMore: 0 })
+    expect(metrics.association.seriousGivenMinor).toBeNull()
+    expect(metrics.association.riskDifference).toBeNull()
+
+    const capped = new SimulationSession(city, scenario(0.6), {
+      maxTicks: 500,
+      maxCommands: 10,
+      maxEvents: 10_000,
+      maxPendingActions: 100,
+      maxIncidents: 1,
+      maxReports: 100,
+    })
+    let rejected = false
+    for (let tick = 1; tick <= 100; tick += 1) {
+      const before = capped.getSnapshot()
+      const truthBefore = capped.getTruthEventHistory()
+      try {
+        capped.advanceOneTick()
+      } catch (error) {
+        expect(String(error)).toMatch(/history limit/)
+        expect(capped.getSnapshot()).toBe(before)
+        expect(capped.getTruthEventHistory()).toEqual(truthBefore)
+        rejected = true
+        break
+      }
+    }
+    expect(rejected).toBe(true)
+  })
 })

@@ -19,7 +19,7 @@ import type {
   StaticCity,
 } from './types'
 import type { GroundTruthView, IncidentOccurredEvent, ObservedWorldView, ObserverPort, ReportAvailableEvent } from './v3Types'
-import type { GroundTruthViewV4, ObservedWorldViewV4, ObserverPortV4, OffenceOccurredEvent, ReportAvailableEventV4 } from './v4Types'
+import type { GroundTruthViewV4, ObservedWorldViewV4, ObserverPortV4, OffenceOccurredEvent, ReportAvailableEventV4, SimulationStateV4 } from './v4Types'
 
 export interface SimulationHistoryLimits {
   readonly maxTicks: number
@@ -123,6 +123,7 @@ export class SimulationSession {
   private truthEventHistory: (IncidentOccurredEvent | OffenceOccurredEvent)[] = []
   private observationEventHistory: (ReportAvailableEvent | ReportAvailableEventV4)[] = []
   private inspected: ReplayResult | null = null
+  private truthViewV4Cache: { readonly state: SimulationStateV4; readonly view: GroundTruthViewV4 } | null = null
   private snapshot: SimulationSnapshot
   private listeners = new Set<() => void>()
 
@@ -211,9 +212,10 @@ export class SimulationSession {
     if (state.version !== 4 || this.config.version !== 4 || !this.environmentV4) {
       throw new Error('V4 ground truth is unavailable in this simulation version')
     }
+    if (this.truthViewV4Cache?.state === state) return this.truthViewV4Cache.view
     const groupByAgentId = Object.fromEntries(this.environmentV4.profiles.map((profile) =>
       [profile.agentId, profile.researchGroup]))
-    return deepFreeze({
+    const view = deepFreeze({
       asOfTick: state.tick,
       incidents: state.incidents,
       offences: state.offences,
@@ -228,6 +230,8 @@ export class SimulationSession {
         state.tick,
       ),
     })
+    this.truthViewV4Cache = { state, view }
+    return view
   }
 
   getObservedWorldViewV4(): ObservedWorldViewV4 {
