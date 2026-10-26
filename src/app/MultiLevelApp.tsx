@@ -246,9 +246,12 @@ function V5Panel({ session, selectedId, onSelect, selectedEncounterId, onSelectE
                   selectedDecisions.map((decision) =>
                     `T${decision.tick} ${decision.phase}: ${decision.type} (${decision.reason}; consent ${decision.firstAccepted ? 'yes' : 'no'} / ${decision.secondAccepted ? 'yes' : 'no'})`).join(' · ')}</dd>
                 <dt>Trace</dt><dd>{selectedTraces.length > 0 ?
-                  selectedTraces.map((trace) =>
-                    `T${trace.tick} · ${trace.spatialRule} · ${trace.perceptionModel}`).join(' · ') :
-                  'No diagnostic trace recorded'}</dd></dl>
+                  selectedTraces.map((trace) => <div className="v06-trace-row"
+                    key={`${trace.episodeId}:${trace.phase}`}>
+                    T{trace.tick} {trace.phase} · {trace.spatialRule}<br />
+                    A: p={trace.firstChance?.toFixed(3) ?? 'not evaluated'}, draw={trace.firstDraw?.toFixed(3) ?? '—'}, sociability={trace.firstSociability.toFixed(2)}, familiarity={trace.firstFamiliarity.toFixed(2)}, time={trace.firstAvailableTicks} Ticks<br />
+                    B: p={trace.secondChance?.toFixed(3) ?? 'not evaluated'}, draw={trace.secondDraw?.toFixed(3) ?? '—'}, sociability={trace.secondSociability.toFixed(2)}, familiarity={trace.secondFamiliarity.toFixed(2)}, time={trace.secondAvailableTicks} Ticks
+                  </div>) : 'No diagnostic trace retained'}</dd></dl>
               {selectedEpisode.lastContactGlobalSecond !== snapshot.tick * 6 &&
                 <p className="v06-empty">Historical encounter. Map rings show inspected-Tick positions; no current contact link.</p>}
             </div>}

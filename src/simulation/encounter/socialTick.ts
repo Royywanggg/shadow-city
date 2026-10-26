@@ -3,7 +3,7 @@ import type { CitizenStateV5 } from '../v5Types'
 import { createCitizenIdentity } from '../population'
 import { hashSeed } from '../rng'
 import { createSocialProfileV1 } from './socialProfiles'
-import { decideMutualInteractionV1, materializeInteractionV1 } from './interaction'
+import { evaluateMutualInteractionV1, materializeInteractionV1 } from './interaction'
 import { createRecognitionTokenV1, decayMemoriesV1, rememberExperienceV1,
   upsertKnowledgeV1 } from './memory'
 import { decayDirectedRelationshipV1, setRelationshipIdentityBeliefV1,
@@ -230,19 +230,21 @@ export function advanceSocialTickV1(input: SocialTickInputV1): SocialTickResultV
     const secondProfile = profiles.get(secondId)!
     const firstRelation = relationships.get(JSON.stringify([firstId, secondId]))
     const secondRelation = relationships.get(JSON.stringify([secondId, firstId]))
-    const decision = decideMutualInteractionV1({ ...episode,
+    const evaluation = evaluateMutualInteractionV1({ ...episode,
       contactThisTick, currentPerceivedBy: [...perceived] },
     actorInput(first, world, terminalStationaryContact),
     actorInput(second, world, terminalStationaryContact), firstProfile, secondProfile,
     tick, config, firstRelation, secondRelation, phase)
+    const { decision, diagnostics } = evaluation
     newDecisions.push(decision)
     priorDecisions.set(JSON.stringify([episode.id, phase]), decision)
     if (config.diagnosticTraces) decisionTraces.push({
-      episodeId: episode.id, tick, participantIds: episode.participantIds,
+      episodeId: episode.id, tick, phase, participantIds: episode.participantIds,
       minDistanceMm: episode.minDistanceMm,
       contactSeconds: episode.contactSeconds,
       firstPerceived: perceived.has(firstId), secondPerceived: perceived.has(secondId),
       interactionDecisionId: decision.id,
+      ...diagnostics,
       spatialRule: 'sameSurfaceOrOpenPortal',
       perceptionModel: 'surface-portal-blocker-heading',
     })
@@ -300,7 +302,9 @@ export function advanceSocialTickV1(input: SocialTickInputV1): SocialTickResultV
     interactions,
     interactionDecisions: [...previous.interactionDecisions, ...newDecisions],
     interactionEvents: [...previous.interactionEvents, ...newInteractionEvents],
-    decisionTraces: [...previous.decisionTraces, ...decisionTraces],
+    decisionTraces: config.diagnosticTraces ?
+      [...previous.decisionTraces, ...decisionTraces]
+        .slice(-config.diagnosticTraceCapacity) : previous.decisionTraces,
     relationships: [...relationships.values()].sort((a: DirectedRelationshipV1,
       b: DirectedRelationshipV1) => a.ownerAgentId.localeCompare(b.ownerAgentId) ||
         a.referentAgentId.localeCompare(b.referentAgentId)),

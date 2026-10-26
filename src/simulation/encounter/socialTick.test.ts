@@ -129,7 +129,8 @@ describe('social Tick integration', () => {
 
   it('does not convert an arrival during the Tick into a stationary conversation', () => {
     const socialConfig = { ...DEFAULT_SOCIAL_CONFIG_V1,
-      conversationWillingness: 1, greetingWillingness: 0 }
+      conversationWillingness: 1, greetingWillingness: 0,
+      diagnosticTraces: true, diagnosticTraceCapacity: 1 }
     const stationarySamples = [5, 6].map((second): SpatialCandidateSample => ({
       ...sample, second,
       first: { ...sample.first, second, activity: 'atDestination' },
@@ -173,6 +174,10 @@ describe('social Tick integration', () => {
     const settled = run(eligibleId!, stationarySamples)
     expect(settled.second.social.interactionDecisions.map((item) => item.phase))
       .toEqual(['initial', 'settled'])
+    expect(settled.second.social.decisionTraces).toHaveLength(1)
+    expect(settled.second.social.decisionTraces[0].phase).toBe('settled')
+    expect(settled.second.social.decisionTraces[0].firstDraw).toBeLessThan(
+      settled.second.social.decisionTraces[0].firstChance!)
     expect(settled.second.citizens.every((item) => item.engagement !== undefined)).toBe(true)
     const repeated = advanceSocialTickV1({ world, config: socialConfig, tick: 3,
       citizens: settled.second.citizens, previous: settled.second.social,

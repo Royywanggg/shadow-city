@@ -31,12 +31,25 @@ export interface SocialInteractionEventV1 {
 export interface EncounterDecisionTraceV1 {
   readonly episodeId: string
   readonly tick: number
+  readonly phase: 'initial' | 'settled'
   readonly participantIds: readonly [string, string]
   readonly minDistanceMm: number
   readonly contactSeconds: number
   readonly firstPerceived: boolean
   readonly secondPerceived: boolean
   readonly interactionDecisionId: string | null
+  readonly firstChance: number | null
+  readonly secondChance: number | null
+  readonly firstDraw: number | null
+  readonly secondDraw: number | null
+  readonly firstSociability: number
+  readonly secondSociability: number
+  readonly firstFamiliarity: number
+  readonly secondFamiliarity: number
+  readonly firstAvailableTicks: number
+  readonly secondAvailableTicks: number
+  readonly firstStationaryEligible: boolean
+  readonly secondStationaryEligible: boolean
   readonly spatialRule: 'sameSurfaceOrOpenPortal'
   readonly perceptionModel: 'surface-portal-blocker-heading'
 }

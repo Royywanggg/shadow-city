@@ -16,6 +16,7 @@ export interface SocialConfigV1 {
   readonly familiarityConversationGain: number
   readonly familiarityDecayPer100Ticks: number
   readonly diagnosticTraces: boolean
+  readonly diagnosticTraceCapacity: number
 }
 
 export const DEFAULT_SOCIAL_CONFIG_V1: SocialConfigV1 = Object.freeze({
@@ -35,6 +36,7 @@ export const DEFAULT_SOCIAL_CONFIG_V1: SocialConfigV1 = Object.freeze({
   familiarityConversationGain: 0.18,
   familiarityDecayPer100Ticks: 0.985,
   diagnosticTraces: false,
+  diagnosticTraceCapacity: 512,
 })
 
 export interface SocialProfileV1 {

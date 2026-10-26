@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { decideMutualInteractionV1, materializeInteractionV1,
+import { decideMutualInteractionV1, evaluateMutualInteractionV1,
+  materializeInteractionV1,
   validateSocialConfigV1 } from './interaction'
 import { createRecognitionTokenV1, decayMemoriesV1, rememberExperienceV1,
   upsertKnowledgeV1 } from './memory'
@@ -28,6 +29,8 @@ describe('social interaction decisions', () => {
   it('rejects malformed replay configuration booleans', () => {
     expect(() => validateSocialConfigV1({ ...config,
       diagnosticTraces: 'true' as unknown as boolean })).toThrow()
+    expect(() => validateSocialConfigV1({ ...config,
+      diagnosticTraceCapacity: 0 })).toThrow()
   })
   it('requires bilateral willingness and saves a conversation lock for the next Tick', () => {
     const one = actor('citizen-1')
@@ -45,6 +48,16 @@ describe('social interaction decisions', () => {
       null, null, 'settled')
     expect(refused.type).toBe('none')
     expect(refused.secondAccepted).toBe(false)
+    expect(refused.firstAccepted).toBe(true)
+    const evaluated = evaluateMutualInteractionV1(episode, one, two,
+      profile(one.agentId), profile(two.agentId, 0), 10, config,
+      null, null, 'settled')
+    expect(evaluated.diagnostics.firstChance).toBe(1)
+    expect(evaluated.diagnostics.secondChance).toBe(0)
+    expect(evaluated.diagnostics.firstDraw).toBeGreaterThanOrEqual(0)
+    expect(evaluated.diagnostics.firstDraw).toBeLessThan(1)
+    expect(evaluated.decision.firstAccepted).toBe(
+      evaluated.diagnostics.firstDraw! < evaluated.diagnostics.firstChance!)
   })
 
   it('never starts a conversation in motion, in private space, or from one-sided perception', () => {
@@ -75,6 +88,10 @@ describe('social interaction decisions', () => {
       actor('citizen-1'), actor('citizen-2'),
       profile('citizen-1'), profile('citizen-2'), 10, config)
     expect(decide()).toEqual(decide())
+    expect(decideMutualInteractionV1(episode, actor('citizen-1'), actor('citizen-2'),
+      profile('citizen-1'), profile('citizen-2'), 10,
+      { ...config, diagnosticTraces: !config.diagnosticTraces,
+        diagnosticTraceCapacity: 1 })).toEqual(decide())
     expect(decide().phase).toBe('initial')
   })
 })
