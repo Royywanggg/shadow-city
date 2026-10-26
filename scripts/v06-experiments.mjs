@@ -13,11 +13,13 @@ if (![seeds, ticks, population].every(Number.isSafeInteger) ||
 const vite = await createServer({ server: { middlewareMode: true, hmr: false }, appType: 'custom' })
 try {
   const { generateWorldV2 } = await vite.ssrLoadModule('/src/world/generation/generateWorldV2.ts')
+  const { generateIntegratedWorld } = await vite.ssrLoadModule('/src/world/generation/generateIntegratedWorld.ts')
   const { createNavigationIndexV2 } = await vite.ssrLoadModule('/src/world/navigation/routeV2.ts')
   const { createEnvironmentV5, createInitialStateV5, advanceStateV5 } =
     await vite.ssrLoadModule('/src/simulation/engineV5.ts')
   const { DEFAULT_SIMULATION_CONFIG_V5 } = await vite.ssrLoadModule('/src/simulation/v5Types.ts')
-  const world = generateWorldV2()
+  const scene = process.env.V06_EXPERIMENT_SCENE === 'prototype' ? 'prototype' : 'integrated'
+  const world = scene === 'prototype' ? generateWorldV2() : generateIntegratedWorld()
   const index = createNavigationIndexV2(world)
   const levelBySurface = new Map(world.surfaces.map((surface) => [surface.id, surface.levelId]))
   const run = (seedIndex, bridgeOpen) => {
@@ -73,7 +75,7 @@ try {
     const values = metric(key, mode)
     return { min: values[0], median: values[Math.floor(values.length / 2)], max: values.at(-1) }
   }
-  const report = { model: 'WorldModelV2 / SimulationStateV5', worldSeed: world.config.seed,
+  const report = { model: 'WorldModelV2 / SimulationStateV5', scene, worldSeed: world.config.seed,
     seedPairs: seeds, ticks, logicalSecondsPerTick: 6, population,
     timeWindow: `08:00–${String((8 + Math.floor(ticks * 6 / 3600)) % 24).padStart(2, '0')}:${String(Math.floor(ticks * 6 / 60) % 60).padStart(2, '0')}`,
     intervention: 'bridge-entry open versus entryClosed at Tick 0',
@@ -88,7 +90,7 @@ try {
     return [level, { open: describe('open'), closed: describe('closed') }]
   }))
   const target = resolve(process.env.V06_EXPERIMENT_OUTPUT ??
-    'docs/screenshots/v06-paired-experiments.json')
+    `docs/screenshots/v06-${scene}-paired-experiments.json`)
   await mkdir(resolve('docs/screenshots'), { recursive: true })
   await writeFile(target, JSON.stringify(report, null, 2) + '\n')
   console.log(JSON.stringify({ target, seedPairs: seeds, ticks, population,

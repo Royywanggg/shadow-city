@@ -1,0 +1,393 @@
+{
+  "model": "WorldModelV2 / SimulationStateV5",
+  "scene": "integrated",
+  "worldSeed": "shadow-city-hero-01",
+  "seedPairs": 1,
+  "ticks": 9000,
+  "logicalSecondsPerTick": 6,
+  "population": 50,
+  "timeWindow": "08:00–23:00",
+  "intervention": "bridge-entry open versus entryClosed at Tick 0",
+  "note": "Synthetic model output; no real-world causal interpretation. Tick 500 is 50 logical minutes, not a day.",
+  "summary": {
+    "bridgeEntries": {
+      "open": {
+        "min": 99,
+        "median": 99,
+        "max": 99
+      },
+      "closed": {
+        "min": 0,
+        "median": 0,
+        "max": 0
+      }
+    },
+    "visits": {
+      "open": {
+        "min": 4833,
+        "median": 4833,
+        "max": 4833
+      },
+      "closed": {
+        "min": 4935,
+        "median": 4935,
+        "max": 4935
+      }
+    },
+    "encounters": {
+      "open": {
+        "min": 4193,
+        "median": 4193,
+        "max": 4193
+      },
+      "closed": {
+        "min": 4387,
+        "median": 4387,
+        "max": 4387
+      }
+    },
+    "offences": {
+      "open": {
+        "min": 13,
+        "median": 13,
+        "max": 13
+      },
+      "closed": {
+        "min": 16,
+        "median": 16,
+        "max": 16
+      }
+    },
+    "reports": {
+      "open": {
+        "min": 7,
+        "median": 7,
+        "max": 7
+      },
+      "closed": {
+        "min": 8,
+        "median": 8,
+        "max": 8
+      }
+    },
+    "levelPersonTicks": {
+      "L0": {
+        "open": {
+          "min": 431524,
+          "median": 431524,
+          "max": 431524
+        },
+        "closed": {
+          "min": 409899,
+          "median": 409899,
+          "max": 409899
+        }
+      },
+      "L1": {
+        "open": {
+          "min": 17362,
+          "median": 17362,
+          "max": 17362
+        },
+        "closed": {
+          "min": 39375,
+          "median": 39375,
+          "max": 39375
+        }
+      }
+    }
+  },
+  "pairs": [
+    {
+      "seedIndex": 0,
+      "open": {
+        "seed": "v06-paired-00",
+        "bridgeOpen": true,
+        "bridgeEntries": 99,
+        "levelPersonTicks": {
+          "L0": 431524,
+          "L1": 17362
+        },
+        "visits": 4833,
+        "encounters": 4193,
+        "offences": 13,
+        "reports": 7,
+        "hourly": {
+          "10": {
+            "bridgeEntries": 1,
+            "visits": 325,
+            "encounters": 199,
+            "offences": 1,
+            "L0PersonTicks": 29293,
+            "L1PersonTicks": 680
+          },
+          "11": {
+            "bridgeEntries": 7,
+            "visits": 321,
+            "encounters": 228,
+            "offences": 1,
+            "L0PersonTicks": 28518,
+            "L1PersonTicks": 1391
+          },
+          "12": {
+            "bridgeEntries": 8,
+            "visits": 321,
+            "encounters": 217,
+            "offences": 2,
+            "L0PersonTicks": 28353,
+            "L1PersonTicks": 1560
+          },
+          "13": {
+            "bridgeEntries": 5,
+            "visits": 321,
+            "encounters": 267,
+            "offences": 0,
+            "L0PersonTicks": 28332,
+            "L1PersonTicks": 1585
+          },
+          "14": {
+            "bridgeEntries": 4,
+            "visits": 326,
+            "encounters": 244,
+            "offences": 0,
+            "L0PersonTicks": 29417,
+            "L1PersonTicks": 558
+          },
+          "15": {
+            "bridgeEntries": 2,
+            "visits": 319,
+            "encounters": 179,
+            "offences": 0,
+            "L0PersonTicks": 29494,
+            "L1PersonTicks": 472
+          },
+          "16": {
+            "bridgeEntries": 2,
+            "visits": 332,
+            "encounters": 252,
+            "offences": 0,
+            "L0PersonTicks": 29252,
+            "L1PersonTicks": 724
+          },
+          "17": {
+            "bridgeEntries": 5,
+            "visits": 321,
+            "encounters": 274,
+            "offences": 0,
+            "L0PersonTicks": 28872,
+            "L1PersonTicks": 1024
+          },
+          "18": {
+            "bridgeEntries": 12,
+            "visits": 317,
+            "encounters": 302,
+            "offences": 3,
+            "L0PersonTicks": 27634,
+            "L1PersonTicks": 2250
+          },
+          "19": {
+            "bridgeEntries": 12,
+            "visits": 312,
+            "encounters": 289,
+            "offences": 1,
+            "L0PersonTicks": 27669,
+            "L1PersonTicks": 2182
+          },
+          "20": {
+            "bridgeEntries": 23,
+            "visits": 328,
+            "encounters": 341,
+            "offences": 1,
+            "L0PersonTicks": 27379,
+            "L1PersonTicks": 2477
+          },
+          "21": {
+            "bridgeEntries": 14,
+            "visits": 316,
+            "encounters": 362,
+            "offences": 0,
+            "L0PersonTicks": 27751,
+            "L1PersonTicks": 2107
+          },
+          "22": {
+            "bridgeEntries": 3,
+            "visits": 321,
+            "encounters": 436,
+            "offences": 4,
+            "L0PersonTicks": 29914,
+            "L1PersonTicks": 23
+          },
+          "23": {
+            "bridgeEntries": 0,
+            "visits": 0,
+            "encounters": 22,
+            "offences": 0,
+            "L0PersonTicks": 50,
+            "L1PersonTicks": 0
+          },
+          "08": {
+            "bridgeEntries": 0,
+            "visits": 326,
+            "encounters": 367,
+            "offences": 0,
+            "L0PersonTicks": 29835,
+            "L1PersonTicks": 111
+          },
+          "09": {
+            "bridgeEntries": 1,
+            "visits": 327,
+            "encounters": 214,
+            "offences": 0,
+            "L0PersonTicks": 29761,
+            "L1PersonTicks": 218
+          }
+        },
+        "finalFingerprint": "world-v2:heritage-overlay-v1:dbb0cc6a:sim-v5:37e3974f"
+      },
+      "closed": {
+        "seed": "v06-paired-00",
+        "bridgeOpen": false,
+        "bridgeEntries": 0,
+        "levelPersonTicks": {
+          "L0": 409899,
+          "L1": 39375
+        },
+        "visits": 4935,
+        "encounters": 4387,
+        "offences": 16,
+        "reports": 8,
+        "hourly": {
+          "10": {
+            "bridgeEntries": 0,
+            "visits": 325,
+            "encounters": 220,
+            "offences": 1,
+            "L0PersonTicks": 29034,
+            "L1PersonTicks": 923
+          },
+          "11": {
+            "bridgeEntries": 0,
+            "visits": 325,
+            "encounters": 206,
+            "offences": 1,
+            "L0PersonTicks": 27933,
+            "L1PersonTicks": 2006
+          },
+          "12": {
+            "bridgeEntries": 0,
+            "visits": 330,
+            "encounters": 234,
+            "offences": 1,
+            "L0PersonTicks": 27675,
+            "L1PersonTicks": 2274
+          },
+          "13": {
+            "bridgeEntries": 0,
+            "visits": 330,
+            "encounters": 257,
+            "offences": 1,
+            "L0PersonTicks": 26994,
+            "L1PersonTicks": 2961
+          },
+          "14": {
+            "bridgeEntries": 0,
+            "visits": 342,
+            "encounters": 282,
+            "offences": 1,
+            "L0PersonTicks": 26671,
+            "L1PersonTicks": 3274
+          },
+          "15": {
+            "bridgeEntries": 0,
+            "visits": 327,
+            "encounters": 204,
+            "offences": 0,
+            "L0PersonTicks": 27492,
+            "L1PersonTicks": 2501
+          },
+          "16": {
+            "bridgeEntries": 0,
+            "visits": 343,
+            "encounters": 229,
+            "offences": 0,
+            "L0PersonTicks": 27374,
+            "L1PersonTicks": 2604
+          },
+          "17": {
+            "bridgeEntries": 0,
+            "visits": 326,
+            "encounters": 294,
+            "offences": 2,
+            "L0PersonTicks": 26738,
+            "L1PersonTicks": 3197
+          },
+          "18": {
+            "bridgeEntries": 0,
+            "visits": 337,
+            "encounters": 377,
+            "offences": 2,
+            "L0PersonTicks": 26311,
+            "L1PersonTicks": 3603
+          },
+          "19": {
+            "bridgeEntries": 0,
+            "visits": 329,
+            "encounters": 385,
+            "offences": 3,
+            "L0PersonTicks": 25625,
+            "L1PersonTicks": 4292
+          },
+          "20": {
+            "bridgeEntries": 0,
+            "visits": 342,
+            "encounters": 413,
+            "offences": 2,
+            "L0PersonTicks": 26096,
+            "L1PersonTicks": 3847
+          },
+          "21": {
+            "bridgeEntries": 0,
+            "visits": 338,
+            "encounters": 397,
+            "offences": 2,
+            "L0PersonTicks": 25499,
+            "L1PersonTicks": 4400
+          },
+          "22": {
+            "bridgeEntries": 0,
+            "visits": 287,
+            "encounters": 292,
+            "offences": 0,
+            "L0PersonTicks": 26980,
+            "L1PersonTicks": 3007
+          },
+          "23": {
+            "bridgeEntries": 0,
+            "visits": 1,
+            "encounters": 6,
+            "offences": 0,
+            "L0PersonTicks": 45,
+            "L1PersonTicks": 5
+          },
+          "08": {
+            "bridgeEntries": 0,
+            "visits": 326,
+            "encounters": 367,
+            "offences": 0,
+            "L0PersonTicks": 29835,
+            "L1PersonTicks": 111
+          },
+          "09": {
+            "bridgeEntries": 0,
+            "visits": 327,
+            "encounters": 224,
+            "offences": 0,
+            "L0PersonTicks": 29597,
+            "L1PersonTicks": 370
+          }
+        },
+        "finalFingerprint": "world-v2:heritage-overlay-v1:dbb0cc6a:sim-v5:3a47fc59"
+      }
+    }
+  ]
+}

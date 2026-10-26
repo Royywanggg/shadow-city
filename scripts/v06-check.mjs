@@ -13,12 +13,15 @@ const browser = await chromium.launch({ headless: true,
   args: hardware ? ['--enable-webgl'] : ['--enable-webgl', '--use-gl=angle', '--use-angle=swiftshader'] })
 const errors = []
 const screenshots = []
+const scene = process.env.SHADOW_CITY_SCENE === 'prototype' ? 'prototype' : 'integrated'
+const evidencePrefix = `v06-${scene}`
 let page
 try {
   page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 })
   page.on('pageerror', (error) => errors.push(error.message))
   page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()) })
   const url = new URL(process.env.SHADOW_CITY_URL ?? 'http://127.0.0.1:5173/')
+  if (scene === 'prototype') url.searchParams.set('world', 'prototype')
   url.searchParams.set('population', '200')
   url.searchParams.set('test', '1')
   await page.goto(url.toString(), { waitUntil: 'networkidle' })
@@ -36,7 +39,11 @@ try {
       return counts
     }, {})
   })
-  const screenshot = async (name) => { await page.screenshot({ path: resolve(output, name + '.png') }); screenshots.push(name) }
+  const screenshot = async (name) => {
+    const recordedName = name.replace(/^v06-/, `${evidencePrefix}-`)
+    await page.screenshot({ path: resolve(output, recordedName + '.png') })
+    screenshots.push(recordedName)
+  }
   await screenshot('v06-hero-200-tick100-1440x900')
   const advanceDurations = await page.evaluate(() => window.__shadowCityV06.advanceToTick(500))
   await page.waitForFunction(() => window.__shadowCityV06Agents?.tick === 500)
@@ -117,6 +124,7 @@ try {
   await page.getByRole('button', { name: 'RESET VIEW' }).click()
   const navigationReset = await page.evaluate(() => window.__shadowCityV06.getCameraView())
   await page.getByRole('button', { name: 'PLAY', exact: true }).click()
+  await page.waitForTimeout(1000)
   const frames = await page.evaluate(async () => {
     const times = []
     const started = performance.now()
@@ -131,6 +139,7 @@ try {
   const fps = frames.length / ((frames.at(-1) - frames[0]) / 1000)
   const frameP95 = gaps[Math.ceil(gaps.length * .95) - 1]
   const bearings = {}
+  const bearingTick = await page.evaluate(() => window.__shadowCityV06.getSnapshot().tick)
   await page.getByRole('button', { name: 'Compass: north up' }).click()
   for (const bearing of [0, 90, 180, 270]) {
     if (bearing > 0) {
@@ -140,7 +149,7 @@ try {
     }
     await page.waitForTimeout(120)
     bearings[bearing] = await page.evaluate(() => window.__shadowCityV06.getCameraView().bearingDeg)
-    await screenshot(`v06-bearing-${String(bearing).padStart(3, '0')}-tick${page.url().includes('tick') ? '500' : '514'}-1440x900`)
+    await screenshot(`v06-bearing-${String(bearing).padStart(3, '0')}-tick${bearingTick}-1440x900`)
   }
   await page.getByRole('button', { name: 'RESET VIEW' }).click()
   await page.getByRole('button', { name: 'BRIDGE OPEN' }).click()
@@ -151,8 +160,8 @@ try {
   await narrow.goto(url.toString(), { waitUntil: 'networkidle' })
   await narrow.waitForFunction(() => window.__shadowCityV06Agents?.tick === 100)
   await narrow.getByRole('button', { name: 'Collapse population' }).click()
-  await narrow.screenshot({ path: resolve(output, 'v06-narrow-200-tick100-390x844.png') })
-  screenshots.push('v06-narrow-200-tick100-390x844')
+  await narrow.screenshot({ path: resolve(output, `${evidencePrefix}-narrow-200-tick100-390x844.png`) })
+  screenshots.push(`${evidencePrefix}-narrow-200-tick100-390x844`)
   await narrow.getByRole('button', { name: 'Expand population' }).click()
   await narrow.getByRole('textbox', { name: 'Search residents' }).fill('citizen-0001')
   await narrow.locator('[data-agent-id="citizen-0001"]').click()
@@ -165,16 +174,17 @@ try {
   const alternate = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 })
   alternate.on('pageerror', (error) => errors.push(`alternate seed: ${error.message}`))
   const alternateUrl = new URL(url)
-  alternateUrl.searchParams.set('seed', 'shadow-city-multilevel-02')
+  const alternateSeedName = scene === 'prototype' ? 'shadow-city-multilevel-02' : 'shadow-city-hero-02'
+  alternateUrl.searchParams.set('seed', alternateSeedName)
   await alternate.goto(alternateUrl.toString(), { waitUntil: 'networkidle' })
   await alternate.waitForFunction(() => window.__shadowCityV06Agents?.tick === 100)
   const alternateSeed = await alternate.evaluate(() => window.__shadowCityV06.getWorld().config.seed)
-  await alternate.screenshot({ path: resolve(output, 'v06-alternate-seed-tick100-1440x900.png') })
-  screenshots.push('v06-alternate-seed-tick100-1440x900')
+  await alternate.screenshot({ path: resolve(output, `${evidencePrefix}-alternate-seed-tick100-1440x900.png`) })
+  screenshots.push(`${evidencePrefix}-alternate-seed-tick100-1440x900`)
   await alternate.close()
   const result = await page.evaluate(() => ({
     visibleAgents: window.__shadowCityV06Agents,
-    rendering: window.__shadowCityV06Rendering,
+    rendering: window.__shadowCityDiagnostics ?? window.__shadowCityV06Rendering,
     snapshot: { tick: window.__shadowCityV06.getSnapshot().tick,
       offences: window.__shadowCityV06.getSnapshot().state.offences.length,
       reports: window.__shadowCityV06.getSnapshot().state.reports.length },
@@ -183,8 +193,9 @@ try {
   }))
   const ordered = advanceDurations.slice().sort((a, b) => a - b)
   const p95 = ordered[Math.ceil(ordered.length * 0.95) - 1]
+  const worldSeed = await page.evaluate(() => window.__shadowCityV06.getWorld().config.seed)
   const report = { renderer, hardwareRequested: hardware, viewport: '1440x900', dpr: 1,
-    worldSeed: 'shadow-city-multilevel-01', population: 200, initialCounts, finalCounts,
+    scene, worldSeed, population: 200, initialCounts, finalCounts,
     allLevelAgents, mapSelectionId, upstairsId, focusY, galleriaId, replayBenchmark,
     fps, frameP95, bearings, bridgeClosed, narrowSelected, legacyOpen, alternateSeed,
     cameraNavigation: { zoomRatio, pannedTarget, pitch, navigationStart, navigationReset },
@@ -193,7 +204,7 @@ try {
       visibleCount: result.visibleAgents.visibleCount, farCount: result.visibleAgents.farCount,
       mediumCount: result.visibleAgents.mediumCount, closeCount: result.visibleAgents.closeCount } },
     screenshots, errors }
-  await writeFile(resolve(output, 'v06-results.json'), JSON.stringify(report, null, 2) + '\n')
+  await writeFile(resolve(output, `${evidencePrefix}-results.json`), JSON.stringify(report, null, 2) + '\n')
   console.log(JSON.stringify(report, null, 2))
   if (errors.length) throw new Error('Browser console reported errors')
   if (hardware && /swiftshader|software|llvmpipe/i.test(renderer ?? '')) throw new Error(`Software renderer: ${renderer}`)
@@ -210,7 +221,7 @@ try {
     throw new Error('Cardinal bearing controls failed')
   }
   if (bridgeClosed !== 'entryClosed' || !narrowSelected?.includes('citizen-0001') ||
-    legacyOpen !== 'SHADOW CITY' || alternateSeed !== 'shadow-city-multilevel-02') {
+    legacyOpen !== 'SHADOW CITY' || alternateSeed !== alternateSeedName) {
     throw new Error('Bridge, narrow inspector, legacy, or alternate-seed check failed')
   }
   if (hardware && (fps < 50 || frameP95 > 33 || p95 > 5 || replayBenchmark.durationMs > 2000)) {
