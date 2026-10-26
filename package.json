@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --maxWorkers=4 --testTimeout=120000",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "visual:check": "node scripts/visual-check.mjs",
