@@ -1,0 +1,184 @@
+{
+  "dateUtc": "2026-10-26T22:22:18.501Z",
+  "conditions": "One Chrome 156 page, Apple M4 hardware WebGL, fixed seeds, population 200, 1440x900 DPR 1. Initial Tick 200; cases run serially with 1.5-second settle and 3-second rAF samples. No concurrent test or browser workload.",
+  "samples": [
+    {
+      "name": "paused-unselected",
+      "selected": false,
+      "playing": false,
+      "simulationSpeed": "1",
+      "startTick": 200,
+      "endTick": 200,
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+      "canvasCount": 1,
+      "fps": 59.99600026658929,
+      "p95FrameIntervalMs": 18.100000001490116,
+      "frames": 181,
+      "longTaskCount": 0,
+      "longTaskTotalMs": 0,
+      "cdpMainThreadMs": {
+        "TaskDuration": 1049.8040000000008,
+        "ScriptDuration": 988.2809999999997,
+        "LayoutDuration": 0,
+        "RecalcStyleDuration": 0
+      },
+      "rendering": {
+        "drawCalls": 318,
+        "triangles": 312889,
+        "geometries": 192,
+        "textures": 38,
+        "geometryBufferBytes": 428324,
+        "instanceBufferBytes": 1496820,
+        "textureSourceBytesEstimated": 5745328,
+        "medianActiveFrameMs": 16.69999999552965,
+        "p50ActiveFrameMs": 16.69999999552965,
+        "p95ActiveFrameMs": 16.900000005960464,
+        "sampledFrames": 120,
+        "renderedFrames": 433
+      },
+      "visibleAgents": {
+        "tick": 200,
+        "visibleCount": 165,
+        "farCount": 165,
+        "mediumCount": 0,
+        "closeCount": 0
+      }
+    },
+    {
+      "name": "paused-selected",
+      "selected": true,
+      "playing": false,
+      "simulationSpeed": "1",
+      "startTick": 200,
+      "endTick": 200,
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+      "canvasCount": 2,
+      "fps": 59.98458496696177,
+      "p95FrameIntervalMs": 17.899999998509884,
+      "frames": 180,
+      "longTaskCount": 0,
+      "longTaskTotalMs": 0,
+      "cdpMainThreadMs": {
+        "TaskDuration": 736.4240000000013,
+        "ScriptDuration": 701.0080000000007,
+        "LayoutDuration": 0,
+        "RecalcStyleDuration": 0
+      },
+      "rendering": {
+        "drawCalls": 329,
+        "triangles": 319415,
+        "geometries": 203,
+        "textures": 48,
+        "geometryBufferBytes": 1149472,
+        "instanceBufferBytes": 1496820,
+        "textureSourceBytesEstimated": 5745328,
+        "medianActiveFrameMs": 16.69999999552965,
+        "p50ActiveFrameMs": 16.69999999552965,
+        "p95ActiveFrameMs": 16.899999998509884,
+        "sampledFrames": 120,
+        "renderedFrames": 710
+      },
+      "visibleAgents": {
+        "tick": 200,
+        "visibleCount": 165,
+        "farCount": 164,
+        "mediumCount": 0,
+        "closeCount": 1
+      }
+    },
+    {
+      "name": "playing-selected",
+      "selected": true,
+      "playing": true,
+      "simulationSpeed": "1",
+      "startTick": 200,
+      "endTick": 212,
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+      "canvasCount": 2,
+      "fps": 52.687741763293474,
+      "p95FrameIntervalMs": 57,
+      "frames": 159,
+      "longTaskCount": 5,
+      "longTaskTotalMs": 335,
+      "cdpMainThreadMs": {
+        "TaskDuration": 1572.222,
+        "ScriptDuration": 1472.454,
+        "LayoutDuration": 6.003000000000001,
+        "RecalcStyleDuration": 0.25799999999999956
+      },
+      "rendering": {
+        "drawCalls": 329,
+        "triangles": 319343,
+        "geometries": 203,
+        "textures": 48,
+        "geometryBufferBytes": 1149472,
+        "instanceBufferBytes": 1496820,
+        "textureSourceBytesEstimated": 5745328,
+        "medianActiveFrameMs": 16.69999999552965,
+        "p50ActiveFrameMs": 16.69999999552965,
+        "p95ActiveFrameMs": 43.79999999701977,
+        "sampledFrames": 120,
+        "renderedFrames": 971
+      },
+      "visibleAgents": {
+        "tick": 212,
+        "visibleCount": 156,
+        "farCount": 155,
+        "mediumCount": 0,
+        "closeCount": 1
+      }
+    },
+    {
+      "name": "playing-unselected",
+      "selected": false,
+      "playing": true,
+      "simulationSpeed": "1",
+      "startTick": 212,
+      "endTick": 224,
+      "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+      "canvasCount": 1,
+      "fps": 55.020174063714045,
+      "p95FrameIntervalMs": 49.600000001490116,
+      "frames": 166,
+      "longTaskCount": 3,
+      "longTaskTotalMs": 167,
+      "cdpMainThreadMs": {
+        "TaskDuration": 1333.646,
+        "ScriptDuration": 1242.8129999999999,
+        "LayoutDuration": 5.396000000000005,
+        "RecalcStyleDuration": 0.21900000000000044
+      },
+      "rendering": {
+        "drawCalls": 318,
+        "triangles": 312753,
+        "geometries": 202,
+        "textures": 48,
+        "geometryBufferBytes": 428324,
+        "instanceBufferBytes": 1496820,
+        "textureSourceBytesEstimated": 5745328,
+        "medianActiveFrameMs": 16.69999999552965,
+        "p50ActiveFrameMs": 16.69999999552965,
+        "p95ActiveFrameMs": 37.399999998509884,
+        "sampledFrames": 120,
+        "renderedFrames": 1243
+      },
+      "visibleAgents": {
+        "tick": 224,
+        "visibleCount": 148,
+        "farCount": 148,
+        "mediumCount": 0,
+        "closeCount": 0
+      }
+    }
+  ],
+  "errors": [],
+  "isolatedSimulation": {
+    "constructionMs": 36.600000001490116,
+    "measuredTicks": 100,
+    "averageTickMs": 17.625,
+    "p95TickMs": 24.200000002980232,
+    "maxTickMs": 33.599999994039536,
+    "finalTick": 224,
+    "fingerprint": "world-v2:heritage-extension-v6:b2d75275:sim-v5:330194d1"
+  }
+}

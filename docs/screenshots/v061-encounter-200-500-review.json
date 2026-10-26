@@ -1,0 +1,295 @@
+{
+  "model": "WorldModelV2 / SimulationStateV5 / EncounterScenarioV1",
+  "citySeed": "shadow-city-hero-01",
+  "simulationSeed": "shadow-city-sim-01",
+  "socialSeed": "shadow-city-social-01",
+  "offendingSeed": "shadow-city-offending-01",
+  "observationSeed": "shadow-city-observation-01",
+  "ticks": 500,
+  "population": 200,
+  "socialReview": true,
+  "generationMs": 146.994,
+  "tickDuration": {
+    "count": 500,
+    "meanMs": 20.157,
+    "p95Ms": 29.437,
+    "maxMs": 485.486
+  },
+  "replayFromZeroMs": 8124.738,
+  "replayEqual": true,
+  "stageTiming": {
+    "spatialQueryMs": {
+      "count": 500,
+      "meanMs": 5.777,
+      "p95Ms": 5.81,
+      "maxMs": 343.778
+    },
+    "perceptionMs": {
+      "count": 500,
+      "meanMs": 1.329,
+      "p95Ms": 2.195,
+      "maxMs": 30.825
+    },
+    "lifecycleMs": {
+      "count": 500,
+      "meanMs": 1.7,
+      "p95Ms": 2.588,
+      "maxMs": 131.412
+    },
+    "crimeAndWitnessMs": {
+      "count": 500,
+      "meanMs": 2.656,
+      "p95Ms": 4.314,
+      "maxMs": 46.359
+    },
+    "socialDecisionAndMemoryMs": {
+      "count": 500,
+      "meanMs": 2.066,
+      "p95Ms": 2.836,
+      "maxMs": 37.744
+    }
+  },
+  "candidatePairSeconds": 374055,
+  "perceivedPairSeconds": 312198,
+  "episodeCount": 1720,
+  "uniquePairCount": 1141,
+  "interactionDecisionEvaluations": 1341,
+  "interactionAttempts": 719,
+  "interactionDecisionReasons": {
+    "busy": 203,
+    "mutualGreeting": 194,
+    "declined": 943,
+    "mutualConversation": 1
+  },
+  "acceptedInteractions": 195,
+  "completedInteractions": 195,
+  "conversations": 1,
+  "conversationExamples": [
+    {
+      "id": "social-interaction:social-encounter:[\"citizen-0069\",\"citizen-0117\"]:619:settled",
+      "participantIds": [
+        "citizen-0069",
+        "citizen-0117"
+      ],
+      "decisionTick": 105,
+      "startTick": 106,
+      "plannedEndTick": 111,
+      "status": "completed"
+    }
+  ],
+  "memories": 398,
+  "knowledge": 358,
+  "directedRelationships": 2094,
+  "opportunitySeconds": 87978,
+  "offenderAttempts": 16,
+  "truthOffences": 12,
+  "offenceExamples": [
+    {
+      "id": "offence:citizen-0147:citizen:citizen-0196:39@interior:building-block-1-4-0-0",
+      "tick": 86,
+      "second": 4,
+      "offenderAgentId": "citizen-0147",
+      "target": {
+        "kind": "citizen",
+        "id": "citizen-0196"
+      },
+      "encounterId": "social-encounter:[\"citizen-0147\",\"citizen-0196\"]:229",
+      "witnesses": [],
+      "reports": 0
+    },
+    {
+      "id": "offence:citizen-0091:citizen:citizen-0036:40@interior:building-block-1-4-0-0",
+      "tick": 92,
+      "second": 2,
+      "offenderAgentId": "citizen-0091",
+      "target": {
+        "kind": "citizen",
+        "id": "citizen-0036"
+      },
+      "encounterId": "social-encounter:[\"citizen-0036\",\"citizen-0091\"]:238",
+      "witnesses": [
+        {
+          "ownerAgentId": "citizen-0036",
+          "source": "victim",
+          "believedIdentity": null
+        },
+        {
+          "ownerAgentId": "citizen-0084",
+          "source": "witness",
+          "believedIdentity": null
+        }
+      ],
+      "reports": 1
+    },
+    {
+      "id": "offence:citizen-0052:citizen:citizen-0179:82@galleria-shop-cafe-l0",
+      "tick": 126,
+      "second": 3,
+      "offenderAgentId": "citizen-0052",
+      "target": {
+        "kind": "citizen",
+        "id": "citizen-0179"
+      },
+      "encounterId": "social-encounter:[\"citizen-0052\",\"citizen-0179\"]:489",
+      "witnesses": [],
+      "reports": 0
+    },
+    {
+      "id": "offence:citizen-0091:citizen:citizen-0147:137@interior:building-block-1-4-0-0",
+      "tick": 143,
+      "second": 2,
+      "offenderAgentId": "citizen-0091",
+      "target": {
+        "kind": "citizen",
+        "id": "citizen-0147"
+      },
+      "encounterId": "social-encounter:[\"citizen-0091\",\"citizen-0147\"]:176",
+      "witnesses": [
+        {
+          "ownerAgentId": "citizen-0048",
+          "source": "witness",
+          "believedIdentity": null
+        },
+        {
+          "ownerAgentId": "citizen-0131",
+          "source": "witness",
+          "believedIdentity": null
+        }
+      ],
+      "reports": 1
+    },
+    {
+      "id": "offence:citizen-0063:citizen:citizen-0126:152@interior:building-block-7-0-0-0",
+      "tick": 152,
+      "second": 1,
+      "offenderAgentId": "citizen-0063",
+      "target": {
+        "kind": "citizen",
+        "id": "citizen-0126"
+      },
+      "encounterId": "social-encounter:[\"citizen-0063\",\"citizen-0126\"]:597",
+      "witnesses": [],
+      "reports": 0
+    },
+    {
+      "id": "offence:citizen-0013:citizen:citizen-0175:146@interior:building-block-7-0-0-0",
+      "tick": 165,
+      "second": 2,
+      "offenderAgentId": "citizen-0013",
+      "target": {
+        "kind": "citizen",
+        "id": "citizen-0175"
+      },
+      "encounterId": "social-encounter:[\"citizen-0013\",\"citizen-0175\"]:871",
+      "witnesses": [],
+      "reports": 0
+    },
+    {
+      "id": "offence:citizen-0142:citizen:citizen-0035:212@interior:building-block-2-2-0-0",
+      "tick": 212,
+      "second": 2,
+      "offenderAgentId": "citizen-0142",
+      "target": {
+        "kind": "citizen",
+        "id": "citizen-0035"
+      },
+      "encounterId": "social-encounter:[\"citizen-0035\",\"citizen-0142\"]:1267",
+      "witnesses": [],
+      "reports": 0
+    },
+    {
+      "id": "offence:citizen-0065:citizen:citizen-0128:221@interior:building-block-7-0-0-0",
+      "tick": 234,
+      "second": 5,
+      "offenderAgentId": "citizen-0065",
+      "target": {
+        "kind": "citizen",
+        "id": "citizen-0128"
+      },
+      "encounterId": "social-encounter:[\"citizen-0065\",\"citizen-0128\"]:747",
+      "witnesses": [
+        {
+          "ownerAgentId": "citizen-0173",
+          "source": "witness",
+          "believedIdentity": null
+        }
+      ],
+      "reports": 0
+    },
+    {
+      "id": "offence:citizen-0191:citizen:citizen-0133:247@interior:building-block-1-4-0-0",
+      "tick": 321,
+      "second": 2,
+      "offenderAgentId": "citizen-0191",
+      "target": {
+        "kind": "citizen",
+        "id": "citizen-0133"
+      },
+      "encounterId": "social-encounter:[\"citizen-0133\",\"citizen-0191\"]:1476",
+      "witnesses": [],
+      "reports": 0
+    },
+    {
+      "id": "offence:citizen-0065:citizen:citizen-0120:322@interior:building-block-7-0-0-0",
+      "tick": 322,
+      "second": 2,
+      "offenderAgentId": "citizen-0065",
+      "target": {
+        "kind": "citizen",
+        "id": "citizen-0120"
+      },
+      "encounterId": "social-encounter:[\"citizen-0065\",\"citizen-0120\"]:1927",
+      "witnesses": [
+        {
+          "ownerAgentId": "citizen-0120",
+          "source": "victim",
+          "believedIdentity": null
+        },
+        {
+          "ownerAgentId": "citizen-0126",
+          "source": "witness",
+          "believedIdentity": null
+        }
+      ],
+      "reports": 2
+    },
+    {
+      "id": "offence:citizen-0031:citizen:citizen-0188:425@interior:building-block-1-4-0-0",
+      "tick": 441,
+      "second": 4,
+      "offenderAgentId": "citizen-0031",
+      "target": {
+        "kind": "citizen",
+        "id": "citizen-0188"
+      },
+      "encounterId": "social-encounter:[\"citizen-0031\",\"citizen-0188\"]:2550",
+      "witnesses": [
+        {
+          "ownerAgentId": "citizen-0041",
+          "source": "witness",
+          "believedIdentity": null
+        }
+      ],
+      "reports": 1
+    },
+    {
+      "id": "offence:citizen-0177:citizen:citizen-0013:479@interior:building-block-7-0-0-0",
+      "tick": 480,
+      "second": 6,
+      "offenderAgentId": "citizen-0177",
+      "target": {
+        "kind": "citizen",
+        "id": "citizen-0013"
+      },
+      "encounterId": "social-encounter:[\"citizen-0013\",\"citizen-0177\"]:2870",
+      "witnesses": [],
+      "reports": 0
+    }
+  ],
+  "potentialWitnesses": 59,
+  "actualWitnesses": 8,
+  "deliveredReports": 5,
+  "pendingReports": 0,
+  "serializedStateBytes": 5170277,
+  "note": "Synthetic rules and local Node/Vite CPU measurements. This is not a browser or GPU benchmark."
+}

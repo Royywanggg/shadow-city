@@ -1,0 +1,485 @@
+{
+  "dateUtc": "2026-10-26T22:14:01.588Z",
+  "citySeed": "shadow-city-hero-01",
+  "simulationSeed": "shadow-city-sim-01",
+  "socialSeed": "shadow-city-social-01",
+  "population": 120,
+  "scenario": {
+    "greetingWillingness": 0.7,
+    "conversationWillingness": 0.85,
+    "diagnosticTraces": true
+  },
+  "viewport": "1440x900 CSS pixels",
+  "dpr": 1,
+  "browser": "Google Chrome 156.0.8078.48",
+  "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+  "renderer": {
+    "name": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+    "api": "WebGL 2.0 (OpenGL ES 3.0 Chromium)"
+  },
+  "gpuKind": "hardware",
+  "activeConversation": {
+    "id": "social-interaction:social-encounter:[\"citizen-0015\",\"citizen-0071\"]:712:settled",
+    "encounterId": "social-encounter:[\"citizen-0015\",\"citizen-0071\"]:712",
+    "participantIds": [
+      "citizen-0015",
+      "citizen-0071"
+    ],
+    "startTick": 121,
+    "plannedEndTick": 126,
+    "participants": [
+      {
+        "id": "citizen-0015",
+        "activity": "interacting",
+        "surfaceId": "ground",
+        "position": {
+          "x": 120600,
+          "y": 250,
+          "z": 82999
+        }
+      },
+      {
+        "id": "citizen-0071",
+        "activity": "interacting",
+        "surfaceId": "ground",
+        "position": {
+          "x": 122500,
+          "y": 250,
+          "z": 82999
+        }
+      }
+    ]
+  },
+  "activeVisualLabel": [
+    {
+      "text": "CONVERSATION · T121",
+      "visible": true
+    }
+  ],
+  "activeUiContainsConversation": true,
+  "relationshipTextHasConversation": true,
+  "memoryTextHasInteraction": true,
+  "timelineSeek": {
+    "label": "T489 · TripStarted\nOBJECTIVE · INSPECT ↗",
+    "expectedTick": 489,
+    "actualTick": 489
+  },
+  "observerBoundary": {
+    "tick": 500,
+    "visibleReports": 1,
+    "truthOffences": 7,
+    "reportFields": [
+      "id",
+      "availableTick",
+      "reportedOccurrenceTick",
+      "reportedPosition",
+      "reportedLevelId",
+      "reportedPlaceId",
+      "reportedSeverity",
+      "suspect",
+      "source"
+    ],
+    "excludesHidden": true,
+    "onlyAvailable": true,
+    "godViewVisible": true
+  },
+  "observedFooter": "1 REPORTS",
+  "replay100": {
+    "tick": 100,
+    "socialEpisodeCount": 198
+  },
+  "bearings": {
+    "0": 0,
+    "90": 90,
+    "180": 180,
+    "270": 270
+  },
+  "narrowSelected": "citizen-0015 · L0",
+  "renderedAgentTick500": 500,
+  "renderPerformance": {
+    "fps": 31.778952298135867,
+    "p95FrameIntervalMs": 101.70000000298023,
+    "frames": 96,
+    "rendering": {
+      "drawCalls": 328,
+      "triangles": 318583,
+      "geometries": 227,
+      "textures": 48,
+      "geometryBufferBytes": 1146208,
+      "instanceBufferBytes": 1430900,
+      "textureSourceBytesEstimated": 5745328,
+      "medianActiveFrameMs": 22.19999999552965,
+      "p50ActiveFrameMs": 21.799999997019768,
+      "p95ActiveFrameMs": 77,
+      "sampledFrames": 120,
+      "renderedFrames": 1503
+    },
+    "p95AdvanceTickMs": 19,
+    "replay500": {
+      "durationMs": 4584.4000000059605,
+      "fingerprint": "world-v2:heritage-extension-v6:b2d75275:sim-v5:464f54b2",
+      "offences": 7
+    }
+  },
+  "population200": {
+    "population": 200,
+    "viewport": "1440x900 CSS pixels",
+    "dpr": 1,
+    "renderer": "ANGLE Metal Apple M4",
+    "assetSettleWaitMs": 7000,
+    "before": {
+      "drawCalls": 0,
+      "triangles": 0,
+      "geometries": 0,
+      "textures": 0
+    },
+    "rendering": {
+      "drawCalls": 318,
+      "triangles": 312857,
+      "geometries": 192,
+      "textures": 38
+    },
+    "fps": 26.02081665334206,
+    "p95FrameIntervalMs": 99.10000000149012,
+    "frames": 53,
+    "p95AdvanceTickMs": 46.69999999552965
+  },
+  "final": {
+    "tick": 512,
+    "population": 120,
+    "episodes": 808,
+    "interactions": 88,
+    "conversations": 3,
+    "offences": 8,
+    "reports": 1,
+    "usedJsHeapBytes": 244450678
+  },
+  "screenshots": [
+    {
+      "name": "v061-hero-tick100-1440x900",
+      "path": "/Users/rw1225/Desktop/shadow-city/.visual/v061/v061-hero-tick100-1440x900.png",
+      "curated": true
+    },
+    {
+      "name": "v061-conversation-active-tick121-1440x900",
+      "path": "/Users/rw1225/Desktop/shadow-city/.visual/v061/v061-conversation-active-tick121-1440x900.png",
+      "curated": true
+    },
+    {
+      "name": "v061-conversation-complete-tick126-1440x900",
+      "path": "/Users/rw1225/Desktop/shadow-city/.visual/v061/v061-conversation-complete-tick126-1440x900.png",
+      "curated": true
+    },
+    {
+      "name": "v061-hero-tick500-1440x900",
+      "path": "/Users/rw1225/Desktop/shadow-city/.visual/v061/v061-hero-tick500-1440x900.png",
+      "curated": true
+    },
+    {
+      "name": "v061-relationships-tick500-1440x900",
+      "path": "/Users/rw1225/Desktop/shadow-city/.visual/v061/v061-relationships-tick500-1440x900.png",
+      "curated": true
+    },
+    {
+      "name": "v061-memory-tick500-1440x900",
+      "path": "/Users/rw1225/Desktop/shadow-city/.visual/v061/v061-memory-tick500-1440x900.png",
+      "curated": true
+    },
+    {
+      "name": "v061-encounter-history-tick500-1440x900",
+      "path": "/Users/rw1225/Desktop/shadow-city/.visual/v061/v061-encounter-history-tick500-1440x900.png",
+      "curated": true
+    },
+    {
+      "name": "v061-timeline-seek-1440x900",
+      "path": "/Users/rw1225/Desktop/shadow-city/.visual/v061/v061-timeline-seek-1440x900.png",
+      "curated": false
+    },
+    {
+      "name": "v061-observed-god-view-tick500-1440x900",
+      "path": "/Users/rw1225/Desktop/shadow-city/.visual/v061/v061-observed-god-view-tick500-1440x900.png",
+      "curated": false
+    },
+    {
+      "name": "v061-replay-tick100-1440x900",
+      "path": "/Users/rw1225/Desktop/shadow-city/.visual/v061/v061-replay-tick100-1440x900.png",
+      "curated": false
+    },
+    {
+      "name": "v061-bearing-0-tick500-1440x900",
+      "path": "/Users/rw1225/Desktop/shadow-city/.visual/v061/v061-bearing-0-tick500-1440x900.png",
+      "curated": false
+    },
+    {
+      "name": "v061-bearing-90-tick500-1440x900",
+      "path": "/Users/rw1225/Desktop/shadow-city/.visual/v061/v061-bearing-90-tick500-1440x900.png",
+      "curated": false
+    },
+    {
+      "name": "v061-bearing-180-tick500-1440x900",
+      "path": "/Users/rw1225/Desktop/shadow-city/.visual/v061/v061-bearing-180-tick500-1440x900.png",
+      "curated": false
+    },
+    {
+      "name": "v061-bearing-270-tick500-1440x900",
+      "path": "/Users/rw1225/Desktop/shadow-city/.visual/v061/v061-bearing-270-tick500-1440x900.png",
+      "curated": false
+    },
+    {
+      "name": "v061-narrow-collapsed-tick100-390x844",
+      "path": "/Users/rw1225/Desktop/shadow-city/.visual/v061/v061-narrow-collapsed-tick100-390x844.png",
+      "curated": true
+    },
+    {
+      "name": "v061-narrow-inspector-tick100-390x844",
+      "path": "/Users/rw1225/Desktop/shadow-city/.visual/v061/v061-narrow-inspector-tick100-390x844.png",
+      "curated": true
+    }
+  ],
+  "errors": [],
+  "quietPerformance": {
+    "dateUtc": "2026-10-26T22:15:23.565Z",
+    "conditions": "Serial Chrome pages; no parallel Vitest or browser workload; 1440x900 DPR 1; resident citizen-0015 selected; Tick 200 before frame sampling; 3-second rAF sample while playing.",
+    "samples": [
+      {
+        "population": 120,
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+        "gpuKind": "hardware",
+        "fps": 27.53358765964505,
+        "p95FrameIntervalMs": 84.30000000447035,
+        "frameCount": 84,
+        "p95AdvanceTickMs": 29.80000000447035,
+        "rendering": {
+          "drawCalls": 327,
+          "triangles": 318599,
+          "geometries": 201,
+          "textures": 48,
+          "geometryBufferBytes": 1142944,
+          "instanceBufferBytes": 1430900,
+          "textureSourceBytesEstimated": 5745328,
+          "medianActiveFrameMs": 34.399999998509884,
+          "p50ActiveFrameMs": 34,
+          "p95ActiveFrameMs": 54.20000000298023,
+          "sampledFrames": 120,
+          "renderedFrames": 249
+        },
+        "finalTick": 212,
+        "renderedAgentTick": 212,
+        "usedJsHeapBytes": 168607222,
+        "errors": []
+      },
+      {
+        "population": 200,
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+        "gpuKind": "hardware",
+        "fps": 28.10962754746303,
+        "p95FrameIntervalMs": 111.70000000298023,
+        "frameCount": 85,
+        "p95AdvanceTickMs": 64,
+        "rendering": {
+          "drawCalls": 329,
+          "triangles": 319343,
+          "geometries": 203,
+          "textures": 48,
+          "geometryBufferBytes": 1149472,
+          "instanceBufferBytes": 1496820,
+          "textureSourceBytesEstimated": 5745328,
+          "medianActiveFrameMs": 30,
+          "p50ActiveFrameMs": 29.600000001490116,
+          "p95ActiveFrameMs": 75.5,
+          "sampledFrames": 120,
+          "renderedFrames": 259
+        },
+        "finalTick": 212,
+        "renderedAgentTick": 212,
+        "usedJsHeapBytes": 175183035,
+        "errors": []
+      }
+    ]
+  },
+  "performanceCaveat": "Earlier renderPerformance and population200 samples overlapped a parallel Vitest run; use quietPerformance for the controlled 120/200 comparison.",
+  "performanceAttribution": {
+    "dateUtc": "2026-10-26T22:22:18.501Z",
+    "conditions": "One Chrome 156 page, Apple M4 hardware WebGL, fixed seeds, population 200, 1440x900 DPR 1. Initial Tick 200; cases run serially with 1.5-second settle and 3-second rAF samples. No concurrent test or browser workload.",
+    "samples": [
+      {
+        "name": "paused-unselected",
+        "selected": false,
+        "playing": false,
+        "simulationSpeed": "1",
+        "startTick": 200,
+        "endTick": 200,
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+        "canvasCount": 1,
+        "fps": 59.99600026658929,
+        "p95FrameIntervalMs": 18.100000001490116,
+        "frames": 181,
+        "longTaskCount": 0,
+        "longTaskTotalMs": 0,
+        "cdpMainThreadMs": {
+          "TaskDuration": 1049.8040000000008,
+          "ScriptDuration": 988.2809999999997,
+          "LayoutDuration": 0,
+          "RecalcStyleDuration": 0
+        },
+        "rendering": {
+          "drawCalls": 318,
+          "triangles": 312889,
+          "geometries": 192,
+          "textures": 38,
+          "geometryBufferBytes": 428324,
+          "instanceBufferBytes": 1496820,
+          "textureSourceBytesEstimated": 5745328,
+          "medianActiveFrameMs": 16.69999999552965,
+          "p50ActiveFrameMs": 16.69999999552965,
+          "p95ActiveFrameMs": 16.900000005960464,
+          "sampledFrames": 120,
+          "renderedFrames": 433
+        },
+        "visibleAgents": {
+          "tick": 200,
+          "visibleCount": 165,
+          "farCount": 165,
+          "mediumCount": 0,
+          "closeCount": 0
+        }
+      },
+      {
+        "name": "paused-selected",
+        "selected": true,
+        "playing": false,
+        "simulationSpeed": "1",
+        "startTick": 200,
+        "endTick": 200,
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+        "canvasCount": 2,
+        "fps": 59.98458496696177,
+        "p95FrameIntervalMs": 17.899999998509884,
+        "frames": 180,
+        "longTaskCount": 0,
+        "longTaskTotalMs": 0,
+        "cdpMainThreadMs": {
+          "TaskDuration": 736.4240000000013,
+          "ScriptDuration": 701.0080000000007,
+          "LayoutDuration": 0,
+          "RecalcStyleDuration": 0
+        },
+        "rendering": {
+          "drawCalls": 329,
+          "triangles": 319415,
+          "geometries": 203,
+          "textures": 48,
+          "geometryBufferBytes": 1149472,
+          "instanceBufferBytes": 1496820,
+          "textureSourceBytesEstimated": 5745328,
+          "medianActiveFrameMs": 16.69999999552965,
+          "p50ActiveFrameMs": 16.69999999552965,
+          "p95ActiveFrameMs": 16.899999998509884,
+          "sampledFrames": 120,
+          "renderedFrames": 710
+        },
+        "visibleAgents": {
+          "tick": 200,
+          "visibleCount": 165,
+          "farCount": 164,
+          "mediumCount": 0,
+          "closeCount": 1
+        }
+      },
+      {
+        "name": "playing-selected",
+        "selected": true,
+        "playing": true,
+        "simulationSpeed": "1",
+        "startTick": 200,
+        "endTick": 212,
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+        "canvasCount": 2,
+        "fps": 52.687741763293474,
+        "p95FrameIntervalMs": 57,
+        "frames": 159,
+        "longTaskCount": 5,
+        "longTaskTotalMs": 335,
+        "cdpMainThreadMs": {
+          "TaskDuration": 1572.222,
+          "ScriptDuration": 1472.454,
+          "LayoutDuration": 6.003000000000001,
+          "RecalcStyleDuration": 0.25799999999999956
+        },
+        "rendering": {
+          "drawCalls": 329,
+          "triangles": 319343,
+          "geometries": 203,
+          "textures": 48,
+          "geometryBufferBytes": 1149472,
+          "instanceBufferBytes": 1496820,
+          "textureSourceBytesEstimated": 5745328,
+          "medianActiveFrameMs": 16.69999999552965,
+          "p50ActiveFrameMs": 16.69999999552965,
+          "p95ActiveFrameMs": 43.79999999701977,
+          "sampledFrames": 120,
+          "renderedFrames": 971
+        },
+        "visibleAgents": {
+          "tick": 212,
+          "visibleCount": 156,
+          "farCount": 155,
+          "mediumCount": 0,
+          "closeCount": 1
+        }
+      },
+      {
+        "name": "playing-unselected",
+        "selected": false,
+        "playing": true,
+        "simulationSpeed": "1",
+        "startTick": 212,
+        "endTick": 224,
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+        "canvasCount": 1,
+        "fps": 55.020174063714045,
+        "p95FrameIntervalMs": 49.600000001490116,
+        "frames": 166,
+        "longTaskCount": 3,
+        "longTaskTotalMs": 167,
+        "cdpMainThreadMs": {
+          "TaskDuration": 1333.646,
+          "ScriptDuration": 1242.8129999999999,
+          "LayoutDuration": 5.396000000000005,
+          "RecalcStyleDuration": 0.21900000000000044
+        },
+        "rendering": {
+          "drawCalls": 318,
+          "triangles": 312753,
+          "geometries": 202,
+          "textures": 48,
+          "geometryBufferBytes": 428324,
+          "instanceBufferBytes": 1496820,
+          "textureSourceBytesEstimated": 5745328,
+          "medianActiveFrameMs": 16.69999999552965,
+          "p50ActiveFrameMs": 16.69999999552965,
+          "p95ActiveFrameMs": 37.399999998509884,
+          "sampledFrames": 120,
+          "renderedFrames": 1243
+        },
+        "visibleAgents": {
+          "tick": 224,
+          "visibleCount": 148,
+          "farCount": 148,
+          "mediumCount": 0,
+          "closeCount": 0
+        }
+      }
+    ],
+    "errors": [],
+    "isolatedSimulation": {
+      "constructionMs": 36.600000001490116,
+      "measuredTicks": 100,
+      "averageTickMs": 17.625,
+      "p95TickMs": 24.200000002980232,
+      "maxTickMs": 33.599999994039536,
+      "finalTick": 224,
+      "fingerprint": "world-v2:heritage-extension-v6:b2d75275:sim-v5:330194d1"
+    }
+  }
+}

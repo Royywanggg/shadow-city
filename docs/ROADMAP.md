@@ -154,6 +154,21 @@ The v0.6 implementation is split into reviewable gates:
 
 **Out of scope:** police investigation, SSP/HSP, elevator dispatch, a production NavMesh, a 1,000-citizen acceptance claim, empirical calibration, backend services, and database persistence. The bridge, Galleria, operating hours and place attractiveness may change outcomes through reproducible interventions; no route or offence is guaranteed by config. See `V06_ARCHITECTURE.md` for data flow, evidence and remaining limits. If visual or hardware inspection is unavailable, leave the relevant gate pending.
 
+## v0.6.1 — Encounter, social relationships and subjective knowledge
+
+**Goal:** Let residents encounter one another through legal space and time, sometimes interact, and retain bounded subjective knowledge. Connect contact to a separate offender decision and witness/reporting path without giving the observer research-only truth.
+
+| Gate | Deliverable | Exit evidence |
+| --- | --- | --- |
+| **A — Spatial contact** | Surface-keyed spatial index, explicit portal contact, deterministic social episode lifecycle. | Cross-floor, blocked-polygon, connector, pair-order, hysteresis and repeated-episode tests. |
+| **B — Perception and interaction** | Directed attention, bilateral greeting and stationary conversation with real Tick cost. | Near does not imply noticed or interaction; no moving conversation or teleport; one initial and at most one settled decision per episode; closure interruption and speed/replay parity. |
+| **C — Relationship and memory** | Directed familiarity/recognition/identity beliefs, bounded owner-local memory and knowledge, subjective risk. | Passing never grants a name; conversation may exchange a name; source and confidence preserved; Tick 100/500 replay and capacity tests. |
+| **D — Crime and witness** | Explicit exclusive encounter-aware mode, second-level opportunity/attempt/truth event, five-stage witness perception, delayed subjective reports. | Zero opportunity can yield zero offence; multiple reports are one truth event; offence-second spatial eligibility; observer allowlist; old v5 and v2–v4 regression. |
+| **E — Researcher God View** | Relationship, encounter, memory and timeline inspection, real seek, selected encounter visualization. | UI reads simulation state and decision traces; all event modes retain God View; actual browser captures include a natural encounter and active interaction. |
+| **F — Scientific and performance review** | Reproducible positive/negative fixtures, metric denominators, 100–200-resident CPU/browser samples, assumptions and limitations. | Typecheck, full tests, production build, Tick 500 replay, real Chrome screenshots and measured frame/render counters; unmeasured GPU limits stay open. |
+
+This is an opt-in, fingerprinted `EncounterScenarioV1` extension to v5; old configs retain the legacy incident pipeline. Synthetic rules are research assumptions, not predictions about people or real cities. See `V061_ENCOUNTER_ARCHITECTURE.md` for the tick phases and model boundaries. **Status:** functional gates A–F have code, test and real Chrome evidence in `V061_VERIFICATION.md`. The 200-citizen hardware Chrome and replay performance targets remain open; this milestone is not performance-complete.
+
 ## v0.7 — Policing strategy design and implementation
 
 **Goal:** Compare explicit police decision strategies under transparent model assumptions.
