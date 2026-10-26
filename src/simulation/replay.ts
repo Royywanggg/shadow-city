@@ -1,6 +1,7 @@
 import { createInitialState, stepSimulation, validateCommand, validateConfig } from './engine'
 import { createInitialCitizenState, stepCitizenSimulation } from './engineV2'
 import { createInitialStateV3, createSimulationEnvironmentV3, stepSimulationV3, type SimulationEnvironmentV3 } from './engineV3'
+import { createInitialStateV4, createSimulationEnvironmentV4, stepSimulationV4, type SimulationEnvironmentV4 } from './engineV4'
 import { createSimulationEnvironment, validateCitizenConfig } from './environment'
 import type {
   CommandEnvelope,
@@ -11,6 +12,7 @@ import type {
   StaticCity,
 } from './types'
 import type { IncidentOccurredEvent, ReportAvailableEvent } from './v3Types'
+import type { OffenceOccurredEvent, ReportAvailableEventV4 } from './v4Types'
 
 // Replay reconstructs facts from accepted domain inputs; playback controls are absent.
 export function replayToTick(
@@ -18,7 +20,7 @@ export function replayToTick(
   config: SimulationConfig,
   acceptedCommands: readonly CommandEnvelope[],
   targetTick: number,
-  suppliedEnvironment?: SimulationEnvironment | SimulationEnvironmentV3 | null,
+  suppliedEnvironment?: SimulationEnvironment | SimulationEnvironmentV3 | SimulationEnvironmentV4 | null,
 ): ReplayResult {
   if (config.version === 1) validateConfig(config)
   else if (config.version === 2) validateCitizenConfig(config)
@@ -60,13 +62,35 @@ export function replayToTick(
           suppliedEnvironment.scenarioFingerprint !== expected.scenarioFingerprint)) {
       throw new Error('Supplied replay environment is incompatible with the v3 scenario')
     }
-    const environment = suppliedEnvironment && 'worldFingerprint' in suppliedEnvironment
-      ? suppliedEnvironment : expected
+    const environment: SimulationEnvironmentV3 = suppliedEnvironment && 'worldFingerprint' in suppliedEnvironment && suppliedEnvironment.config.version === 3
+      ? suppliedEnvironment as SimulationEnvironmentV3 : expected
     const truthEvents: IncidentOccurredEvent[] = []
     const observationEvents: ReportAvailableEvent[] = []
     let state = createInitialStateV3(environment)
     for (let tick = 1; tick <= targetTick; tick += 1) {
       const transition = stepSimulationV3(environment, state, byTick.get(tick) ?? [])
+      state = transition.state
+      events.push(...transition.citizenEvents)
+      truthEvents.push(...transition.truthEvents)
+      observationEvents.push(...transition.observationEvents)
+    }
+    return { state, events, truthEvents, observationEvents }
+  }
+  if (config.version === 4) {
+    const expected = createSimulationEnvironmentV4(city, config)
+    if (suppliedEnvironment &&
+        (!('worldFingerprint' in suppliedEnvironment) ||
+          suppliedEnvironment.worldFingerprint !== expected.worldFingerprint ||
+          suppliedEnvironment.scenarioFingerprint !== expected.scenarioFingerprint)) {
+      throw new Error('Supplied replay environment is incompatible with the v4 scenario')
+    }
+    const environment = suppliedEnvironment && 'worldFingerprint' in suppliedEnvironment
+      ? suppliedEnvironment as SimulationEnvironmentV4 : expected
+    const truthEvents: OffenceOccurredEvent[] = []
+    const observationEvents: ReportAvailableEventV4[] = []
+    let state = createInitialStateV4(environment)
+    for (let tick = 1; tick <= targetTick; tick += 1) {
+      const transition = stepSimulationV4(environment, state, byTick.get(tick) ?? [])
       state = transition.state
       events.push(...transition.citizenEvents)
       truthEvents.push(...transition.truthEvents)

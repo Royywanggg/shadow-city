@@ -1,8 +1,10 @@
 import { createInitialState, stepSimulation, validateCommand, validateConfig } from './engine'
 import { createInitialCitizenState, stepCitizenSimulation } from './engineV2'
 import { createInitialStateV3, createSimulationEnvironmentV3, stepSimulationV3, type SimulationEnvironmentV3 } from './engineV3'
+import { createInitialStateV4, createSimulationEnvironmentV4, stepSimulationV4, type SimulationEnvironmentV4 } from './engineV4'
 import { createSimulationEnvironment, validateCitizenConfig } from './environment'
 import { selectGroundTruthView, selectObservedWorldView } from './observation'
+import { deriveGroundTruthMetricsV4, selectObservedWorldViewV4 } from './observation/v4'
 import { replayToTick } from './replay'
 import { DEFAULT_SIMULATION_CONFIG } from './types'
 import type {
@@ -17,6 +19,7 @@ import type {
   StaticCity,
 } from './types'
 import type { GroundTruthView, IncidentOccurredEvent, ObservedWorldView, ObserverPort, ReportAvailableEvent } from './v3Types'
+import type { GroundTruthViewV4, ObservedWorldViewV4, ObserverPortV4, OffenceOccurredEvent, ReportAvailableEventV4 } from './v4Types'
 
 export interface SimulationHistoryLimits {
   readonly maxTicks: number
@@ -37,6 +40,7 @@ export const DEFAULT_HISTORY_LIMITS: Required<SimulationHistoryLimits> = Object.
 })
 
 function freezeState(state: SimulationState): SimulationState {
+  if (state.version === 4) return deepFreeze(state)
   if (state.version === 3) {
     freezeState(state.citizen)
     for (const incident of state.incidents) {
@@ -72,6 +76,14 @@ function freezeState(state: SimulationState): SimulationState {
   return Object.freeze(state)
 }
 
+function deepFreeze<T>(value: T): T {
+  if (value && typeof value === 'object' && !Object.isFrozen(value)) {
+    for (const child of Object.values(value)) deepFreeze(child)
+    Object.freeze(value)
+  }
+  return value
+}
+
 function validateLimits(limits: SimulationHistoryLimits): void {
   if (Object.values(limits).some((value) => value !== undefined && (!Number.isSafeInteger(value) || value < 1))) {
     throw new Error('Invalid simulation history limits')
@@ -100,6 +112,7 @@ export class SimulationSession {
   readonly config: SimulationConfig
   readonly environment: SimulationEnvironment | null
   readonly environmentV3: SimulationEnvironmentV3 | null
+  readonly environmentV4: SimulationEnvironmentV4 | null
   readonly limits: Required<SimulationHistoryLimits>
 
   private liveState: SimulationState
@@ -107,8 +120,8 @@ export class SimulationSession {
   private commandHistory: CommandEnvelope[] = []
   private commandsByTick = new Map<number, CommandEnvelope[]>()
   private eventHistory: SimulationEvent[] = []
-  private truthEventHistory: IncidentOccurredEvent[] = []
-  private observationEventHistory: ReportAvailableEvent[] = []
+  private truthEventHistory: (IncidentOccurredEvent | OffenceOccurredEvent)[] = []
+  private observationEventHistory: (ReportAvailableEvent | ReportAvailableEventV4)[] = []
   private inspected: ReplayResult | null = null
   private snapshot: SimulationSnapshot
   private listeners = new Set<() => void>()
@@ -122,12 +135,15 @@ export class SimulationSession {
     else if (config.version === 2) validateCitizenConfig(config)
     validateLimits(limits)
     this.city = city
-    this.config = freezeConfig(config)
+    this.environmentV4 = config.version === 4 ? createSimulationEnvironmentV4(city, config) : null
+    this.config = this.environmentV4?.config ?? freezeConfig(config)
     this.limits = Object.freeze({ ...DEFAULT_HISTORY_LIMITS, ...limits })
     this.environmentV3 = this.config.version === 3 ? createSimulationEnvironmentV3(city, this.config) : null
     this.environment = this.config.version === 2 ? createSimulationEnvironment(city, this.config)
-      : this.environmentV3?.citizen ?? null
-    this.liveState = freezeState(this.config.version === 3
+      : this.environmentV3?.citizen ?? this.environmentV4?.citizen ?? null
+    this.liveState = freezeState(this.config.version === 4
+      ? createInitialStateV4(this.environmentV4!)
+      : this.config.version === 3
       ? createInitialStateV3(this.environmentV3!)
       : this.config.version === 2
         ? createInitialCitizenState(this.environment!, this.config)
@@ -189,11 +205,60 @@ export class SimulationSession {
     })
   }
 
-  getTruthEventHistory(): readonly IncidentOccurredEvent[] {
+  /** Researcher capability. The observer port does not expose this method. */
+  getGroundTruthViewV4(): GroundTruthViewV4 {
+    const state = this.inspected?.state ?? this.liveState
+    if (state.version !== 4 || this.config.version !== 4 || !this.environmentV4) {
+      throw new Error('V4 ground truth is unavailable in this simulation version')
+    }
+    const groupByAgentId = Object.fromEntries(this.environmentV4.profiles.map((profile) =>
+      [profile.agentId, profile.researchGroup]))
+    return deepFreeze({
+      asOfTick: state.tick,
+      incidents: state.incidents,
+      offences: state.offences,
+      profiles: this.environmentV4.profiles,
+      outcomes: state.reporting.outcomes,
+      metrics: deriveGroundTruthMetricsV4(
+        state.offences,
+        state.reporting,
+        this.environmentV4.profiles.map((profile) => profile.agentId),
+        groupByAgentId,
+        this.config.observation,
+        state.tick,
+      ),
+    })
+  }
+
+  getObservedWorldViewV4(): ObservedWorldViewV4 {
+    const state = this.inspected?.state ?? this.liveState
+    if (state.version !== 4) throw new Error('V4 observed world is unavailable in this simulation version')
+    return selectObservedWorldViewV4(state)
+  }
+
+  /** Restricted observer capability: no state, profiles, offences, or private outcomes. */
+  createObserverPortV4(): ObserverPortV4 {
+    if (this.config.version !== 4) throw new Error('V4 observer port requires a v4 scenario')
+    let lastSnapshot = this.snapshot
+    let lastView = this.getObservedWorldViewV4()
+    const getView = () => {
+      if (this.snapshot !== lastSnapshot) {
+        lastSnapshot = this.snapshot
+        lastView = this.getObservedWorldViewV4()
+      }
+      return lastView
+    }
+    return Object.freeze({
+      getView,
+      subscribe: (listener: () => void) => this.subscribe(listener),
+    })
+  }
+
+  getTruthEventHistory(): readonly (IncidentOccurredEvent | OffenceOccurredEvent)[] {
     return [...(this.inspected?.truthEvents ?? this.truthEventHistory)]
   }
 
-  getObservationEventHistory(): readonly ReportAvailableEvent[] {
+  getObservationEventHistory(): readonly (ReportAvailableEvent | ReportAvailableEventV4)[] {
     return [...(this.inspected?.observationEvents ?? this.observationEventHistory)]
   }
 
@@ -237,6 +302,22 @@ export class SimulationSession {
     }
     const nextTick = this.liveState.tick + 1
     const commands = this.commandsByTick.get(nextTick) ?? []
+    if (this.config.version === 4 && this.liveState.version === 4) {
+      const transition = stepSimulationV4(this.environmentV4!, this.liveState, commands)
+      if (this.eventHistory.length + transition.citizenEvents.length > this.limits.maxEvents ||
+          transition.state.citizen.pendingActions.length > this.limits.maxPendingActions ||
+          transition.state.incidents.length > this.limits.maxIncidents ||
+          transition.state.reporting.records.length > this.limits.maxReports) {
+        throw new Error('Simulation history limit reached; reset simulation to continue')
+      }
+      this.previousLiveState = this.liveState
+      this.liveState = freezeState(transition.state)
+      this.eventHistory.push(...transition.citizenEvents.map((event) => Object.freeze(event)))
+      this.truthEventHistory.push(...transition.truthEvents.map((event) => Object.freeze(event)))
+      this.observationEventHistory.push(...transition.observationEvents.map((event) => Object.freeze(event)))
+      this.publish()
+      return
+    }
     if (this.config.version === 3 && this.liveState.version === 3) {
       const transition = stepSimulationV3(this.environmentV3!, this.liveState, commands)
       if (this.eventHistory.length + transition.citizenEvents.length > this.limits.maxEvents ||
@@ -273,7 +354,7 @@ export class SimulationSession {
       throw new Error('Inspection tick must be within the live history')
     }
     const replay = replayToTick(this.city, this.config, this.commandHistory, tick,
-      this.environmentV3 ?? this.environment)
+      this.environmentV4 ?? this.environmentV3 ?? this.environment)
     this.inspected = {
       state: freezeState(replay.state),
       events: Object.freeze(replay.events.map((event) => Object.freeze(event))),
@@ -291,7 +372,9 @@ export class SimulationSession {
   }
 
   reset(): void {
-    this.liveState = freezeState(this.config.version === 3
+    this.liveState = freezeState(this.config.version === 4
+      ? createInitialStateV4(this.environmentV4!)
+      : this.config.version === 3
       ? createInitialStateV3(this.environmentV3!)
       : this.config.version === 2
         ? createInitialCitizenState(this.environment!, this.config)

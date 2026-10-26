@@ -10,6 +10,10 @@ export { createSimulationEnvironment, validateCitizenConfig, CITIZEN_ENGINE_VERS
 export { createInitialCitizenState, stepCitizenSimulation } from './engineV2'
 export { createInitialStateV3, createSimulationEnvironmentV3, stepSimulationV3 } from './engineV3'
 export type { SimulationEnvironmentV3 } from './engineV3'
+export { createInitialStateV4, createSimulationEnvironmentV4, stepSimulationV4 } from './engineV4'
+export type { SimulationEnvironmentV4 } from './engineV4'
+export { canonicalOffendingConfig, createOffendingProfiles, generateOffencesForTick, offenceChoiceProbabilities } from './offending'
+export { deriveGroundTruthMetricsV4, selectObservedWorldViewV4, stepReportingV4 } from './observation/v4'
 export {
   createIncidentWorldRunId,
   generateIncidentsForTick,
@@ -34,6 +38,7 @@ export { SimulationSession, DEFAULT_HISTORY_LIMITS } from './session'
 export { DEFAULT_SIMULATION_CONFIG, isCitizenSimulationState } from './types'
 export { getCitizenSimulationState } from './types'
 export { DEFAULT_V3_SCENARIO_CONFIG, V04_REVIEW_SCENARIO_CONFIG } from './v3Types'
+export { DEFAULT_V4_SCENARIO_CONFIG, V05_REVIEW_SCENARIO_CONFIG } from './v4Types'
 export type { SimulationHistoryLimits } from './session'
 export type {
   CommandEnvelope,
@@ -75,3 +80,16 @@ export type {
   SimulationStateV3,
   SimulationTransitionV3,
 } from './v3Types'
+export type {
+  SimulationConfigV4,
+  SimulationStateV4,
+  SimulationTransitionV4,
+  GroundTruthViewV4,
+  Offence,
+  OffendingConfig,
+  OffendingProfile,
+  ObservationConfigV4,
+  ObservedWorldViewV4,
+  ObserverPortV4,
+  ReportableOccurrenceV4,
+} from './v4Types'
