@@ -12,6 +12,7 @@ export function CameraControls({ controller }: { controller: CameraController })
       className="camera-controls"
       aria-label="Camera navigation"
       data-target-x={view.target[0].toFixed(3)}
+      data-target-y={view.target[1].toFixed(3)}
       data-target-z={view.target[2].toFixed(3)}
       data-zoom-ratio={view.zoomRatio.toFixed(4)}
     >
