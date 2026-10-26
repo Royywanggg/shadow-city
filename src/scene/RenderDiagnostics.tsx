@@ -6,6 +6,8 @@ declare global {
     __shadowCityDiagnostics?: {
       drawCalls: number
       triangles: number
+      geometries: number
+      textures: number
       medianActiveFrameMs: number | null
       p50ActiveFrameMs: number | null
       p95ActiveFrameMs: number | null
@@ -42,6 +44,8 @@ export function RenderDiagnostics() {
       window.__shadowCityDiagnostics = {
         drawCalls: gl.info.render.calls,
         triangles: gl.info.render.triangles,
+        geometries: gl.info.memory.geometries,
+        textures: gl.info.memory.textures,
         medianActiveFrameMs: sorted.length ? sorted[Math.floor(sorted.length / 2)] : null,
         p50ActiveFrameMs: percentile(0.5),
         p95ActiveFrameMs: percentile(0.95),

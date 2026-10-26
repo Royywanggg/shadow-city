@@ -1,5 +1,7 @@
 # v0.5.1 population and character architecture
 
+This document records the v0.5.1 design. [v0.5.2](V052_ARCHITECTURE.md) adds independent activity occupancy and real simulation-backed jogging; its spatial and animation rules supersede the corresponding v0.5.1 limitations below.
+
 ## Data boundaries
 
 ```text

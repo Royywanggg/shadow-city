@@ -31,6 +31,9 @@ describe('character animation isolation', () => {
     expect(animationWeights('atDestination', 'travelling', 0.5)).toEqual({ Idle: 0.5, Walk: 0.5, Run: 0 })
     expect(animationWeights('atHome', undefined, 0)).toEqual({ Idle: 1, Walk: 0, Run: 0 })
     expect(animationWeights('atHome', 'travelling', 0.3, 'Run')).toEqual({ Idle: 0, Walk: 0, Run: 1 })
+    expect(animationWeights('travelling', 'atHome', 0.5, null, 'jog')).toEqual({ Idle: 0.5, Walk: 0, Run: 0.5 })
+    expect(animationWeights('atDestination', 'travelling', 0.5, null, 'walk', 'jog'))
+      .toEqual({ Idle: 0.5, Walk: 0, Run: 0.5 })
   })
   it('locks horizontal root translation without changing authored vertical movement', () => {
     const source = new AnimationClip('Walk', 1, [

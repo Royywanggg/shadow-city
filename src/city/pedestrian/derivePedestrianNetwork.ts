@@ -135,6 +135,19 @@ export function derivePedestrianNetwork(city: SpatialCity): PedestrianNetwork {
       }
     })
 
+    for (const [side, z] of [['north', north], ['south', south]] as const) {
+      xValues.forEach((x, index) => anchors.push({
+        id: `anchor-street-${block.id}-${side}-${index}`,
+        nodeId: at(x, z), kind: 'street', blockId: block.id,
+      }))
+    }
+    for (const [side, x] of [['west', west], ['east', east]] as const) {
+      zValues.slice(1, -1).forEach((z, index) => anchors.push({
+        id: `anchor-street-${block.id}-${side}-${index}`,
+        nodeId: at(x, z), kind: 'street', blockId: block.id,
+      }))
+    }
+
     for (const building of blockBuildings) {
       const id = `ped-entrance-${building.id}`
       addNode({ id, x: building.entrance.x, z: building.entrance.z, surfaceY: SIDEWALK_Y, kind: 'entrance' })
@@ -142,6 +155,24 @@ export function derivePedestrianNetwork(city: SpatialCity): PedestrianNetwork {
       if (nextLane === undefined) throw new Error(`No sidewalk lane for ${building.id}`)
       addEdge(`ped-access-${building.id}`, id, at(building.entrance.x, nextLane), 'access')
       anchors.push({ id: `anchor-${building.id}`, nodeId: id, kind: 'building', buildingId: building.id, blockId: block.id })
+      if (building.kind === 'civic' || building.kind === 'commercial' || building.kind === 'office') {
+        const frontageIndex = xValues.findIndex((x) => Math.abs(x - building.entrance.x) < EPSILON)
+        const frontage = [
+          { suffix: 'door', nodeId: id },
+          { suffix: 'walk', nodeId: at(building.entrance.x, nextLane) },
+          ...[frontageIndex - 1, frontageIndex + 1]
+            .filter((index) => index >= 0 && index < xValues.length &&
+              Math.abs(xValues[index] - building.entrance.x) <= 3)
+            .map((index) => ({ suffix: `side-${index}`, nodeId: at(xValues[index], nextLane) })),
+        ]
+        for (const spot of frontage) anchors.push({
+          id: `anchor-public-${building.id}-${spot.suffix}`,
+          nodeId: spot.nodeId,
+          kind: 'publicEntrance',
+          buildingId: building.id,
+          blockId: block.id,
+        })
+      }
     }
 
     if (block.isPlaza) {

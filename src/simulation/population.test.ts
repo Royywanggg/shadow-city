@@ -12,6 +12,7 @@ function profiles(count: number): AgentProfile[] {
     id: `citizen-${String(index).padStart(4, '0')}`,
     homeAnchorId: 'home',
     speedUnitsPerLogicalSecond: 0.3,
+    jogPreference: 0.2,
     firstDepartureTick: 1,
     homeDwellTicks: 100,
     visitDwellTicks: 40,

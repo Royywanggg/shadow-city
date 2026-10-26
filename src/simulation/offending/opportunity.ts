@@ -31,13 +31,15 @@ function legalOutdoorAnchor(
   nodeById: ReadonlyMap<string, StaticCity['pedestrian']['nodes'][number]>,
   anchorById: ReadonlyMap<string, StaticCity['pedestrian']['anchors'][number]>,
 ): PedestrianSpatialAnchor | null {
-  if (citizen.activity === 'atHome' || citizen.activity === 'planningTrip') return null
+  if (citizen.activity === 'atHome' || citizen.activity === 'planningTrip' ||
+      citizen.activity === 'waitingForSpace') return null
   if (![citizen.position.x, citizen.position.y, citizen.position.z].every(Number.isFinite)) {
     throw new Error(`Invalid outdoor citizen position ${citizen.id}`)
   }
   if (citizen.activity === 'atDestination') {
     const anchor = citizen.currentAnchorId && anchorById.get(citizen.currentAnchorId)
-    if (!anchor || (anchor.kind !== 'plaza' && anchor.kind !== 'park')) return null
+    if (!anchor || (anchor.kind !== 'plaza' && anchor.kind !== 'park' &&
+        anchor.kind !== 'publicEntrance' && anchor.kind !== 'street')) return null
     const node = nodeById.get(anchor.nodeId)
     if (!node || !nearPosition(citizen.position, { x: node.x, y: node.surfaceY, z: node.z })) {
       throw new Error(`Citizen ${citizen.id} is not at its public pedestrian anchor`)

@@ -105,7 +105,8 @@ describe('derived pedestrian network', () => {
   it('distributes public anchors over visible walkable space and clear of street furniture', () => {
     const city = generateCity(HERO_SEED)
     const nodes = new Map(city.pedestrian.nodes.map((node) => [node.id, node]))
-    const publicAnchors = city.pedestrian.anchors.filter((anchor) => anchor.kind !== 'building')
+    const publicAnchors = city.pedestrian.anchors.filter((anchor) =>
+      anchor.kind === 'plaza' || anchor.kind === 'park')
     const publicNodes = publicAnchors.map((anchor) => nodes.get(anchor.nodeId)!)
     expect(new Set(publicNodes.map((node) => `${node.x.toFixed(6)}:${node.z.toFixed(6)}`)).size).toBe(publicNodes.length)
     for (let index = 0; index < publicNodes.length; index += 1) {

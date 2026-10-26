@@ -11,7 +11,8 @@ const executablePath = process.env.SHADOW_CITY_CHROME ??
 const browser = await chromium.launch({
   headless: true,
   executablePath,
-  args: ['--enable-webgl', '--use-gl=angle', '--use-angle=swiftshader'],
+  args: process.env.SHADOW_CITY_WEBGL === 'hardware'
+    ? ['--enable-webgl'] : ['--enable-webgl', '--use-gl=angle', '--use-angle=swiftshader'],
 })
 const baseUrl = new URL(process.env.SHADOW_CITY_URL ?? 'http://127.0.0.1:5173/')
 baseUrl.searchParams.set('review', '1')

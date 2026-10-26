@@ -19,6 +19,7 @@ const HISTORY_PAGE_SIZE = 24
 const ACTIVITY_LABELS: Record<CitizenActivity, string> = {
   atHome: 'At home',
   planningTrip: 'Planning trip',
+  waitingForSpace: 'Waiting for space',
   travelling: 'Travelling',
   atDestination: 'At destination',
   returningHome: 'Returning home',
@@ -45,6 +46,7 @@ function eventDescription(event: CitizenEvent, anchorNames: ReadonlyMap<string, 
     case 'ActivityStarted': return `Activity started at ${name(event.destinationAnchorId)}`
     case 'ActivityFinished': return `Activity finished at ${name(event.destinationAnchorId)}`
     case 'TripFailed': return `Trip failed: ${event.reason}`
+    case 'TripDeferred': return `Trip deferred: ${event.reason} at ${name(event.desiredAnchorId)}`
   }
 }
 
@@ -86,7 +88,10 @@ export function PopulationSidebar({
   const previousSelectedId = useRef<string | null>(null)
   const anchorNames = useMemo(() => new Map(graph.anchors.map((anchor) => [anchor.id,
     anchor.kind === 'building' ? `Building ${anchor.buildingId ?? anchor.id}`
-      : anchor.kind === 'plaza' ? 'Central plaza' : `Park ${anchor.blockId ?? anchor.id}`])), [graph])
+      : anchor.kind === 'plaza' ? 'Central plaza'
+        : anchor.kind === 'publicEntrance' ? `Public entrance ${anchor.buildingId ?? anchor.id}`
+          : anchor.kind === 'street' ? `Sidewalk ${anchor.blockId ?? anchor.id}`
+          : `Park ${anchor.blockId ?? anchor.id}`])), [graph])
   const pedestrianLookup = useMemo(() => createPedestrianLookup(graph), [graph])
 
   const filtered = useMemo(() => {
@@ -302,6 +307,8 @@ export function PopulationSidebar({
               <p className="population-profile-cue">DRAG TO TURN · SCROLL FOR PROFILE DATA ↓</p>
               <div className="population-portrait" role="group" aria-label="Selected citizen 3D portrait">
                 <CharacterPortrait appearance={selected.identity.appearance} activity={selected.state.activity}
+                  movementMode={selected.state.movementMode}
+                  animationRate={selected.profile.speedUnitsPerLogicalSecond / 0.35}
                   logicalTimeSeconds={session.getSnapshot().state.logicalTimeSeconds}
                   agentId={selected.identity.id} playback={playback} session={session} />
               </div>
@@ -329,11 +336,19 @@ export function PopulationSidebar({
               <div><dt>ACTIVITY</dt><dd data-testid="selected-agent-activity">{ACTIVITY_LABELS[selected.state.activity]}</dd></div>
               <div><dt>DESTINATION</dt><dd data-testid="selected-agent-destination">{destination}</dd></div>
               <div><dt>POSITION</dt><dd data-testid="selected-agent-position">{selected.state.position.x.toFixed(1)}, {selected.state.position.z.toFixed(1)}</dd></div>
+              <div><dt>MOVEMENT</dt><dd>{selected.state.activity === 'travelling' ||
+                selected.state.activity === 'returningHome'
+                ? selected.state.movementMode === 'jog' ? 'Jogging' : 'Walking' : 'Idle'}</dd></div>
+              <div><dt>HEADING</dt><dd>{Math.round(selected.state.headingRadians * 180 / Math.PI)}°</dd></div>
               <div><dt>ROUTE</dt><dd>{selected.state.route.length ? `${selected.state.routeIndex + 1} / ${selected.state.route.length} edges` : 'No active route'}</dd></div>
               <div><dt>EDGE</dt><dd>{currentEdge?.edgeId ?? '—'}</dd></div>
               <div><dt>NEXT DECISION</dt><dd>Tick {selected.state.nextDecisionTick}</dd></div>
               <div><dt>TRIPS</dt><dd>{selected.state.tripOrdinal}</dd></div>
-              <div><dt>VISIBILITY</dt><dd>{selected.state.activity === 'atHome' || selected.state.activity === 'planningTrip' ? 'Indoors / no street avatar' : 'Outdoors'}</dd></div>
+              <div><dt>ACTIVITY SLOT</dt><dd>{selected.state.occupancySlotId ??
+                (selected.state.activity === 'waitingForSpace' ? 'Waiting for capacity' : 'None')}</dd></div>
+              <div><dt>VISIBILITY</dt><dd>{selected.state.activity === 'atHome' ||
+                selected.state.activity === 'planningTrip' || selected.state.activity === 'waitingForSpace'
+                ? 'Indoors / no street avatar' : 'Outdoors'}</dd></div>
             </dl>}
             {tab === 'history' && <div className="population-history" data-testid="selected-agent-offence-history">
               <p>Initial activity: {history ? ACTIVITY_LABELS[history.initialActivity] : 'Unavailable'} at Tick 0.</p>

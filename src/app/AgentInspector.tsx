@@ -7,6 +7,7 @@ import type { AgentSelectionController } from './agentSelection'
 const ACTIVITY_LABELS = {
   atHome: 'AT HOME',
   planningTrip: 'PLANNING TRIP',
+  waitingForSpace: 'WAITING FOR SPACE',
   travelling: 'TRAVELLING',
   atDestination: 'AT DESTINATION',
   returningHome: 'RETURNING HOME',

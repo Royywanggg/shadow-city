@@ -21,11 +21,23 @@ declare global {
       renderedFrames: number
     }
     __shadowCityAnonymousPresence?: { visibleCount: number }
+    __shadowCityPopulationSpatialDiagnostics?: {
+      tick: number
+      outdoorCount: number
+      renderedCount: number
+      occupiedCount: number
+      uniqueOccupiedSlots: number
+      sharedActivitySites: number
+      invalidOccupiedPositions: number
+      waitingCount: number
+    }
     __shadowCityCharacterDiagnostics?: CharacterDiagnostics & {
       farSpriteCount?: number
       primitiveFallbackCount?: number
       selectedTier?: 'far' | 'medium' | 'close' | null
       selectedVisualTime?: number | null
+      selectedPresetId?: string | null
+      selectedPrimaryColor?: string | null
       assetError?: string
     }
     __shadowCityCharacterPreview?: {
@@ -80,6 +92,15 @@ export function AgentLayer({
   const populationPort = useMemo(() => session.createPopulationResearchPort(), [session])
   const appearanceById = useMemo(() => new Map(populationPort.getView().citizens.map((citizen) =>
     [citizen.id, citizen.identity.appearance])), [populationPort])
+  const animationRateById = useMemo(() => new Map(populationPort.getView().citizens.map((citizen) =>
+    [citizen.id, citizen.profile.speedUnitsPerLogicalSecond / 0.35])), [populationPort])
+  const farTintById = useMemo(() => new Map(populationPort.getView().citizens.map((citizen) => {
+    const appearance = citizen.identity.appearance
+    const tint = new Color('#ffffff')
+    if (appearance.primaryClothingColor) tint.lerp(new Color(appearance.primaryClothingColor), 0.3)
+    if (appearance.secondaryClothingColor) tint.lerp(new Color(appearance.secondaryClothingColor), 0.1)
+    return [citizen.id, tint] as const
+  })), [populationPort])
   const lookup = useMemo(() => createPedestrianLookup(graph), [graph])
   const pickRadius = useMemo(() => Math.max(20, ...graph.nodes.map((node) => Math.hypot(node.x, node.z))) + 8, [graph])
   const { camera, gl, invalidate } = useThree()
@@ -111,6 +132,7 @@ export function AgentLayer({
       delete window.__shadowCityAgentDiagnostics
       delete window.__shadowCityAnonymousPresence
       delete window.__shadowCityCharacterDiagnostics
+      delete window.__shadowCityPopulationSpatialDiagnostics
     }
   }, [])
 
@@ -160,7 +182,8 @@ export function AgentLayer({
       if (cancelled) return
       if (import.meta.env.DEV) window.__shadowCityCharacterDiagnostics = {
         farCount: 0, mediumCount: 0, closeCount: 0, visibleCount: 0,
-        assetPresetCount: 0, assetError: error instanceof Error ? error.message : String(error),
+        assetPresetCount: 0, activeInstances: 0, pooledInstances: 0,
+        assetError: error instanceof Error ? error.message : String(error),
       }
     })
     return () => {
@@ -181,32 +204,18 @@ export function AgentLayer({
     let movingCount = 0
     const poses: AgentRenderPose[] = []
     const renderItems: CharacterRenderItem[] = []
-    const stationaryRepresentatives = new Map<string, string>()
-    for (const citizen of current.citizens) {
-      if (citizen.activity !== 'atDestination') continue
-      const anchorId = citizen.currentAnchorId ?? citizen.destinationAnchorId ?? citizen.id
-      if (!stationaryRepresentatives.has(anchorId)) {
-        stationaryRepresentatives.set(anchorId, citizen.id)
-      }
-    }
-    if (selected?.activity === 'atDestination') {
-      stationaryRepresentatives.set(selected.currentAnchorId ?? selected.destinationAnchorId ?? selected.id, selected.id)
-    }
     const bounds = gl.domElement.getBoundingClientRect()
     for (const [index, citizen] of current.citizens.entries()) {
       const prior = previous?.citizens[index]?.id === citizen.id ? previous.citizens[index] : null
       const pose = interpolateAgentPose(prior, citizen, lookup, alpha)
-      const settling = alpha < 1 && (prior?.activity === 'travelling' || prior?.activity === 'returningHome')
-      const visible = pose.visible && (citizen.activity !== 'atDestination' || settling ||
-        stationaryRepresentatives.get(citizen.currentAnchorId ?? citizen.destinationAnchorId ?? citizen.id) === citizen.id)
-      poses.push({ ...pose, visible })
-      if (visible) visibleCount += 1
+      poses.push(pose)
+      if (pose.visible) visibleCount += 1
       if (citizen.activity === 'travelling' || citizen.activity === 'returningHome' ||
           (alpha < 1 && (prior?.activity === 'travelling' || prior?.activity === 'returningHome'))) {
         movingCount += 1
       }
       const appearance = appearanceById.get(citizen.id)
-      if (visible && appearance) {
+      if (pose.visible && appearance) {
         screenPoint.set(pose.x, pose.y, pose.z).project(camera)
         screenTop.set(pose.x, pose.y + 1.76, pose.z).project(camera)
         const onScreen = screenPoint.x >= -1.1 && screenPoint.x <= 1.1 &&
@@ -215,8 +224,11 @@ export function AgentLayer({
           id: citizen.id,
           appearance,
           activity: citizen.activity,
+          movementMode: citizen.movementMode,
           previousActivity: prior?.activity,
+          previousMovementMode: prior?.movementMode,
           transitionProgress: alpha,
+          animationRate: animationRateById.get(citizen.id) ?? 1,
           pose,
           pixelHeight: onScreen ? Math.abs(screenTop.y - screenPoint.y) * bounds.height / 2 : 0,
         })
@@ -243,6 +255,8 @@ export function AgentLayer({
         object.scale.setScalar(1)
         object.updateMatrix()
         mesh.setMatrixAt(slot, object.matrix)
+        const tint = farTintById.get(citizen.id)
+        if (tint) mesh.setColorAt(slot, tint)
         const agentIds = mesh.userData.agentIds as string[]
         agentIds[slot] = citizen.id
         counts.set(appearance.presetId, slot + 1)
@@ -252,11 +266,13 @@ export function AgentLayer({
         if (!mesh) continue
         mesh.count = counts.get(presetId) ?? 0
         mesh.instanceMatrix.needsUpdate = true
+        if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
       }
     }
     if (import.meta.env.DEV && updateDebug) {
       const diagnostics = result?.diagnostics ?? {
         farCount: visibleCount, mediumCount: 0, closeCount: 0, visibleCount, assetPresetCount: 0,
+        activeInstances: 0, pooledInstances: 0,
       }
       window.__shadowCityCharacterDiagnostics = {
         ...diagnostics,
@@ -264,6 +280,30 @@ export function AgentLayer({
         primitiveFallbackCount: farReady ? 0 : diagnostics.farCount,
         selectedTier: selectedId ? tiers?.get(selectedId) ?? null : null,
         selectedVisualTime: selectedId ? visualTime : null,
+        selectedPresetId: selectedId ? appearanceById.get(selectedId)?.presetId ?? null : null,
+        selectedPrimaryColor: selectedId ? appearanceById.get(selectedId)?.primaryClothingColor ?? null : null,
+      }
+      const slots = new Map(session.environment?.activitySlots.map((slot) => [slot.id, slot]) ?? [])
+      const occupied = current.citizens.filter((citizen) => citizen.activity === 'atDestination')
+      const siteCounts = new Map<string, number>()
+      let invalidOccupiedPositions = 0
+      for (const citizen of occupied) {
+        const slot = citizen.occupancySlotId ? slots.get(citizen.occupancySlotId) : null
+        if (!slot || Math.hypot(citizen.position.x - slot.position.x,
+          citizen.position.z - slot.position.z) > 1e-6) invalidOccupiedPositions += 1
+        else siteCounts.set(slot.siteId, (siteCounts.get(slot.siteId) ?? 0) + 1)
+      }
+      window.__shadowCityPopulationSpatialDiagnostics = {
+        tick: current.tick,
+        outdoorCount: current.citizens.filter((citizen) =>
+          citizen.activity === 'travelling' || citizen.activity === 'returningHome' ||
+          citizen.activity === 'atDestination').length,
+        renderedCount: visibleCount,
+        occupiedCount: occupied.length,
+        uniqueOccupiedSlots: new Set(occupied.map((citizen) => citizen.occupancySlotId)).size,
+        sharedActivitySites: [...siteCounts.values()].filter((count) => count > 1).length,
+        invalidOccupiedPositions,
+        waitingCount: current.citizens.filter((citizen) => citizen.activity === 'waitingForSpace').length,
       }
     }
     for (const [index, citizen] of current.citizens.entries()) {
@@ -345,7 +385,7 @@ export function AgentLayer({
       lastDebugTick.current = current.tick
     }
     return movingCount > 0 || (result?.diagnostics.closeCount ?? 0) > 0
-  }, [appearanceById, camera, clothingColor, farMaterials, gl, interactive, lookup, object, screenPoint, screenTop, selected, selectedId])
+  }, [animationRateById, appearanceById, camera, clothingColor, farMaterials, farTintById, gl, interactive, lookup, object, screenPoint, screenTop, selectedId, session])
 
   useLayoutEffect(() => {
     const current = state
@@ -402,7 +442,8 @@ export function AgentLayer({
       : event.instanceId === undefined ? null
         : (event.object.userData.agentIds as string[] | undefined)?.[event.instanceId] ?? state.citizens[event.instanceId]?.id
     const citizen = state.citizens.find((item) => item.id === id)
-    if (!citizen || citizen.activity === 'atHome' || citizen.activity === 'planningTrip') return
+    if (!citizen || citizen.activity === 'atHome' || citizen.activity === 'planningTrip' ||
+        citizen.activity === 'waitingForSpace') return
     event.stopPropagation()
     selection.select(citizen.id)
   }

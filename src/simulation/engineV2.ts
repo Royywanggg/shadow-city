@@ -54,6 +54,20 @@ export function stepCitizenSimulation(
       !Number.isSafeInteger(state.tick) || state.tick < 0 || state.citizens.length !== env.profiles.length) {
     throw new Error('Invalid or incompatible citizen simulation state')
   }
+  const validSlots = new Map(env.activitySlots.map((slot) => [slot.id, slot]))
+  const seenSlots = new Set<string>()
+  for (const citizen of state.citizens) {
+    if (!citizen.occupancySlotId) continue
+    const slot = validSlots.get(citizen.occupancySlotId)
+    if (!slot || seenSlots.has(slot.id) ||
+        (citizen.activity !== 'travelling' && citizen.activity !== 'atDestination') ||
+        (citizen.activity === 'travelling' ? citizen.destinationAnchorId !== slot.anchorId
+          : citizen.currentAnchorId !== slot.anchorId ||
+            Math.hypot(citizen.position.x - slot.position.x, citizen.position.z - slot.position.z) > 1e-6)) {
+      throw new Error('Invalid or duplicate citizen occupancy slot')
+    }
+    seenSlots.add(slot.id)
+  }
   const tick = state.tick + 1
   if (!Number.isSafeInteger(tick) || !Number.isSafeInteger(tick * config.logicalSecondsPerTick)) {
     throw new Error('Simulation time limit reached')
@@ -115,9 +129,15 @@ export function stepCitizenSimulation(
     diagnosticSampleCount += 1
   }
 
+  const reservedSlots = new Set(state.citizens.flatMap((citizen) =>
+    citizen.occupancySlotId ? [citizen.occupancySlotId] : []))
   const citizens = state.citizens.map((previous, index) => {
     const profile = env.profiles[index]
-    const result = stepCitizen(env, config, profile, previous, tick)
+    const result = stepCitizen(env, config, profile, previous, tick, reservedSlots)
+    if (previous.occupancySlotId !== result.citizen.occupancySlotId) {
+      if (previous.occupancySlotId) reservedSlots.delete(previous.occupancySlotId)
+      if (result.citizen.occupancySlotId) reservedSlots.add(result.citizen.occupancySlotId)
+    }
     result.events.forEach((draft, eventIndex) => {
       const sequence = nextEventSequence++
       const ordinal = previous.nextEventOrdinal + eventIndex

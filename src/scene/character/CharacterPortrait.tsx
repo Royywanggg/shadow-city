@@ -10,13 +10,16 @@ import { sampleAnimationTime } from './animationClock'
 interface CharacterPortraitProps {
   readonly appearance: CitizenAppearance
   readonly activity: string
+  readonly movementMode: 'walk' | 'jog'
+  readonly animationRate: number
   readonly logicalTimeSeconds: number
   readonly agentId: string
   readonly playback: PlaybackController
   readonly session: SimulationSession
 }
 
-function PortraitScene({ manager, appearance, activity, logicalTimeSeconds, rotationY, agentId, playback, session }: CharacterPortraitProps & {
+function PortraitScene({ manager, appearance, activity, movementMode, animationRate,
+  logicalTimeSeconds, rotationY, agentId, playback, session }: CharacterPortraitProps & {
   readonly manager: CharacterManager
   readonly rotationY: number
 }) {
@@ -54,11 +57,16 @@ function PortraitScene({ manager, appearance, activity, logicalTimeSeconds, rota
     }
     const alpha = playing && interpolateTick.current ? playback.getInterpolationAlpha() : 1
     const priorActivity = previous?.citizens.find((citizen) => citizen.id === agentId)?.activity
-    const selectedActivity = current.citizens.find((citizen) => citizen.id === agentId)?.activity ?? activity
+    const priorMovementMode = previous?.citizens.find((citizen) => citizen.id === agentId)?.movementMode
+    const currentCitizen = current.citizens.find((citizen) => citizen.id === agentId)
+    const selectedActivity = currentCitizen?.activity ?? activity
     const time = sampleAnimationTime(playing && interpolateTick.current && previous ? previous.tick : null,
       current.tick, alpha)
     manager.update([{
       id: 'selected-portrait', appearance, activity: selectedActivity,
+      movementMode: currentCitizen?.movementMode ?? movementMode,
+      previousMovementMode: playing && interpolateTick.current ? priorMovementMode : undefined,
+      animationRate,
       previousActivity: playing && interpolateTick.current ? priorActivity : undefined,
       transitionProgress: alpha,
       pose: { x: 0, y: 0, z: 0, yaw: 0, visible: true }, pixelHeight: 160,
@@ -82,7 +90,8 @@ function PortraitScene({ manager, appearance, activity, logicalTimeSeconds, rota
 }
 
 /** A selected-only turntable, independent of city occlusion and simulation movement. */
-export function CharacterPortrait({ appearance, activity, logicalTimeSeconds, agentId, playback, session }: CharacterPortraitProps) {
+export function CharacterPortrait({ appearance, activity, movementMode, animationRate,
+  logicalTimeSeconds, agentId, playback, session }: CharacterPortraitProps) {
   const [manager, setManager] = useState<CharacterManager | null>(null)
   const [error, setError] = useState(false)
   const [rotationY, setRotationY] = useState(0)
@@ -120,12 +129,15 @@ export function CharacterPortrait({ appearance, activity, logicalTimeSeconds, ag
     <div style={{ width: '100%', height: '100%', minHeight: 100, position: 'relative',
       overflow: 'hidden', cursor: manager ? 'grab' : 'default',
       background: 'radial-gradient(ellipse at 50% 55%, #243649 0%, #101d2d 58%, #0a1422 100%)' }}
+      data-preset-id={appearance.presetId}
+      data-primary-color={appearance.primaryClothingColor ?? ''}
       onPointerDown={onPointerDown} onPointerMove={onPointerMove}
       onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
       {manager ? <Canvas orthographic camera={{ position: [2.1, 1.45, 3.6], zoom: 48, near: 0.1, far: 20 }}
         dpr={[1, 1.3]} frameloop="demand" gl={{ alpha: true, antialias: true, powerPreference: 'low-power' }}
         style={{ width: '100%', height: '100%' }}>
         <PortraitScene manager={manager} appearance={appearance} activity={activity}
+          movementMode={movementMode} animationRate={animationRate}
           logicalTimeSeconds={logicalTimeSeconds} rotationY={rotationY}
           agentId={agentId} playback={playback} session={session} />
       </Canvas> : <span style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center',

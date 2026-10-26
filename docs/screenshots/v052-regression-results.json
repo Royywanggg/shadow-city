@@ -1,0 +1,195 @@
+{
+  "browserInfo": {
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36",
+    "devicePixelRatio": 1,
+    "webglRenderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)"
+  },
+  "citySeed": "shadow-city-hero-01",
+  "simulationSeed": "shadow-city-sim-01",
+  "observationSeed": "shadow-city-observation-01",
+  "identitySeed": "shadow-city-identity-01",
+  "appearanceSeed": "shadow-city-appearance-01",
+  "viewport": "1440x900",
+  "population": [
+    80,
+    100
+  ],
+  "selectedCitizen": "citizen-0003",
+  "mapSelectedCitizen": "citizen-0003",
+  "closeZoomRatio": 1.8046,
+  "detailZoomRatio": 8.9491,
+  "closeCharacterDiagnostics": {
+    "characters": {
+      "farCount": 47,
+      "mediumCount": 24,
+      "closeCount": 1,
+      "visibleCount": 72,
+      "assetPresetCount": 10,
+      "activeInstances": 25,
+      "pooledInstances": 1,
+      "farSpriteCount": 47,
+      "primitiveFallbackCount": 0,
+      "selectedTier": "close",
+      "selectedVisualTime": 10,
+      "selectedPresetId": "character-5",
+      "selectedPrimaryColor": "#9f92a5"
+    },
+    "selectedScreenPoint": {
+      "id": "citizen-0003",
+      "x": 682.4982538628445,
+      "y": 765.0960393962904
+    }
+  },
+  "detailCharacterDiagnostics": {
+    "characters": {
+      "farCount": 70,
+      "mediumCount": 0,
+      "closeCount": 2,
+      "visibleCount": 72,
+      "assetPresetCount": 10,
+      "activeInstances": 2,
+      "pooledInstances": 25,
+      "farSpriteCount": 70,
+      "primitiveFallbackCount": 0,
+      "selectedTier": "close",
+      "selectedVisualTime": 10,
+      "selectedPresetId": "character-5",
+      "selectedPrimaryColor": "#9f92a5"
+    },
+    "selectedScreenPoint": {
+      "id": "citizen-0003",
+      "x": 719.4597069167048,
+      "y": 417.14671413130964
+    }
+  },
+  "replay100Ms": 31.900000002235174,
+  "hundredTickDurationsMs": {
+    "count": 500,
+    "p50": 0.30000000074505806,
+    "p95": 0.6999999992549419
+  },
+  "heroDiagnostics": {
+    "scene": {
+      "drawCalls": 154,
+      "triangles": 94073,
+      "geometries": 254,
+      "textures": 130,
+      "medianActiveFrameMs": 16.699999999254942,
+      "p50ActiveFrameMs": 16.699999999254942,
+      "p95ActiveFrameMs": 17.699999999254942,
+      "sampledFrames": 120,
+      "renderedFrames": 180
+    },
+    "characters": {
+      "farCount": 53,
+      "mediumCount": 0,
+      "closeCount": 0,
+      "visibleCount": 53,
+      "assetPresetCount": 10,
+      "activeInstances": 0,
+      "pooledInstances": 38,
+      "farSpriteCount": 53,
+      "primitiveFallbackCount": 0,
+      "selectedTier": null,
+      "selectedVisualTime": 50,
+      "selectedPresetId": "character-5",
+      "selectedPrimaryColor": "#9f92a5"
+    }
+  },
+  "speedPlayback": [
+    {
+      "speed": 1,
+      "fromTick": 500,
+      "toTick": 501
+    },
+    {
+      "speed": 2,
+      "fromTick": 501,
+      "toTick": 502
+    },
+    {
+      "speed": 4,
+      "fromTick": 502,
+      "toTick": 504
+    }
+  ],
+  "hundredDiagnostics": {
+    "scene": {
+      "drawCalls": 154,
+      "triangles": 96629,
+      "geometries": 78,
+      "textures": 31,
+      "medianActiveFrameMs": 42.900000002235174,
+      "p50ActiveFrameMs": 42.900000002235174,
+      "p95ActiveFrameMs": 60.899999998509884,
+      "sampledFrames": 3,
+      "renderedFrames": 5
+    },
+    "characters": {
+      "farCount": 68,
+      "mediumCount": 0,
+      "closeCount": 0,
+      "visibleCount": 68,
+      "assetPresetCount": 10,
+      "activeInstances": 0,
+      "pooledInstances": 0,
+      "farSpriteCount": 68,
+      "primitiveFallbackCount": 0,
+      "selectedTier": null,
+      "selectedVisualTime": null,
+      "selectedPresetId": null,
+      "selectedPrimaryColor": null
+    }
+  },
+  "hundredActivePlayback": {
+    "seconds": 4.003,
+    "renderedFrames": 240,
+    "approximateFps": 59.95503372470647,
+    "advancedTicks": 39,
+    "scene": {
+      "drawCalls": 154,
+      "triangles": 97209,
+      "geometries": 78,
+      "textures": 31,
+      "medianActiveFrameMs": 16.699999999254942,
+      "p50ActiveFrameMs": 16.699999999254942,
+      "p95ActiveFrameMs": 30.300000000745058,
+      "sampledFrames": 120,
+      "renderedFrames": 245
+    },
+    "characters": {
+      "farCount": 73,
+      "mediumCount": 0,
+      "closeCount": 0,
+      "visibleCount": 73,
+      "assetPresetCount": 10,
+      "activeInstances": 0,
+      "pooledInstances": 0,
+      "farSpriteCount": 73,
+      "primitiveFallbackCount": 0,
+      "selectedTier": null,
+      "selectedVisualTime": null,
+      "selectedPresetId": null,
+      "selectedPrimaryColor": null
+    }
+  },
+  "screenshots": [
+    "v051-observed-population-tick000-1440x900",
+    "v051-selected-portrait-tick100-1440x900",
+    "v051-selected-focus-tick100-1440x900",
+    "v051-close-character-tick100-1440x900",
+    "v051-detail-character-tick100-1440x900",
+    "v051-run-clip-preview-tick100-1440x900",
+    "v051-history-tick100-1440x900",
+    "v051-replay-selected-tick100-1440x900",
+    "v051-collapsed-tick500-1440x900",
+    "v051-resized-tick500-1440x900",
+    "v051-narrow-population-tick100-390x844",
+    "v051-narrow-selected-profile-tick100-390x844",
+    "v051-hundred-tick500-1440x900"
+  ],
+  "warnings": [
+    "THREE.Clock: This module has been deprecated. Please use THREE.Timer instead."
+  ],
+  "issues": []
+}

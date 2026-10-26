@@ -124,6 +124,16 @@ This roadmap is milestone-based, not date-based. Each milestone should leave a u
 
 **Exit criteria:** The same agent keeps its appearance and identity through playback, Pause/Resume, 1×/2×/4×, Tick 100/500 inspection, bearing/pitch changes, and LOD transitions. Every selected citizen can be inspected in the portrait even when city geometry occludes the map view. Record package URL, version, acquisition date, applicable license, and hashes; do not commit raw assets with unresolved redistribution rights. Browser screenshots at the fixed seeds and 1440 × 900 show a visible improvement at close range without overwhelming the city. Report draw calls, triangles, frame times, visible population, and full-rig count on a named renderer, plus tests, type checking, and build results. A 1,000-person synthetic fixture may measure catalog, list, and renderer scaling but must not be presented as an actual 1,000-citizen simulation; raise the simulation cap only with independent behavior, event, spatial-capacity, and replay tests.
 
+## v0.5.2 — Population spatial fidelity and character behaviour
+
+**Goal:** Give concurrent public activities separate legal positions, maintain identity through character representations, and make movement animation follow authoritative state for 100–200 citizens.
+
+**In scope:** Deterministic activity slots derived from pedestrian anchors at plazas, parks, public entrances, and sidewalks; per-slot capacity, nearby alternatives, and explicit waiting when full. Preserve every citizen in the world renderer. Store route heading and a synthetic walk/jog choice in simulation state; use state for turning, arrival, and clip blending. Keep the researcher Population Inspector independent of event layers and observer restrictions. Check character resource bounds and named hardware-GPU browser behavior.
+
+**Out of scope:** Crowd collision avoidance, 1,000-citizen simulation acceptance, policing strategies, backend services, and an asset-system replacement.
+
+**Exit criteria:** With fixed city and simulation seeds, 200 citizens remain distinct at Tick 0/100/500 and replay. Every occupied slot is unique, reachable, and on a legal pedestrian surface; several citizens can occupy one site at separate slots. Capacity exhaustion produces a visible waiting state or event. No outdoor citizen is silently omitted by LOD. Selection, Focus, Follow, portrait, event-mode changes, bearing/pitch, Pause/Step, and replay still work. Report fixed-view and narrow screenshots, the renderer and frame sampling method, instance and GPU resource counts, simulation tick cost, tests, type checking, and build results. State remaining close-view and moving-crowd limitations explicitly.
+
 ## v0.6 — Policing strategy design and implementation
 
 **Goal:** Compare explicit police decision strategies under transparent model assumptions.

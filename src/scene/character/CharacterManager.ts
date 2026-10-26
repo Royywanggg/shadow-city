@@ -13,8 +13,11 @@ export interface CharacterRenderItem {
   readonly id: string
   readonly appearance: CitizenAppearance
   readonly activity: string
+  readonly movementMode?: 'walk' | 'jog'
   readonly previousActivity?: string
+  readonly previousMovementMode?: 'walk' | 'jog'
   readonly transitionProgress?: number
+  readonly animationRate?: number
   readonly pose: AgentRenderPose
   readonly pixelHeight: number
 }
@@ -25,6 +28,8 @@ export interface CharacterDiagnostics {
   readonly closeCount: number
   readonly visibleCount: number
   readonly assetPresetCount: number
+  readonly activeInstances: number
+  readonly pooledInstances: number
 }
 
 interface LoadedAsset {
@@ -50,16 +55,18 @@ interface CharacterInstance {
 }
 
 export function animationWeights(activity: string, previousActivity?: string, transitionProgress = 1,
-  preview: 'Idle' | 'Walk' | 'Run' | null = null): Readonly<Record<'Idle' | 'Walk' | 'Run', number>> {
-  const clipFor = (value: string) => value === 'travelling' || value === 'returningHome' ? 'Walk' : 'Idle'
+  preview: 'Idle' | 'Walk' | 'Run' | null = null, movementMode: 'walk' | 'jog' = 'walk',
+  previousMovementMode: 'walk' | 'jog' = 'walk'): Readonly<Record<'Idle' | 'Walk' | 'Run', number>> {
+  const clipFor = (value: string, mode: 'walk' | 'jog') =>
+    value === 'travelling' || value === 'returningHome' ? (mode === 'jog' ? 'Run' : 'Walk') : 'Idle'
   if (preview) return { Idle: Number(preview === 'Idle'), Walk: Number(preview === 'Walk'), Run: Number(preview === 'Run') }
-  const next = clipFor(activity)
-  const prior = previousActivity ? clipFor(previousActivity) : next
+  const next = clipFor(activity, movementMode)
+  const prior = previousActivity ? clipFor(previousActivity, previousMovementMode) : next
   const blend = Math.max(0, Math.min(1, transitionProgress))
   return {
     Idle: (prior === 'Idle' ? 1 - blend : 0) + (next === 'Idle' ? blend : 0),
     Walk: (prior === 'Walk' ? 1 - blend : 0) + (next === 'Walk' ? blend : 0),
-    Run: 0,
+    Run: (prior === 'Run' ? 1 - blend : 0) + (next === 'Run' ? blend : 0),
   }
 }
 
@@ -193,9 +200,14 @@ function colorize(instance: CharacterInstance, appearance: CitizenAppearance): v
 
 function animate(instance: CharacterInstance, item: CharacterRenderItem, logicalTime: number, preview: 'Idle' | 'Walk' | 'Run' | null): void {
   if (!instance.mixer) return
-  const weights = animationWeights(item.activity, item.previousActivity, item.transitionProgress, preview)
+  const weights = animationWeights(item.activity, item.previousActivity, item.transitionProgress, preview,
+    item.movementMode, item.previousMovementMode)
+  const walkRate = Math.max(0.75, Math.min(1.35, item.animationRate ?? 1))
   for (const name of ['Idle', 'Walk', 'Run'] as const) {
-    instance.mixer.clipAction(instance.clips.get(name)!).setEffectiveWeight(weights[name])
+    instance.mixer.clipAction(instance.clips.get(name)!)
+      .setEffectiveWeight(weights[name])
+      .setEffectiveTimeScale(name === 'Idle' ? 0.72 + item.appearance.animationPhaseOffset * 0.28
+        : name === 'Run' ? walkRate * 1.45 : walkRate)
   }
   instance.mixer.setTime(logicalTime + item.appearance.animationPhaseOffset * 2)
 }
@@ -282,6 +294,8 @@ export class CharacterManager {
       closeCount: [...tiers.values()].filter((tier) => tier === 'close').length,
       visibleCount: items.length,
       assetPresetCount: this.assets.size,
+      activeInstances: this.active.size,
+      pooledInstances: [...this.pool.values()].reduce((count, available) => count + available.length, 0),
     }
     return { tiers, diagnostics }
   }

@@ -43,6 +43,20 @@ describe('agent rendering interpolation', () => {
     expect(JSON.stringify(after)).toBe(frozenAfter)
   })
 
+  it('turns continuously around a corner and preserves stopped heading', () => {
+    const lookup = createPedestrianLookup(graph)
+    const before = state(9, 9, 0)
+    const after = { ...state(11, 10, 1), headingRadians: 0 }
+    const approach = interpolateAgentPose(before, after, lookup, 0.49)
+    const corner = interpolateAgentPose(before, after, lookup, 0.5)
+    const departure = interpolateAgentPose(before, after, lookup, 0.51)
+    expect(Math.abs(approach.yaw - corner.yaw)).toBeLessThan(0.1)
+    expect(Math.abs(departure.yaw - corner.yaw)).toBeLessThan(0.1)
+    expect(corner.yaw).toBeCloseTo(Math.PI / 4)
+    expect(interpolateAgentPose(null, { ...after, activity: 'atDestination', route: [] }, lookup, 1).yaw)
+      .toBe(0)
+  })
+
   it('snaps to authoritative state for pause, seek, reset, or route changes', () => {
     const lookup = createPedestrianLookup(graph)
     const before = state(8, 8, 0)
