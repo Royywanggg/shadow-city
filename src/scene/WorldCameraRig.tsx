@@ -23,7 +23,8 @@ export function WorldCameraRig({ controller, world }: { controller: CameraContro
   const homePosition = integrated ? INITIAL_CAMERA_POSITION : HOME_POSITION
   const homeTarget = integrated ? INITIAL_CAMERA_TARGET : HOME_TARGET
   const half = world.config.extentMm / 2000
-  const baseZoom = integrated ? Math.min(size.width / 325, size.height / 235) :
+  const baseZoom = integrated ? Math.min(size.width / (world.baseCity!.size * 1.53),
+    size.height / (world.baseCity!.size * 1.11)) :
     Math.min(size.width / 500, size.height / 390)
   const publish = useCallback(() => {
     if (!controls.current) return

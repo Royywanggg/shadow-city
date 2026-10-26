@@ -238,6 +238,8 @@ export function MultiLevelApp() {
       getSnapshot: () => session.getSnapshot(),
       getWorld: () => world, getObserverView: () => session.getObserverView(),
       getCameraView: () => cameraController.getSnapshot(),
+      focusAtWorld: (x: number, y: number, z: number) => cameraController.focusAt([x, y, z]),
+      inspectAtWorld: (x: number, y: number, z: number) => cameraController.inspectAt([x, y, z]),
       benchmarkReplay500() {
         const started = performance.now()
         const replay = new SimulationSessionV5(world, session.getConfig())
@@ -300,6 +302,8 @@ declare global {
     __shadowCityV06?: { advanceToTick(target: number): number[];
       inspectTick(tick: number): unknown; getSnapshot(): unknown;
       getWorld(): unknown; getObserverView(): unknown; getCameraView(): unknown;
+      focusAtWorld(x: number, y: number, z: number): void;
+      inspectAtWorld(x: number, y: number, z: number): void;
       benchmarkReplay500(): unknown }
   }
 }
