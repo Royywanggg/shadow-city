@@ -1,5 +1,7 @@
-import { Bloom, EffectComposer, N8AO } from '@react-three/postprocessing'
-import { useMemo } from 'react'
+import { Bloom, EffectComposer, N8AO, ToneMapping } from '@react-three/postprocessing'
+import { useEffect, useMemo } from 'react'
+import { useThree } from '@react-three/fiber'
+import { MeshStandardMaterial } from 'three'
 import type { CityModel } from '../city/model'
 import type { CameraController } from '../camera/cameraController'
 import { Buildings } from './Buildings'
@@ -10,22 +12,42 @@ import { Plaza } from './Plaza'
 import { RenderDiagnostics } from './RenderDiagnostics'
 import { Roads } from './Roads'
 import { StreetFurniture } from './StreetFurniture'
+import { LookDevLighting } from './lookdev/LookDevLighting'
+import { selectLookDevArea } from './lookdev/selectLookDevArea'
 
 export type RenderingQuality = 'low' | 'high'
 export type LightingDiagnostic = 'night' | 'day'
+export type LookDevMode = 'baseline' | 'clay' | 'lighting' | 'geometry' | 'final'
+
+function ClayOverride() {
+  const { scene } = useThree()
+  useEffect(() => {
+    const previous = scene.overrideMaterial
+    const material = new MeshStandardMaterial({ color: '#a7a9a5', roughness: 1,
+      metalness: 0 })
+    scene.overrideMaterial = material
+    return () => { scene.overrideMaterial = previous; material.dispose() }
+  }, [scene])
+  return null
+}
 
 export function CityStaticScene({ city, quality = 'high', postprocessing = true,
-  lighting = 'night', castShadows = true, ambientOcclusion = false }: {
+  lighting = 'night', castShadows = true, ambientOcclusion = false, lookdev = 'final',
+  bloomEnabled = false }: {
   city: CityModel
   quality?: RenderingQuality
   postprocessing?: boolean
   lighting?: LightingDiagnostic
   castShadows?: boolean
   ambientOcclusion?: boolean
+  lookdev?: LookDevMode
+  bloomEnabled?: boolean
 }) {
   const half = city.size / 2
   const shadowExtent = half + 10
-  const day = lighting === 'day'
+  const clay = lookdev === 'clay'
+  const day = lighting === 'day' || clay
+  const lookdevArea = useMemo(() => selectLookDevArea(city), [city])
   const plazaLights = useMemo(() => [...city.buildings]
     .filter((building) => building.kind === 'civic' || building.kind === 'commercial' || building.kind === 'corner')
     .sort((a, b) => {
@@ -63,6 +85,7 @@ export function CityStaticScene({ city, quality = 'high', postprocessing = true,
         position={[building.entrance.x, 3.1, building.entrance.z + 0.6]}
         color="#eab37a" intensity={quality === 'high' ? 17 : 11}
         distance={13} decay={2} />)}
+      {!day && lookdevArea && lookdev !== 'baseline' && <LookDevLighting area={lookdevArea} />}
 
       <mesh position={[0, -3.25, 0]} receiveShadow>
         <boxGeometry args={[city.size + 22, 1, city.size + 22]} />
@@ -86,13 +109,16 @@ export function CityStaticScene({ city, quality = 'high', postprocessing = true,
       />
       <Roads city={city} />
       <Plaza city={city} />
-      <Buildings city={city} />
-      <StreetFurniture city={city} />
-      {postprocessing && <EffectComposer multisampling={quality === 'high' ? 4 : 0}>
+      <Buildings city={city} lookdev={lookdev} />
+      <StreetFurniture city={city} enableLights={!clay} />
+      {clay && <ClayOverride />}
+      {postprocessing && lookdev !== 'geometry' && !clay &&
+      <EffectComposer multisampling={quality === 'high' ? 4 : 0}>
         {quality === 'high' && ambientOcclusion && <N8AO halfRes quality="performance" aoRadius={0.85}
           intensity={0.5} distanceFalloff={0.75} color="#142331" />}
-        <Bloom intensity={quality === 'high' ? 0.17 : 0.1}
-          luminanceThreshold={1.35} luminanceSmoothing={0.18} mipmapBlur />
+        {bloomEnabled && <Bloom intensity={quality === 'high' ? 0.17 : 0.1}
+          luminanceThreshold={1.35} luminanceSmoothing={0.18} mipmapBlur />}
+        <ToneMapping />
       </EffectComposer>}
     </>
   )

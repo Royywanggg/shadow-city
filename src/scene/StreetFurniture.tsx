@@ -47,7 +47,8 @@ function placed(feature: StreetFeature, x: number, y: number, z: number, width: 
   }
 }
 
-export function StreetFurniture({ city }: { city: CityModel }) {
+export function StreetFurniture({ city, enableLights = true }: {
+  city: CityModel; enableLights?: boolean }) {
   const geometry = useMemo(() => {
     const poles: BoxInstance[] = []
     const heads: BoxInstance[] = []
@@ -90,7 +91,7 @@ export function StreetFurniture({ city }: { city: CityModel }) {
       <InstancedBoxes items={geometry.furnishings} castShadow roughness={0.7} metalness={0.18} />
       <InstancedBoxes items={geometry.shelterGlass} roughness={0.3} metalness={0.47} />
       <Foliage items={geometry.foliage} />
-      {geometry.lamps.filter((_, index) => index % 6 === 0).map((feature) => (
+      {enableLights && geometry.lamps.filter((_, index) => index % 6 === 0).map((feature) => (
         <pointLight key={feature.id} position={[feature.x, 4.8, feature.z]} color="#e9a76b" intensity={16} distance={17} decay={2} />
       ))}
     </>

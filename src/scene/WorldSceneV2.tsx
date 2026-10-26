@@ -7,7 +7,8 @@ import { metres } from '../world/model'
 import { createNavigationIndexV2, orientedEdgePath } from '../world/navigation/routeV2'
 import type { CitizenStateV5, SimulationStateV5 } from '../simulation/v5Types'
 import { reportIdForOffence } from '../simulation/offending/opportunityV5'
-import { CityStaticScene, type LightingDiagnostic, type RenderingQuality } from './CityScene'
+import { CityStaticScene, type LightingDiagnostic, type LookDevMode,
+  type RenderingQuality } from './CityScene'
 import { RenderDiagnostics } from './RenderDiagnostics'
 import { WalkwayStructures } from './WalkwayStructures'
 import { GalleriaCanopy } from './GalleriaCanopy'
@@ -111,7 +112,7 @@ function InstancedWorldBoxes({ boxes, onPick, quality }: { boxes: readonly World
 
 export function WorldSceneV2({ world, level, cutaway, debugNavigation, onPickSurface,
   quality = 'high', postprocessing = true, lighting = 'night', castShadows = true,
-  ambientOcclusion = false }: {
+  ambientOcclusion = false, lookdev = 'final', bloomEnabled = false }: {
   world: WorldModelV2
   level: 'all' | 'L0' | 'L1'
   cutaway: boolean
@@ -122,6 +123,8 @@ export function WorldSceneV2({ world, level, cutaway, debugNavigation, onPickSur
   lighting?: LightingDiagnostic
   castShadows?: boolean
   ambientOcclusion?: boolean
+  lookdev?: LookDevMode
+  bloomEnabled?: boolean
 }) {
   const groups = useMemo(() => {
     const candidates = [...(world.baseCity ? [] : roadBoxes(world)), ...world.boxes].filter((box) => {
@@ -165,7 +168,8 @@ export function WorldSceneV2({ world, level, cutaway, debugNavigation, onPickSur
   return <>
     {world.baseCity ? <>
       <CityStaticScene city={world.baseCity} quality={quality} postprocessing={postprocessing}
-        lighting={lighting} castShadows={castShadows} ambientOcclusion={ambientOcclusion} />
+        lighting={lighting} castShadows={castShadows} ambientOcclusion={ambientOcclusion}
+        lookdev={lookdev} bloomEnabled={bloomEnabled} />
       {import.meta.env.DEV && <RenderDiagnostics />}
     </> : <>
     <color attach="background" args={['#101c2a']} />

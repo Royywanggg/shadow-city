@@ -193,7 +193,11 @@ function V5Panel({ session, selectedId, onSelect, cameraController, level, setLe
 export function MultiLevelApp() {
   const params = new URLSearchParams(window.location.search)
   const renderQuality = params.get('quality') === 'low' ? 'low' : 'high'
+  const requestedLookDev = params.get('lookdev')
+  const lookdev = requestedLookDev === 'baseline' || requestedLookDev === 'lighting' ||
+    requestedLookDev === 'geometry' || requestedLookDev === 'clay' ? requestedLookDev : 'final'
   const postprocessing = params.get('post') !== 'off'
+  const bloomEnabled = params.get('bloom') === 'on'
   const lighting = params.get('lighting') === 'day' ? 'day' : 'night'
   const castShadows = params.get('shadows') !== 'off'
   const ambientOcclusion = params.get('ao') === 'on'
@@ -290,7 +294,8 @@ export function MultiLevelApp() {
         <WorldCameraRig controller={cameraController} world={world} />
         <WorldSceneV2 world={world} level={level} cutaway={cutaway || selectedIndoor}
           quality={renderQuality} postprocessing={postprocessing} lighting={lighting}
-          castShadows={castShadows} ambientOcclusion={ambientOcclusion}
+          castShadows={castShadows} ambientOcclusion={ambientOcclusion} lookdev={lookdev}
+          bloomEnabled={bloomEnabled}
           debugNavigation={debug} onPickSurface={(surfaceId) => {
             setPickedSurfaceId(surfaceId)
             const surface = world.surfaces.find((item) => item.id === surfaceId)

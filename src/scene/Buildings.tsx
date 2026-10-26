@@ -6,6 +6,9 @@ import { HeroDistrictArchitecture } from './architecture/HeroDistrictArchitectur
 import { ArchitecturalAssetDetails } from './architecture/ArchitecturalAssetDetails'
 import { architecturalTextures } from './architecture/ArchitecturalTextures'
 import { selectHeroBuildings } from './architecture/heroDistrict'
+import { LookDevArchitecture } from './lookdev/LookDevArchitecture'
+import { selectLookDevArea } from './lookdev/selectLookDevArea'
+import type { LookDevMode } from './CityScene'
 
 const facades: Record<BuildingKind, string[]> = {
   residential: ['#5e6974', '#667078', '#6e6d70'],
@@ -242,8 +245,13 @@ function addBuilding(building: Building, geometry: BuildingGeometry, hero: boole
   addFacadeFeatures(building, geometry)
 }
 
-export function Buildings({ city }: { city: CityModel }) {
-  const heroBuildings = useMemo(() => selectHeroBuildings(city), [city])
+export function Buildings({ city, lookdev = 'final' }: { city: CityModel;
+  lookdev?: LookDevMode }) {
+  const area = useMemo(() => selectLookDevArea(city), [city])
+  const replacement = useMemo(() => (lookdev === 'geometry' || lookdev === 'final') && area
+    ? new Set([area.civic.id, area.commercial.id]) : null, [area, lookdev])
+  const heroBuildings = useMemo(() => selectHeroBuildings(city)
+    .filter((building) => !replacement?.has(building.id)), [city, replacement])
   const maps = useMemo(() => architecturalTextures(), [])
   const geometry = useMemo(() => {
     const result: BuildingGeometry = {
@@ -253,9 +261,11 @@ export function Buildings({ city }: { city: CityModel }) {
       warmWindows: [], coolWindows: [], storefronts: [], warmSigns: [], coolAccents: [],
     }
     const heroIds = new Set(heroBuildings.map((building) => building.id))
-    city.buildings.forEach((building) => addBuilding(building, result, heroIds.has(building.id)))
+    city.buildings.forEach((building) => {
+      if (!replacement?.has(building.id)) addBuilding(building, result, heroIds.has(building.id))
+    })
     return result
-  }, [city, heroBuildings])
+  }, [city, heroBuildings, replacement])
 
   return (
     <>
@@ -288,6 +298,7 @@ export function Buildings({ city }: { city: CityModel }) {
       <InstancedBoxes items={geometry.coolAccents} color="#9ed8d3" emissive="#4bb3ad" emissiveIntensity={1.15} />
       <HeroDistrictArchitecture buildings={heroBuildings} />
       <ArchitecturalAssetDetails buildings={heroBuildings} />
+      {replacement && area && <LookDevArchitecture area={area} />}
     </>
   )
 }
