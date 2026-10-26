@@ -5,6 +5,7 @@ import type { CitizenAppearance } from '../../simulation/population'
 import type { SimulationSession } from '../../simulation/session'
 import { getCitizenSimulationState } from '../../simulation/types'
 import { CharacterManager, loadCharacterAssets } from './CharacterManager'
+import { sampleAnimationTime } from './animationClock'
 
 interface CharacterPortraitProps {
   readonly appearance: CitizenAppearance
@@ -54,9 +55,8 @@ function PortraitScene({ manager, appearance, activity, logicalTimeSeconds, rota
     const alpha = playing && interpolateTick.current ? playback.getInterpolationAlpha() : 1
     const priorActivity = previous?.citizens.find((citizen) => citizen.id === agentId)?.activity
     const selectedActivity = current.citizens.find((citizen) => citizen.id === agentId)?.activity ?? activity
-    const time = playing && interpolateTick.current && previous
-      ? previous.logicalTimeSeconds + (current.logicalTimeSeconds - previous.logicalTimeSeconds) * alpha
-      : current.logicalTimeSeconds
+    const time = sampleAnimationTime(playing && interpolateTick.current && previous ? previous.tick : null,
+      current.tick, alpha)
     manager.update([{
       id: 'selected-portrait', appearance, activity: selectedActivity,
       previousActivity: playing && interpolateTick.current ? priorActivity : undefined,
