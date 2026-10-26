@@ -244,12 +244,13 @@ export function App() {
         fallback={<div className="canvas-fallback">This city needs a browser with WebGL support.</div>}
       >
         <CityScene city={city} cameraController={cameraController} />
-        {(!modelV4 || observationMode !== 'observed') && <AgentLayer
+        <AgentLayer
           session={simulationSession}
           playback={playbackController}
           selection={agentSelection}
           graph={city.pedestrian}
-        />}
+          interactive={!modelV4 || observationMode !== 'observed'}
+        />
         {observerPortV3 && (observationMode === 'observed'
           ? <ObservedIncidentScene port={observerPortV3} />
           : <ResearchIncidentScene session={simulationSession} port={observerPortV3} mode={observationMode} />)}

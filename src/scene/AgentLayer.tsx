@@ -16,6 +16,7 @@ declare global {
       candidates: { id: string; x: number; y: number }[]
       renderedFrames: number
     }
+    __shadowCityAnonymousPresence?: { visibleCount: number }
   }
 }
 
@@ -48,15 +49,18 @@ export function AgentLayer({
   playback,
   selection,
   graph,
+  interactive = true,
 }: {
   session: SimulationSession
   playback: PlaybackController
   selection: AgentSelectionController
   graph: PedestrianNetwork
+  interactive?: boolean
 }) {
   const snapshot = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot)
   const playbackSnapshot = useSyncExternalStore(playback.subscribe, playback.getSnapshot, playback.getSnapshot)
-  const selectedId = useSyncExternalStore(selection.subscribe, selection.getSnapshot, selection.getSnapshot)
+  const selectionId = useSyncExternalStore(selection.subscribe, selection.getSnapshot, selection.getSnapshot)
+  const selectedId = interactive ? selectionId : null
   const state = getCitizenSimulationState(snapshot.state)
   const selected = state?.citizens.find((citizen) => citizen.id === selectedId) ?? null
   const lookup = useMemo(() => createPedestrianLookup(graph), [graph])
@@ -77,7 +81,10 @@ export function AgentLayer({
   const lastPlaybackStatus = useRef(playbackSnapshot.status)
 
   useEffect(() => () => {
-    if (import.meta.env.DEV) delete window.__shadowCityAgentDiagnostics
+    if (import.meta.env.DEV) {
+      delete window.__shadowCityAgentDiagnostics
+      delete window.__shadowCityAnonymousPresence
+    }
   }, [])
 
   const draw = useCallback((alpha: number, updateDebug = false) => {
@@ -147,7 +154,12 @@ export function AgentLayer({
       if (selectedPose) ring.position.set(selectedPose.x, selectedPose.y + 0.08, selectedPose.z)
     }
 
-    if (import.meta.env.DEV && updateDebug) {
+    if (import.meta.env.DEV && updateDebug && !interactive) {
+      window.__shadowCityAnonymousPresence = { visibleCount }
+      delete window.__shadowCityAgentDiagnostics
+    }
+    if (import.meta.env.DEV && updateDebug && interactive) {
+      delete window.__shadowCityAnonymousPresence
       const bounds = gl.domElement.getBoundingClientRect()
       const candidates: { id: string; x: number; y: number }[] = []
       for (const [index, pose] of poses.entries()) {
@@ -164,7 +176,7 @@ export function AgentLayer({
       lastDebugTick.current = current.tick
     }
     return movingCount > 0
-  }, [camera, gl, lookup, object, screenPoint, selected, selectedId])
+  }, [camera, gl, interactive, lookup, object, screenPoint, selected, selectedId])
 
   useLayoutEffect(() => {
     const current = state
@@ -227,12 +239,12 @@ export function AgentLayer({
   return (
     <group>
       <instancedMesh ref={bodyRef} args={[undefined, undefined, count]} frustumCulled={false}
-        onPointerDown={onPointerDown} onClick={onClick}>
+        onPointerDown={interactive ? onPointerDown : undefined} onClick={interactive ? onClick : undefined}>
         <capsuleGeometry args={[0.35, 0.82, 3, 6]} />
         <meshStandardMaterial color="#ffffff" emissive="#91bcb4" emissiveIntensity={0.6} roughness={0.83} />
       </instancedMesh>
       <instancedMesh ref={headRef} args={[undefined, undefined, count]} frustumCulled={false}
-        onPointerDown={onPointerDown} onClick={onClick}>
+        onPointerDown={interactive ? onPointerDown : undefined} onClick={interactive ? onClick : undefined}>
         <sphereGeometry args={[0.29, 6, 5]} />
         <meshStandardMaterial color="#ecdeca" emissive="#d0b999" emissiveIntensity={0.42} roughness={0.83} />
       </instancedMesh>

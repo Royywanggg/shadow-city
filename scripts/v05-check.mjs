@@ -155,6 +155,10 @@ try {
   assert(await hero.getByTestId('selected-agent-id').count() === 0 &&
     await hero.evaluate(() => window.__shadowCityAgentDiagnostics === undefined),
   'Observed mode must not expose citizen selection at Tick 100')
+  const anonymousPresence = await hero.evaluate(() => window.__shadowCityAnonymousPresence)
+  assert(anonymousPresence?.visibleCount > 0 &&
+    JSON.stringify(Object.keys(anonymousPresence)) === JSON.stringify(['visibleCount']),
+  'Observed mode must render anonymous pedestrians without exposing identities or positions in diagnostics')
   await capture(hero, 'v05-observed-tick100-1440x900')
 
   await mode(hero, 'groundTruth')
