@@ -4,7 +4,7 @@ import { canTraverseV2, createNavigationIndexV2, findRouteV2 } from '../world/na
 import { advanceStateV5, createEnvironmentV5, createInitialStateV5 } from './engineV5'
 import { replayV5 } from './replayV5'
 import { SimulationSessionV5 } from './sessionV5'
-import { moveCitizenOneTick } from './movementV5'
+import { completeTickTraces, moveCitizenOneTick } from './movementV5'
 import { updateOpportunityV5 } from './offending/opportunityV5'
 import { DEFAULT_SIMULATION_CONFIG_V5 } from './v5Types'
 
@@ -96,6 +96,25 @@ describe('multi-level v5 simulation', () => {
       new Map(), 6, new Map([['west-stair', 0]]))
     expect(full.blocked).toBe('capacity')
     expect(full.citizen.position).toEqual(start.position)
+  })
+
+  it('keeps a citizen at the last legal position for every second after a blocked move', () => {
+    const world = generateVerticalProofWorld()
+    const index = createNavigationIndexV2(world)
+    const env = createEnvironmentV5(world, { ...config, populationSize: 1 })
+    const initial = createInitialStateV5(env).citizens[0]
+    const edge = index.edgeById.get('connector:west-stair')!
+    const node = index.nodeById.get(edge.fromNodeId)!
+    const citizen = { ...initial, activity: 'travelling' as const,
+      position: node.position, surfaceId: node.surfaceId, currentNodeId: node.id,
+      route: [{ edgeId: edge.id, fromNodeId: edge.fromNodeId,
+        toNodeId: edge.toNodeId, lengthMm: edge.lengthMm }] }
+    const blocked = moveCitizenOneTick(citizen, env.profiles[0], index,
+      new Map(), 6, new Map([['west-stair', 0]]))
+    expect(blocked.trace).toHaveLength(1)
+    const complete = completeTickTraces(blocked.trace, [blocked.citizen], 6)
+    expect(complete.map((sample) => sample.second)).toEqual([1, 2, 3, 4, 5, 6])
+    expect(complete.every((sample) => sample.position === node.position)).toBe(true)
   })
 
   it('evacuates an occupied shop after closing the mall without resetting position', () => {

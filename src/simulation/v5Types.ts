@@ -1,8 +1,10 @@
 import type { ActivityKind, WorldModelV2, WorldPointMm } from '../world/model'
 import type { AccessMode, RouteStepV5, TravellerCosts } from '../world/navigation/routeV2'
+import type { EncounterScenarioConfigV1 } from './encounter/config'
+import type { SocialStateV1 } from './encounter/state'
 
 export type CitizenActivityV5 = 'atHome' | 'planningTrip' | 'waitingForSpace' |
-  'travelling' | 'atDestination' | 'returningHome'
+  'travelling' | 'atDestination' | 'returningHome' | 'interacting'
 
 export interface CitizenProfileV5 {
   readonly id: string
@@ -37,6 +39,7 @@ export interface CitizenStateV5 {
   readonly nextDecisionTick: number
   readonly visitOrdinal: number
   readonly arrivedTick: number
+  readonly engagement?: Readonly<{ interactionId: string; resumeDecisionTick: number }>
 }
 
 export interface MovementTracePoint {
@@ -46,6 +49,8 @@ export interface MovementTracePoint {
   readonly surfaceId: string
   readonly placeId: string | null
   readonly edgeId: string | null
+  readonly headingRadians?: number
+  readonly activity?: CitizenActivityV5
 }
 
 export type AccessCommandV5 = Readonly<{
@@ -81,6 +86,12 @@ export interface OpportunityEncounterV5 {
   readonly exposureSeconds: number
   readonly perceivedRisk: number
   readonly guardianship: number
+  readonly socialContext?: Readonly<{
+    encounterId: string | null
+    contactSeconds: number
+    offenderPerceivedTarget: boolean
+    directedFamiliarity: number
+  }>
 }
 
 export interface EncounterEpisodeV5 {
@@ -121,6 +132,8 @@ export interface ReportV5 {
   readonly reportedSeverity: 'minor' | 'serious'
   readonly suspect: Readonly<{ status: 'unknown' }> | Readonly<{
     status: 'namedLead'; candidateAgentId: string; verification: 'unverified'
+  }> | Readonly<{
+    status: 'nameClaim'; claimedName: string; verification: 'unverified'
   }>
 }
 
@@ -137,6 +150,7 @@ export interface SimulationConfigV5 {
   readonly placeAttractiveness?: Readonly<Record<string, number>>
   readonly placeOpeningHours?: Readonly<Record<string,
     readonly Readonly<{ openMinute: number; closeMinute: number }>[]> >
+  readonly encounter?: EncounterScenarioConfigV1
 }
 
 export interface SimulationStateV5 {
@@ -153,6 +167,7 @@ export interface SimulationStateV5 {
   readonly offenderCooldowns: Readonly<Record<string, number>>
   readonly resourceCooldowns: Readonly<Record<string, number>>
   readonly commands: readonly AccessCommandV5[]
+  readonly social?: SocialStateV1
 }
 
 export interface SimulationEnvironmentV5 {

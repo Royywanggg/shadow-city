@@ -2,6 +2,7 @@ import { hashSeed } from '../rng'
 import type { WorldPointMm } from '../../world/model'
 import type { MovementTracePoint, OffenceV5, OpportunityTargetV5,
   ReportV5, SimulationEnvironmentV5, SimulationStateV5 } from '../v5Types'
+import { projectObserverViewV5 } from '../encounter/observerProjection'
 
 const unit = (key: string) => (hashSeed(key) + 0.5) / 0x1_0000_0000
 const distance = (a: WorldPointMm, b: WorldPointMm) =>
@@ -157,5 +158,5 @@ export function updateOpportunityV5(state: SimulationStateV5,
 }
 
 export function observerViewV5(state: SimulationStateV5): Readonly<{ tick: number; reports: readonly ReportV5[] }> {
-  return { tick: state.tick, reports: state.reports }
+  return projectObserverViewV5(state)
 }

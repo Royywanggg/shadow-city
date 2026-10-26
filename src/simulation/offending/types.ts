@@ -87,7 +87,7 @@ export interface OffenderStepResult {
   readonly offenderStates: readonly OffenderDynamicState[]
 }
 
-export type CitizenProfiles = readonly AgentProfile[]
+export type CitizenProfiles = readonly Pick<AgentProfile, 'id'>[]
 
 export const DEFAULT_OFFENDING_CONFIG: OffendingConfig = Object.freeze({
   version: 'offender-choice-v1',

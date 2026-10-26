@@ -3,8 +3,15 @@ import { createNavigationIndexV2, findRouteV2, findRoutesFromV2,
   type NavigationIndexV2, type AccessMode } from '../world/navigation/routeV2'
 import type { ActivityKind, SemanticPlace, WorldModelV2 } from '../world/model'
 import { createCitizenProfilesV5, activityDemand, localMinute, placeIsOpen } from './v5Profiles'
-import { moveCitizenOneTick, initialTrace } from './movementV5'
+import { moveCitizenOneTick, initialTrace, completeTickTraces } from './movementV5'
 import { updateOpportunityV5 } from './offending/opportunityV5'
+import { validateSocialConfigV1 } from './encounter/interaction'
+import { validateSocialEncounterConfig } from './encounter/lifecycle'
+import { validatePerceptionConfig } from './encounter/perception'
+import { validateWitnessModelConfig } from './encounter/crimeWitness'
+import { validateOffendingConfig } from './offending/profiles'
+import { createInitialSocialStateV1 } from './encounter/state'
+import { advanceEncounterPipelineV1 } from './encounter/pipeline'
 import type { AccessCommandV5, CitizenEventV5, CitizenProfileV5, CitizenStateV5,
   MovementTracePoint, SimulationConfigV5, SimulationEnvironmentV5, SimulationStateV5 } from './v5Types'
 
@@ -31,7 +38,8 @@ export function worldFingerprintV5(world: WorldModelV2, config: SimulationConfig
 export function createEnvironmentV5(world: WorldModelV2, config: SimulationConfigV5,
   commands: readonly AccessCommandV5[] = []): SimulationEnvironmentV5 {
   if (config.logicalSecondsPerTick !== 6 || !Number.isSafeInteger(config.startHour) ||
-    config.startHour < 0 || config.startHour > 23 || config.reportingProbability < 0 ||
+    config.startHour < 0 || config.startHour > 23 ||
+    !Number.isFinite(config.reportingProbability) || config.reportingProbability < 0 ||
     config.reportingProbability > 1) throw new Error('Invalid v5 simulation configuration')
   const placeIds = new Set(world.places.map((place) => place.id))
   for (const [id, value] of Object.entries(config.placeAttractiveness ?? {})) {
@@ -46,6 +54,24 @@ export function createEnvironmentV5(world: WorldModelV2, config: SimulationConfi
       window.openMinute === window.closeMinute)) {
       throw new Error(`Invalid opening hours override ${id}`)
     }
+  }
+  if (config.encounter) {
+    if (config.encounter.version !== 'encounter-v1' ||
+      !['legacy', 'encounterAware'].includes(config.encounter.offenceMode) ||
+      typeof config.encounter.interactionsEnabled !== 'boolean' ||
+      ![config.encounter.offenceCompletionProbability,
+        config.encounter.socialRestraintWeight].every((value) =>
+        Number.isFinite(value) && value >= 0 && value <= 1)) {
+      throw new Error('Invalid encounter mode')
+    }
+    validateSocialConfigV1(config.encounter.social)
+    validateSocialEncounterConfig(config.encounter.lifecycle, config.logicalSecondsPerTick)
+    validatePerceptionConfig(config.encounter.perception)
+    validateOffendingConfig({ ...config.encounter.offending,
+      offendingSeed: config.offendingSeed, startHour: config.startHour })
+    validateWitnessModelConfig({ ...config.encounter.witness,
+      observationSeed: config.observationSeed,
+      reportingProbability: config.reportingProbability })
   }
   const ids = new Set<string>()
   for (const command of commands) {
@@ -79,7 +105,8 @@ export function createInitialStateV5(environment: SimulationEnvironmentV5,
   return { version: 5, fingerprint: environment.fingerprint, tick: 0, citizens,
     accessModes: { ...environment.config.initialAccessModes }, events: [],
     encounterEpisodes: [], offences: [], reports: [], pendingReports: [],
-    offenderCooldowns: {}, resourceCooldowns: {}, commands: [...commands] }
+    offenderCooldowns: {}, resourceCooldowns: {}, commands: [...commands],
+    ...(environment.config.encounter ? { social: createInitialSocialStateV1() } : {}) }
 }
 
 function chooseDestination(citizen: CitizenStateV5, profile: CitizenProfileV5,
@@ -164,12 +191,18 @@ export function advanceStateV5(state: SimulationStateV5, environment: Simulation
         (connectorAvailability.get(connectorId) ?? 0) - 1)
     }
     const placeId = citizen.destinationPlaceId ??
-      (citizen.activity === 'atDestination' ? citizen.placeId : null)
+      (citizen.activity === 'atDestination' || citizen.activity === 'interacting' ? citizen.placeId : null)
     if (placeId) priorPlaceCrowd.set(placeId, (priorPlaceCrowd.get(placeId) ?? 0) + 1)
   }
   const events: CitizenEventV5[] = []
   const traces: MovementTracePoint[] = []
   const tracedCitizenIds = new Set<string>()
+  const interruptedInteractionIds = new Set((state.social?.interactions ?? [])
+    .filter((interaction) => interaction.status === 'active' && interaction.placeId &&
+      (modes['mall-entry'] !== 'open' && (interaction.placeId === 'central-galleria' ||
+        interaction.placeId.startsWith('galleria-')) ||
+        !placeIsOpen(places.get(interaction.placeId)!, environment.config, tick)))
+    .map((interaction) => interaction.id))
   const priority = [...state.citizens].sort((a, b) =>
     hashSeed(`${environment.config.simulationSeed}:${tick}:${a.id}:priority`) -
     hashSeed(`${environment.config.simulationSeed}:${tick}:${b.id}:priority`) || a.id.localeCompare(b.id))
@@ -177,6 +210,21 @@ export function advanceStateV5(state: SimulationStateV5, environment: Simulation
   for (const prior of priority) {
     const profile = profiles.get(prior.id)!
     let citizen = prior
+    if (citizen.engagement) {
+      const interaction = state.social?.interactions.find((item) =>
+        item.id === citizen.engagement!.interactionId)
+      if (!interaction || interruptedInteractionIds.has(citizen.engagement.interactionId) ||
+        tick >= interaction.plannedEndTick) {
+        const plannedDuration = interaction ? interaction.plannedEndTick - interaction.startTick : 0
+        const elapsedDuration = interaction ? Math.max(0,
+          Math.min(plannedDuration, tick - interaction.startTick)) : plannedDuration
+        const resumeDecisionTick = interruptedInteractionIds.has(citizen.engagement.interactionId) ?
+          citizen.engagement.resumeDecisionTick - plannedDuration + elapsedDuration :
+          citizen.engagement.resumeDecisionTick
+        citizen = { ...citizen, activity: 'atDestination', engagement: undefined,
+          nextDecisionTick: resumeDecisionTick }
+      } else citizen = { ...citizen, activity: 'interacting' }
+    }
     const currentPlace = citizen.placeId ? places.get(citizen.placeId) : null
     const mustEvacuate = citizen.activity === 'atDestination' &&
       Boolean(currentPlace && (modes['mall-entry'] !== 'open' &&
@@ -249,5 +297,10 @@ export function advanceStateV5(state: SimulationStateV5, environment: Simulation
   const citizens = state.citizens.map((citizen) => nextById.get(citizen.id)!)
   const next: SimulationStateV5 = { ...state, tick, citizens, accessModes: modes,
     events: [...state.events, ...events] }
-  return updateOpportunityV5(next, environment, traces)
+  if (!environment.config.encounter) return updateOpportunityV5(next, environment, traces)
+  const socialNext = advanceEncounterPipelineV1(next, environment,
+    completeTickTraces(traces, citizens, environment.config.logicalSecondsPerTick),
+    interruptedInteractionIds)
+  return environment.config.encounter.offenceMode === 'legacy' ?
+    updateOpportunityV5(socialNext, environment, traces) : socialNext
 }

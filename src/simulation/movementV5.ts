@@ -57,7 +57,8 @@ export function moveCitizenOneTick(citizen: CitizenStateV5, profile: CitizenProf
     }
     trace.push({ agentId: current.id, second, position: current.position,
       surfaceId: current.surfaceId, placeId: current.placeId,
-      edgeId: current.routeIndex < current.route.length ? current.route[current.routeIndex].edgeId : null })
+      edgeId: current.routeIndex < current.route.length ? current.route[current.routeIndex].edgeId : null,
+      headingRadians: current.headingRadians, activity: current.activity })
     if (blocked) break
   }
   return { citizen: current, trace, blocked }
@@ -65,7 +66,29 @@ export function moveCitizenOneTick(citizen: CitizenStateV5, profile: CitizenProf
 
 export function initialTrace(citizen: CitizenStateV5): MovementTracePoint {
   return { agentId: citizen.id, second: 0, position: citizen.position,
-    surfaceId: citizen.surfaceId, placeId: citizen.placeId, edgeId: null }
+    surfaceId: citizen.surfaceId, placeId: citizen.placeId, edgeId: null,
+    headingRadians: citizen.headingRadians, activity: citizen.activity }
+}
+
+/** Fill seconds after an access or capacity stop at the last legal simulation position. */
+export function completeTickTraces(traces: readonly MovementTracePoint[],
+  finalCitizens: readonly CitizenStateV5[], secondsPerTick: number): readonly MovementTracePoint[] {
+  const byId = new Map<string, MovementTracePoint[]>()
+  for (const point of traces) {
+    const group = byId.get(point.agentId) ?? []
+    group.push(point)
+    byId.set(point.agentId, group)
+  }
+  const completed: MovementTracePoint[] = []
+  for (const citizen of finalCitizens) {
+    const samples = [...(byId.get(citizen.id) ?? [])].sort((a, b) => a.second - b.second)
+    const last = samples.at(-1) ?? initialTrace(citizen)
+    const perSecond = new Map(samples.map((sample) => [sample.second, sample]))
+    for (let second = 1; second <= secondsPerTick; second += 1) {
+      completed.push(perSecond.get(second) ?? { ...last, second })
+    }
+  }
+  return completed
 }
 
 export function pathHasVerticalContinuity(index: NavigationIndexV2, edgeId: string): boolean {
