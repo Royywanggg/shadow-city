@@ -108,6 +108,22 @@ This roadmap is milestone-based, not date-based. Each milestone should leave a u
 
 **Exit criteria:** No public view, tooltip, agent selection, or development fixture exposes hidden offender identity or future evidence; named leads have a visible source and availability Tick and may be inaccurate; zero-denominator and reporting-bias cases are handled explicitly. Browser review at the fixed hero seed and 1440 × 900 covers Tick 0/100/500, views, close markers, cardinal bearings, narrow layout, replay, and 100 citizens; record performance and visual limitations. Legacy v0.4 browser regression, tests, type checking, and build pass.
 
+## v0.5.1A — God View Population Explorer
+
+**Goal:** Let a researcher inspect every synthetic citizen at the current or replayed Tick without changing the restricted observer model or event visualization modes.
+
+**In scope:** A researcher-only population read capability joining static citizen profiles, deterministic synthetic identity, authoritative current state, complete tick-bounded citizen events, and true offence history. Add a collapsible, resizable left Population Sidebar with full-population browsing, ID/name search, filters for implemented fields, Profile/Activity/History tabs, map/list selection, selected-agent highlight, and camera Focus/optional Follow. Keep Truth, Observed, and Compare as event layers; do not clear researcher selection when changing them. A missing occupation remains missing rather than becoming invented UI content.
+
+**Exit criteria:** Every citizen, including indoor and visually grouped citizens, can be found. Search, filters, history, and inspector data agree with the selected replay Tick and update on Return Live. Identity and appearance assignments reproduce from separate versioned seeds and do not depend on camera, FPS, replay, or offending propensity. Focus and Follow preserve bearing and pitch, and keep any zoom adjustment within camera bounds; direct map manipulation and Reset cancel Follow, while discrete bearing/pitch controls can orbit a followed citizen. Existing observer-port isolation, replay, camera controls, tests, type checking, and build pass. Inspect a fixed-seed 1440 × 900 browser view, close focus, and a narrow viewport, recording screenshot and browser evidence.
+
+## v0.5.1B — Character system proof of concept
+
+**Goal:** Replace the closest simplified pedestrians with a small set of licensed, rigged characters while keeping individual identity separate from reusable rendering resources and preparing for a future 1,000-citizen run.
+
+**In scope:** Verify the exact license and contents of acquired character and animation packages; normalize compatible models to a documented rig and asset manifest; create 5–10 distinct stable appearance combinations. Use far/medium/close representation with a bounded close-range skinned-character pool and shared lower-detail resources. Provide a selected-only 3D portrait so a researcher can inspect an individual even when a city building occludes their world avatar; an explicit Inspect 3D camera action gives close spatial context. Map simulation activity to idle/walk; demonstrate jog in an isolated preview until the simulation has a real jog state. Keep simulation position authoritative and strip or neutralize clip root motion. Preserve per-agent selection across levels of detail.
+
+**Exit criteria:** The same agent keeps its appearance and identity through playback, Pause/Resume, 1×/2×/4×, Tick 100/500 inspection, bearing/pitch changes, and LOD transitions. Every selected citizen can be inspected in the portrait even when city geometry occludes the map view. Record package URL, version, acquisition date, applicable license, and hashes; do not commit raw assets with unresolved redistribution rights. Browser screenshots at the fixed seeds and 1440 × 900 show a visible improvement at close range without overwhelming the city. Report draw calls, triangles, frame times, visible population, and full-rig count on a named renderer, plus tests, type checking, and build results. A 1,000-person synthetic fixture may measure catalog, list, and renderer scaling but must not be presented as an actual 1,000-citizen simulation; raise the simulation cap only with independent behavior, event, spatial-capacity, and replay tests.
+
 ## v0.6 — Policing strategy design and implementation
 
 **Goal:** Compare explicit police decision strategies under transparent model assumptions.

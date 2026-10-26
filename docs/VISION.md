@@ -36,6 +36,8 @@ seed + generation configuration
 
 The `SimulationEngine` reads static city data and produces dynamic agent and event state. The renderer consumes `CityModel` and dynamic state separately. Simulation does not use mutation of the city's static geometry as its primary interface. The v0.4 observation process turns some ground-truth incidents into delayed reports. Researcher and observer read models make what happened and what is known separate data views; future strategy logic must receive only its permitted view.
 
+The researcher has a global God View of the synthetic population. A Population Inspector can read each citizen's stable identity, current state, reproducible activity history, and true offence history at the inspected Tick. Truth, Observed, and Compare control event presentation, not researcher access to citizens. A future police observer needs its own knowledge boundary and must not inherit the researcher's population capability. Character appearance is stable per citizen and independent of offending propensity; simulation position remains authoritative when character animation is rendered.
+
 Generation must be reproducible from a seed and configuration. The rendering layer should not make random layout decisions. Add complexity only when a milestone needs it and it improves the result.
 
 ## Scope boundaries
