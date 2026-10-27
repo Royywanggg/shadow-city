@@ -1,0 +1,182 @@
+{
+  "after": {
+    "reviewIds": [
+      "citizen-0006",
+      "citizen-0005",
+      "citizen-0004",
+      "citizen-0010",
+      "citizen-0011",
+      "citizen-0003",
+      "citizen-0002",
+      "citizen-0001",
+      "citizen-0000",
+      "citizen-0007"
+    ],
+    "selectedId": "citizen-0010",
+    "selectedTick": 100,
+    "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+    "assetLoads": [
+      {
+        "name": "men-casual2.glb",
+        "durationMs": 11.100000001490116,
+        "transferBytes": 1023436
+      },
+      {
+        "name": "men-hoodie.glb",
+        "durationMs": 14.099999994039536,
+        "transferBytes": 1055560
+      },
+      {
+        "name": "men-punk.glb",
+        "durationMs": 12.299999997019768,
+        "transferBytes": 978836
+      },
+      {
+        "name": "men-suit.glb",
+        "durationMs": 14.599999994039536,
+        "transferBytes": 1230808
+      },
+      {
+        "name": "men-worker.glb",
+        "durationMs": 12,
+        "transferBytes": 947200
+      },
+      {
+        "name": "women-casual.glb",
+        "durationMs": 13.699999995529652,
+        "transferBytes": 1074624
+      },
+      {
+        "name": "women-formal.glb",
+        "durationMs": 18,
+        "transferBytes": 1042000
+      },
+      {
+        "name": "women-punk.glb",
+        "durationMs": 17.899999998509884,
+        "transferBytes": 1029092
+      },
+      {
+        "name": "women-suit.glb",
+        "durationMs": 18.30000000447035,
+        "transferBytes": 1081980
+      },
+      {
+        "name": "women-worker.glb",
+        "durationMs": 19.69999999552965,
+        "transferBytes": 1044496
+      }
+    ],
+    "characterAssetMode": "upgraded",
+    "characterAssetLoadMs": 691.3999999985099,
+    "frameCount": 89,
+    "averageFps": 29.249484810268676,
+    "frameP95Ms": 75.69999999552965,
+    "animationUpdateP95Ms": 1,
+    "averageDrawCallsPerFrame": 197.13636363636363,
+    "averageTrianglesPerFrame": 242705.63636363635,
+    "closeCountP95": 10,
+    "activeInstancesP95": 34,
+    "portraitFramesPerSecond": 29.24948481026868,
+    "texturesP95": 83,
+    "pausedTick": 114,
+    "stillTick": 114,
+    "portraitMovesWithinTick": true,
+    "pausedPortraitStable": true,
+    "replayCitizenMatches": true,
+    "cameraPreservedFingerprint": true,
+    "speedStartTick": 114,
+    "speedEndTick": 120,
+    "errors": []
+  },
+  "before": {
+    "reviewIds": [
+      "citizen-0006",
+      "citizen-0005",
+      "citizen-0004",
+      "citizen-0010",
+      "citizen-0011",
+      "citizen-0003",
+      "citizen-0002",
+      "citizen-0001",
+      "citizen-0000",
+      "citizen-0007"
+    ],
+    "selectedId": "citizen-0010",
+    "selectedTick": 100,
+    "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+    "assetLoads": [
+      {
+        "name": "men-casual2.glb",
+        "durationMs": 9.600000001490116,
+        "transferBytes": 808676
+      },
+      {
+        "name": "men-hoodie.glb",
+        "durationMs": 9.399999998509884,
+        "transferBytes": 843392
+      },
+      {
+        "name": "men-punk.glb",
+        "durationMs": 8.899999998509884,
+        "transferBytes": 765540
+      },
+      {
+        "name": "men-suit.glb",
+        "durationMs": 8.199999995529652,
+        "transferBytes": 998448
+      },
+      {
+        "name": "men-worker.glb",
+        "durationMs": 6.399999998509884,
+        "transferBytes": 738068
+      },
+      {
+        "name": "women-casual.glb",
+        "durationMs": 7.699999995529652,
+        "transferBytes": 867240
+      },
+      {
+        "name": "women-formal.glb",
+        "durationMs": 10.700000002980232,
+        "transferBytes": 830416
+      },
+      {
+        "name": "women-punk.glb",
+        "durationMs": 12.399999998509884,
+        "transferBytes": 814480
+      },
+      {
+        "name": "women-suit.glb",
+        "durationMs": 12.600000001490116,
+        "transferBytes": 874388
+      },
+      {
+        "name": "women-worker.glb",
+        "durationMs": 12.899999998509884,
+        "transferBytes": 837428
+      }
+    ],
+    "characterAssetMode": "legacy",
+    "characterAssetLoadMs": 538,
+    "frameCount": 89,
+    "averageFps": 29.230053809857317,
+    "frameP95Ms": 77.80000000447035,
+    "animationUpdateP95Ms": 0.8000000044703484,
+    "averageDrawCallsPerFrame": 177.13636363636363,
+    "averageTrianglesPerFrame": 230447.63636363635,
+    "closeCountP95": 10,
+    "activeInstancesP95": 34,
+    "portraitFramesPerSecond": 29.23005380985732,
+    "texturesP95": 83,
+    "pausedTick": 114,
+    "stillTick": 114,
+    "portraitMovesWithinTick": true,
+    "pausedPortraitStable": true,
+    "replayCitizenMatches": true,
+    "cameraPreservedFingerprint": true,
+    "speedStartTick": 114,
+    "speedEndTick": 119,
+    "errors": []
+  }
+}
