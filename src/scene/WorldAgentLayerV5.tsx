@@ -12,11 +12,11 @@ import { sampleAnimationTime } from './character/animationClock'
 import { selectCharacterReviewIds } from './character/reviewSelection'
 import { interpolateHeading } from './character/heading'
 
-interface MotionPair { prior: SimulationStateV5 | null; current: SimulationStateV5; changedAt: number }
+interface MotionPair { prior: SimulationStateV5 | null; current: SimulationStateV5 }
 
-export function WorldAgentLayerV5({ session, selectedId, onSelect, playing, ticksPerSecond,
+export function WorldAgentLayerV5({ session, selectedId, onSelect, playing, getPlaybackAlpha,
   level }: { session: SimulationSessionV5; selectedId: string | null;
-  onSelect: (id: string) => void; playing: boolean; ticksPerSecond: number;
+  onSelect: (id: string) => void; playing: boolean; getPlaybackAlpha: () => number;
   level: 'all' | 'L0' | 'L1' }) {
   const snapshot = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot)
   const { camera, size, gl, invalidate } = useThree()
@@ -55,7 +55,7 @@ export function WorldAgentLayerV5({ session, selectedId, onSelect, playing, tick
   const glowRef = useRef<InstancedMesh>(null)
   const fallbackMaterial = useMemo(() => new MeshBasicMaterial({ color: '#b9d4d0',
     side: DoubleSide }), [])
-  const motion = useRef<MotionPair>({ prior: null, current: snapshot.state, changedAt: performance.now() })
+  const motion = useRef<MotionPair>({ prior: null, current: snapshot.state })
   const previousTick = useRef(snapshot.tick)
   const pointerStart = useRef<{ x: number; y: number } | null>(null)
   const lastDebug = useRef(0)
@@ -98,18 +98,17 @@ export function WorldAgentLayerV5({ session, selectedId, onSelect, playing, tick
     glowGeometry.dispose(); glowMaterial.dispose(); glowTexture.dispose() },
     [spriteGeometry, fallbackMaterial, glowGeometry, glowMaterial, glowTexture])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const previous = motion.current.current
     const continuous = playing && !snapshot.isInspecting && snapshot.tick === previousTick.current + 1
-    motion.current = { prior: continuous ? previous : null, current: snapshot.state,
-      changedAt: performance.now() }
+    motion.current = { prior: continuous ? previous : null, current: snapshot.state }
     previousTick.current = snapshot.tick
     invalidate()
   }, [invalidate, playing, snapshot])
 
   useFrame(() => {
-    const { prior, current, changedAt } = motion.current
-    const alpha = prior && playing ? Math.min(1, (performance.now() - changedAt) * ticksPerSecond / 1000) : 1
+    const { prior, current } = motion.current
+    const alpha = prior && playing ? getPlaybackAlpha() : 1
     const previousById = new Map(prior?.citizens.map((citizen) => [citizen.id, citizen]) ?? [])
     const items: CharacterRenderItem[] = []
     const screenCandidates: { id: string; x: number; y: number }[] = []

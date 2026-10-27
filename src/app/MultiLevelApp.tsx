@@ -48,7 +48,7 @@ function DynamicWorldOverlays({ session, selectedId, selectedEncounterId, level,
 function V5Panel({ session, selectedId, onSelect, selectedEncounterId, onSelectEncounter,
   cameraController, level, setLevel,
   cutaway, setCutaway, debug, setDebug, mode, setMode, playing, setPlaying,
-  speed, setSpeed, step, sidebarOpen, setSidebarOpen }: {
+  speed, setSpeed, step, sidebarOpen, setSidebarOpen, getPlaybackAlpha }: {
   session: SimulationSessionV5; selectedId: string | null; onSelect: (id: string | null) => void;
   selectedEncounterId: string | null;
   onSelectEncounter: (episodeId: string | null, tick?: number) => void;
@@ -59,6 +59,7 @@ function V5Panel({ session, selectedId, onSelect, selectedEncounterId, onSelectE
   playing: boolean; setPlaying: (value: boolean) => void; speed: PlaybackSpeed;
   setSpeed: (value: PlaybackSpeed) => void; step: () => void;
   sidebarOpen: boolean; setSidebarOpen: (value: boolean) => void;
+  getPlaybackAlpha: () => number;
 }) {
   const snapshot = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot)
   const following = useSyncExternalStore(cameraController.subscribe,
@@ -177,7 +178,7 @@ function V5Panel({ session, selectedId, onSelect, selectedEncounterId, onSelectE
           <CharacterPortraitV5 agentId={selected.id} appearance={identity.appearance}
             activity={selected.activity} movementMode={selected.movementMode}
             tick={snapshot.tick} playing={playing && !snapshot.isInspecting}
-            ticksPerSecond={4 * speed}
+            getPlaybackAlpha={getPlaybackAlpha}
             animationRate={profile.travellerCosts.speedMmPerSecond / 1300} />
           <div className="v06-action-row"><button onClick={focus}>FOCUS</button>
             <button onClick={follow}>{status}</button></div>
@@ -386,6 +387,7 @@ export function MultiLevelApp() {
       session.getSnapshot().state.citizens.find((citizen) => citizen.id === selectedId)?.surfaceId)?.indoor))
   const scheduler = useMemo(() => new FixedStepScheduler(browserFrameHost(),
     () => session.advanceOneTick(), () => {}, { baseTicksPerSecond: 4 }), [session])
+  const getPlaybackAlpha = useMemo(() => () => scheduler.getInterpolationAlpha(), [scheduler])
   useEffect(() => {
     if (playing) scheduler.play()
     else scheduler.pause()
@@ -461,7 +463,7 @@ export function MultiLevelApp() {
       cutaway={cutaway} setCutaway={setCutaway} debug={debug} setDebug={setDebug}
       mode={mode} setMode={setMode} playing={playing} setPlaying={setPlaying}
       speed={speed} setSpeed={setSpeed} step={step} sidebarOpen={sidebarOpen}
-      setSidebarOpen={setSidebarOpen} />
+      setSidebarOpen={setSidebarOpen} getPlaybackAlpha={getPlaybackAlpha} />
     <div className="v06-viewport">
       <Canvas orthographic camera={{ position: [245, 195, 245], near: 0.1, far: 1200, zoom: 1 }}
         dpr={renderQuality === 'low' ? 1 : [1, 1.5]} shadows="percentage"
@@ -480,7 +482,7 @@ export function MultiLevelApp() {
             }
           }} />
         <WorldAgentLayerV5 session={session} selectedId={selectedId} onSelect={selectAgent}
-          playing={playing} ticksPerSecond={4 * speed} level={level} />
+          playing={playing} getPlaybackAlpha={getPlaybackAlpha} level={level} />
         <DynamicWorldOverlays session={session} selectedId={selectedId}
           selectedEncounterId={selectedEncounterId} level={level} mode={mode} />
       </Canvas>

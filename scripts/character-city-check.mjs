@@ -2,7 +2,7 @@ import { chromium } from 'playwright'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
-const directory = resolve('docs/screenshots/character-city')
+const directory = resolve(process.env.SHADOW_CHARACTER_SCREENSHOT_DIR ?? 'docs/screenshots/character-city')
 await mkdir(directory, { recursive: true })
 const browser = await chromium.launch({ headless: true,
   executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',

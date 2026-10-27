@@ -1,5 +1,5 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { CitizenAppearance } from '../../simulation/population'
 import { CharacterManager, loadCharacterAssets, type CharacterPreviewClip } from './CharacterManager'
 import { sampleAnimationTime } from './animationClock'
@@ -10,17 +10,16 @@ interface PortraitPlayback {
   readonly priorTick: number | null
   readonly priorActivity?: string
   readonly priorMovementMode?: 'walk' | 'jog'
-  readonly changedAt: number
 }
 
 function Portrait({ manager, agentId, appearance, activity, movementMode, tick, playing,
-  ticksPerSecond, animationRate, preview, previewTime }:
+  getPlaybackAlpha, animationRate, preview, previewTime }:
   { manager: CharacterManager; agentId: string; appearance: CitizenAppearance;
     activity: string; movementMode: 'walk' | 'jog'; tick: number; playing: boolean;
-    ticksPerSecond: number; animationRate: number;
+    getPlaybackAlpha: () => number; animationRate: number;
     preview: CharacterPreviewClip | null; previewTime: number | null }) {
   const { camera, invalidate } = useThree()
-  const playback = useRef<PortraitPlayback>({ agentId, tick, priorTick: null, changedAt: performance.now() })
+  const playback = useRef<PortraitPlayback>({ agentId, tick, priorTick: null })
   const previousActivity = useRef(activity)
   const previousMovementMode = useRef(movementMode)
   const frameCount = useRef(0)
@@ -31,23 +30,21 @@ function Portrait({ manager, agentId, appearance, activity, movementMode, tick, 
     camera.updateProjectionMatrix()
     invalidate()
   }, [camera, invalidate])
-  useEffect(() => {
+  useLayoutEffect(() => {
     const prior = playback.current
     const continuous = playing && prior.agentId === agentId && tick === prior.tick + 1
     playback.current = { agentId, tick, priorTick: continuous ? prior.tick : null,
       priorActivity: continuous ? previousActivity.current : undefined,
-      priorMovementMode: continuous ? previousMovementMode.current : undefined,
-      changedAt: performance.now() }
+      priorMovementMode: continuous ? previousMovementMode.current : undefined }
     previousActivity.current = activity
     previousMovementMode.current = movementMode
     invalidate()
   }, [agentId, tick, activity, movementMode, playing, invalidate])
-  useEffect(() => { invalidate() }, [appearance, animationRate, ticksPerSecond, previewTime, invalidate])
+  useEffect(() => { invalidate() }, [appearance, animationRate, previewTime, invalidate])
   useEffect(() => { manager.setPreviewClip(preview); invalidate() }, [manager, preview, invalidate])
   useFrame(() => {
     const motion = playback.current
-    const alpha = playing && motion.priorTick !== null ? Math.min(1,
-      (performance.now() - motion.changedAt) * ticksPerSecond / 1000) : 1
+    const alpha = playing && motion.priorTick !== null ? getPlaybackAlpha() : 1
     const time = previewTime ?? sampleAnimationTime(motion.priorTick, motion.tick, alpha, 4)
     if (import.meta.env.DEV) window.__shadowCityV5Portrait = {
       tick: motion.tick, time, alpha, frameCount: ++frameCount.current, activity,
@@ -66,10 +63,10 @@ function Portrait({ manager, agentId, appearance, activity, movementMode, tick, 
 }
 
 export function CharacterPortraitV5({ agentId, appearance, activity, movementMode, tick,
-  playing, ticksPerSecond, animationRate }:
+  playing, getPlaybackAlpha, animationRate }:
   { agentId: string; appearance: CitizenAppearance; activity: string;
     movementMode: 'walk' | 'jog'; tick: number; playing: boolean;
-    ticksPerSecond: number; animationRate: number }) {
+    getPlaybackAlpha: () => number; animationRate: number }) {
   const [manager, setManager] = useState<CharacterManager | null>(null)
   const [preview, setPreview] = useState<CharacterPreviewClip | null>(null)
   const [previewTime, setPreviewTime] = useState<number | null>(null)
@@ -96,7 +93,7 @@ export function CharacterPortraitV5({ agentId, appearance, activity, movementMod
       dpr={[1, 1.5]} frameloop={playing ? 'always' : 'demand'}>
       <Portrait manager={manager} agentId={agentId} appearance={appearance} activity={activity}
         movementMode={movementMode} tick={tick} playing={playing}
-        ticksPerSecond={ticksPerSecond} animationRate={animationRate}
+        getPlaybackAlpha={getPlaybackAlpha} animationRate={animationRate}
         preview={preview} previewTime={previewTime} />
     </Canvas>}
   </div>
