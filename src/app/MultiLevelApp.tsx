@@ -14,6 +14,8 @@ import { relationshipCategoryV1 } from '../simulation/encounter/relationships'
 import { createSocialProfileV1 } from '../simulation/encounter/socialProfiles'
 import { SimulationSessionV5 } from '../simulation/sessionV5'
 import { DEFAULT_SIMULATION_CONFIG_V5 } from '../simulation/v5Types'
+import { DEFAULT_HABIT_SCENARIO_V1, readHabitLog } from '../simulation/habits/types'
+import { calendarAtTick } from '../simulation/habits/calendar'
 import { DEFAULT_WORLD_CONFIG_V2 } from '../world/model'
 import { generateWorldV2 } from '../world/generation/generateWorldV2'
 import { generateIntegratedWorld, INTEGRATED_WORLD_CONFIG_V2 } from '../world/generation/generateIntegratedWorld'
@@ -48,7 +50,7 @@ function DynamicWorldOverlays({ session, selectedId, selectedEncounterId, level,
 function V5Panel({ session, selectedId, onSelect, selectedEncounterId, onSelectEncounter,
   cameraController, level, setLevel,
   cutaway, setCutaway, debug, setDebug, mode, setMode, playing, setPlaying,
-  speed, setSpeed, step, sidebarOpen, setSidebarOpen, getPlaybackAlpha }: {
+  speed, setSpeed, step, resetSimulation, sidebarOpen, setSidebarOpen, getPlaybackAlpha }: {
   session: SimulationSessionV5; selectedId: string | null; onSelect: (id: string | null) => void;
   selectedEncounterId: string | null;
   onSelectEncounter: (episodeId: string | null, tick?: number) => void;
@@ -58,6 +60,7 @@ function V5Panel({ session, selectedId, onSelect, selectedEncounterId, onSelectE
   mode: 'truth' | 'observed' | 'compare'; setMode: (value: 'truth' | 'observed' | 'compare') => void;
   playing: boolean; setPlaying: (value: boolean) => void; speed: PlaybackSpeed;
   setSpeed: (value: PlaybackSpeed) => void; step: () => void;
+  resetSimulation: () => void;
   sidebarOpen: boolean; setSidebarOpen: (value: boolean) => void;
   getPlaybackAlpha: () => number;
 }) {
@@ -67,7 +70,9 @@ function V5Panel({ session, selectedId, onSelect, selectedEncounterId, onSelectE
   const [query, setQuery] = useState('')
   const [activityFilter, setActivityFilter] = useState('all')
   const [tab, setTab] = useState<'profile' | 'activity' | 'history' | 'relationships' |
-    'encounters' | 'memory' | 'timeline'>('profile')
+    'encounters' | 'memory' | 'timeline' | 'routine' | 'today' |
+    'decisions' | 'habits'>('profile')
+  const [showAllHabitCandidates, setShowAllHabitCandidates] = useState(false)
   const identities = useMemo(() => new Map(session.getProfiles().map((profile) =>
     [profile.id, createCitizenIdentity(profile.id)])), [session])
   useEffect(() => {
@@ -77,10 +82,20 @@ function V5Panel({ session, selectedId, onSelect, selectedEncounterId, onSelectE
   }, [selectedId])
   const selected = snapshot.state.citizens.find((citizen) => citizen.id === selectedId) ?? null
   const profile = session.getProfiles().find((item) => item.id === selectedId)
+  const habitProfile = session.getHabitProfiles().find((item) => item.agentId === selectedId)
+  const habit = snapshot.state.habits?.citizens.find((item) => item.agentId === selectedId)
+  const calendar = session.getConfig().habit ? calendarAtTick(session.getConfig().startHour,
+    snapshot.tick, session.getConfig().habit!.calendarSecondsPerTick) : null
+  const habitDecisions = habit ? readHabitLog(habit.decisions) : []
+  const habitHistory = habit ? readHabitLog(habit.history) : []
+  const habitChanges = habit ? readHabitLog(habit.changes) : []
+  const latestHabitDecision = habitDecisions.at(-1)
   const identity = selected ? identities.get(selected.id)! : null
   const social = snapshot.state.social
-  const socialProfile = selected && session.getConfig().encounter ?
-    createSocialProfileV1(selected.id, session.getConfig().encounter!.social.seed) : null
+  const socialProfile = selected && session.getConfig().encounter ? {
+    ...createSocialProfileV1(selected.id, session.getConfig().encounter!.social.seed),
+    ...(habitProfile ? { sociability: habitProfile.sociability / 1_000 } : {}),
+  } : null
   const relationships = social?.relationships.filter((item) => item.ownerAgentId === selectedId)
     .sort((a, b) => b.familiarity - a.familiarity ||
       a.referentAgentId.localeCompare(b.referentAgentId)) ?? []
@@ -184,7 +199,7 @@ function V5Panel({ session, selectedId, onSelect, selectedEncounterId, onSelectE
             <button onClick={follow}>{status}</button></div>
           <div className="v06-tabs" aria-label="Researcher resident sections">
             {(['profile', 'activity', 'history', 'relationships', 'encounters',
-              'memory', 'timeline'] as const).map((value) =>
+              'memory', 'timeline', 'routine', 'today', 'decisions', 'habits'] as const).map((value) =>
               <button key={value} className={tab === value ? 'active' : ''}
                 onClick={() => setTab(value)}>{value.toUpperCase()}</button>)}
           </div>
@@ -203,6 +218,74 @@ function V5Panel({ session, selectedId, onSelect, selectedEncounterId, onSelectE
             <dt>Position</dt><dd>{(selected.position.x / 1000).toFixed(1)}, {(selected.position.y / 1000).toFixed(1)}, {(selected.position.z / 1000).toFixed(1)} m</dd>
             <dt>Destination</dt><dd>{selected.destinationPlaceId ?? 'None'}</dd>
           </dl>}
+          {tab === 'routine' && <div className="v06-research-list">
+            {!habitProfile || !habit ? <p className="v06-empty">Daily habits are disabled for this experiment.</p> : <>
+              <p className="v06-scope">STABLE SYNTHETIC ROUTINE · DAY {calendar?.day}</p>
+              <dl><dt>Wake preference</dt><dd>{Math.floor(habitProfile.wakeMinute / 60).toString().padStart(2, '0')}:{(habitProfile.wakeMinute % 60).toString().padStart(2, '0')}</dd>
+                <dt>Rest preference</dt><dd>{Math.floor(habitProfile.restMinute / 60).toString().padStart(2, '0')}:{(habitProfile.restMinute % 60).toString().padStart(2, '0')}</dd>
+                <dt>Work obligation</dt><dd>{profile.workPlaceId && habitProfile.workStartMinute !== null ?
+                  `${profile.workPlaceId} · ${Math.floor(habitProfile.workStartMinute / 60)}:00–${Math.floor(habitProfile.workEndMinute! / 60)}:00` : 'None modelled'}</dd>
+                <dt>Preferred places</dt><dd>{habitProfile.preferredPlaces.join(', ') || 'None'}</dd>
+                <dt>Regularity</dt><dd>{(habitProfile.regularity / 1000).toFixed(2)}</dd>
+                <dt>Change willingness</dt><dd>{(habitProfile.changeWillingness / 1000).toFixed(2)}</dd></dl>
+              <p className="v06-scope">ACTIVITY PREFERENCE / LEARNED STRENGTH</p>
+              <dl>{(Object.keys(habitProfile.preference) as (keyof typeof habitProfile.preference)[]).map((kind) =>
+                <div key={kind}><dt>{kind}</dt><dd>{habitProfile.preference[kind]} / {habit.activityStrength[kind]}</dd></div>)}</dl>
+            </>}
+          </div>}
+          {tab === 'today' && <div className="v06-research-list">
+            {!habit || !calendar ? <p className="v06-empty">Daily habits are disabled.</p> : <>
+              <p className="v06-scope">DAY {calendar.day} · {Math.floor(calendar.minuteOfDay / 60).toString().padStart(2, '0')}:{(calendar.minuteOfDay % 60).toString().padStart(2, '0')} · PLANS ARE PROVISIONAL</p>
+              <dl><dt>Current intention</dt><dd>{habit.intention ?
+                `${habit.intention.kind} at ${habit.intention.placeId} · ${habit.intention.status}` : 'None'}</dd>
+                <dt>Needs</dt><dd>Rest {habit.needs.rest} · Food {habit.needs.food} · Shopping {habit.needs.shopping} · Social {habit.needs.social}</dd>
+                <dt>Work today</dt><dd>{habitProfile?.workDays.includes(calendar.day % 7) ?
+                  habit.completedWorkDay === calendar.day ? 'Completed' : 'Due within preferred window' : 'No obligation'}</dd></dl>
+              <p className="v06-scope">PROVISIONAL DAILY GOALS · PRIORITY</p>
+              {habit.dailyGoals.map((goal) => <p key={goal.id}>
+                {goal.kind} · {Math.floor(goal.startMinute / 60).toString().padStart(2, '0')}:{(goal.startMinute % 60).toString().padStart(2, '0')}–{Math.floor(goal.endMinute / 60).toString().padStart(2, '0')}:{(goal.endMinute % 60).toString().padStart(2, '0')} · priority {goal.priority} · {goal.status}
+              </p>)}
+              <p className="v06-scope">ACTUAL ACTIVITY HISTORY</p>
+              {habitHistory.filter((item) => calendarAtTick(session.getConfig().startHour,
+                item.startTick, session.getConfig().habit!.calendarSecondsPerTick).day === calendar.day)
+                .slice(-20).reverse().map((item) =>
+                  <p key={`${item.intentionId}:${item.endTick}`}>T{item.startTick}–{item.endTick} · {item.kind} · {item.outcome} · {item.placeId} · {item.reason}</p>)}
+              {social?.interactions.filter((item) => item.participantIds.includes(selected.id) &&
+                calendarAtTick(session.getConfig().startHour, item.startTick,
+                  session.getConfig().habit!.calendarSecondsPerTick).day === calendar.day)
+                .slice(-12).reverse().map((item) => <p key={item.id}>
+                  T{item.startTick}–{item.endTick ?? 'active'} · actual {item.type} · {item.status} · {item.placeId ?? 'public space'}
+                </p>)}
+            </>}
+          </div>}
+          {tab === 'decisions' && <div className="v06-research-list">
+            <p className="v06-scope">ACTUAL DECISION TRACE · RESEARCHER VIEW</p>
+            {!latestHabitDecision && <p className="v06-empty">No habit decision by this Tick.</p>}
+            {latestHabitDecision && <><p>T{latestHabitDecision.tick} · day {latestHabitDecision.day} · {latestHabitDecision.reason}</p>
+              <p>Selected: {latestHabitDecision.chosenKind ?? 'wait'} · {latestHabitDecision.chosenPlaceId ?? 'no destination'} · {latestHabitDecision.consideredCount} candidates evaluated</p>
+              {latestHabitDecision.candidates.length > 12 && <button
+                onClick={() => setShowAllHabitCandidates((value) => !value)}>
+                {showAllHabitCandidates ? 'SHOW TOP 12' :
+                  `SHOW ALL ${latestHabitDecision.candidates.length} CANDIDATES`}
+              </button>}
+              {[...latestHabitDecision.candidates].sort((a, b) =>
+                (b.score ?? -Infinity) - (a.score ?? -Infinity) ||
+                a.placeId.localeCompare(b.placeId))
+                .slice(0, showAllHabitCandidates ? undefined : 12)
+                .map((candidate, index) =>
+                <div className="v06-research-card" key={`${candidate.kind}:${candidate.placeId}:${index}`}>
+                  <strong>{candidate.kind} · {candidate.placeId} · {candidate.score ?? candidate.reason}</strong>
+                  {candidate.feasible && <small>{Object.entries(candidate.terms).map(([key, value]) =>
+                    `${key} ${value >= 0 ? '+' : ''}${value}`).join(' · ')}</small>}
+                </div>)}</>}
+          </div>}
+          {tab === 'habits' && <div className="v06-research-list">
+            <p className="v06-scope">HABIT EVOLUTION · RECORDED SOURCE EVENTS</p>
+            {habitChanges.length === 0 && <p className="v06-empty">No habit change by this Tick.</p>}
+            {habitChanges.slice(-30).reverse().map((change) => <p key={change.id}>
+              T{change.tick} · {change.key} {change.before} → {change.after} · {change.rule} · {change.sourceId}
+            </p>)}
+          </div>}
           {tab === 'history' && <div className="v06-history">
             {snapshot.state.events.filter((event) => event.agentId === selected.id).slice(-12).reverse().map((event) =>
               <p key={event.id}>T{event.tick} · {event.type} {event.placeId}</p>)}
@@ -281,7 +364,7 @@ function V5Panel({ session, selectedId, onSelect, selectedEncounterId, onSelectE
               key={`${risk.ownerAgentId}:${risk.placeId}`}>
               <strong>{risk.placeId} · {risk.score.toFixed(2)}</strong>
               <small>Updated T{risk.lastUpdatedTick} from {risk.sourceObservationId}</small>
-              <small>Personal observation state; route choice does not yet use this value.</small>
+              <small>Personal observation state; habit-enabled destination utility reads this value.</small>
             </div>)}
           </div>}
           {tab === 'timeline' && <div className="v06-research-list">
@@ -322,6 +405,7 @@ function V5Panel({ session, selectedId, onSelect, selectedEncounterId, onSelectE
       </div>
       <div className="v06-playback"><button onClick={() => setPlaying(!playing)}>{playing ? 'PAUSE' : 'PLAY'}</button>
         <button onClick={step}>STEP</button>
+        <button onClick={resetSimulation}>RESET SIM</button>
         <select aria-label="Simulation speed" value={speed}
           onChange={(event) => setSpeed(Number(event.target.value) as PlaybackSpeed)}>
           <option value={1}>1×</option><option value={2}>2×</option><option value={4}>4×</option>
@@ -357,19 +441,33 @@ export function MultiLevelApp() {
   const seed = params.get('seed') || (prototype ? DEFAULT_WORLD_CONFIG_V2.seed :
     INTEGRATED_WORLD_CONFIG_V2.seed)
   const populationParam = Number(params.get('population') ?? DEFAULT_SIMULATION_CONFIG_V5.populationSize)
+  const habitsEnabled = params.get('habits') !== 'off'
+  const encounterEnabled = params.get('encounter') !== 'off'
+  const simulationSeed = params.get('simSeed') || DEFAULT_SIMULATION_CONFIG_V5.simulationSeed
+  const habitSeed = params.get('habitSeed') || DEFAULT_HABIT_SCENARIO_V1.seed
+  const offendingSeed = params.get('offendingSeed') || DEFAULT_SIMULATION_CONFIG_V5.offendingSeed
+  const observationSeed = params.get('observationSeed') || DEFAULT_SIMULATION_CONFIG_V5.observationSeed
+  const habitWeightInput = params.has('habitWeight') ?
+    Number(params.get('habitWeight')) : DEFAULT_HABIT_SCENARIO_V1.habitWeight
+  const habitWeight = Number.isFinite(habitWeightInput) && habitWeightInput >= 0 &&
+    habitWeightInput <= 2 ? habitWeightInput : DEFAULT_HABIT_SCENARIO_V1.habitWeight
   const populationSize = Number.isSafeInteger(populationParam) && populationParam >= 0 && populationParam <= 200
     ? populationParam : DEFAULT_SIMULATION_CONFIG_V5.populationSize
   const world = useMemo(() => prototype ? generateWorldV2({ ...DEFAULT_WORLD_CONFIG_V2, seed }) :
     generateIntegratedWorld(seed), [prototype, seed])
   const session = useMemo(() => {
     const next = new SimulationSessionV5(world, { ...DEFAULT_SIMULATION_CONFIG_V5,
-      populationSize, encounter: { ...DEFAULT_ENCOUNTER_SCENARIO_V1,
+      populationSize, simulationSeed, offendingSeed, observationSeed,
+      ...(habitsEnabled ? { habit: { ...DEFAULT_HABIT_SCENARIO_V1,
+        seed: habitSeed, habitWeight } } : {}),
+      ...(encounterEnabled ? { encounter: { ...DEFAULT_ENCOUNTER_SCENARIO_V1,
         social: { ...DEFAULT_ENCOUNTER_SCENARIO_V1.social,
           greetingWillingness: 0.7, conversationWillingness: 0.85,
-          diagnosticTraces: true } } })
+          diagnosticTraces: true } } } : {}) })
     for (let tick = 0; tick < 100; tick += 1) next.advanceOneTick()
     return next
-  }, [populationSize, world])
+  }, [encounterEnabled, habitSeed, habitWeight, habitsEnabled, observationSeed,
+    offendingSeed, populationSize, simulationSeed, world])
   const cameraController = useMemo(createCameraController, [])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [selectedEncounterId, setSelectedEncounterId] = useState<string | null>(null)
@@ -403,6 +501,9 @@ export function MultiLevelApp() {
       }
       return durations
     }, inspectTick: (tick: number) => session.inspectTick(tick),
+      scheduleAccessCommand: (command: Parameters<SimulationSessionV5['scheduleAccessCommand']>[0]) =>
+        session.scheduleAccessCommand(command),
+      resetSimulation: () => session.reset(),
       getSnapshot: () => session.getSnapshot(),
       getWorld: () => world, getObserverView: () => session.getObserverView(),
       getCameraView: () => cameraController.getSnapshot(),
@@ -449,6 +550,11 @@ export function MultiLevelApp() {
     if (session.getSnapshot().isInspecting) session.returnLive()
     session.advanceOneTick()
   }
+  const resetSimulation = () => {
+    scheduler.pause()
+    setPlaying(false)
+    session.reset()
+  }
   useEffect(() => {
     const sidebar = document.querySelector('.v06-sidebar')
     if (!sidebar) return
@@ -462,7 +568,8 @@ export function MultiLevelApp() {
       cameraController={cameraController} level={level} setLevel={setLevel}
       cutaway={cutaway} setCutaway={setCutaway} debug={debug} setDebug={setDebug}
       mode={mode} setMode={setMode} playing={playing} setPlaying={setPlaying}
-      speed={speed} setSpeed={setSpeed} step={step} sidebarOpen={sidebarOpen}
+      speed={speed} setSpeed={setSpeed} step={step} resetSimulation={resetSimulation}
+      sidebarOpen={sidebarOpen}
       setSidebarOpen={setSidebarOpen} getPlaybackAlpha={getPlaybackAlpha} />
     <div className="v06-viewport">
       <Canvas orthographic camera={{ position: [245, 195, 245], near: 0.1, far: 1200, zoom: 1 }}
@@ -499,6 +606,8 @@ declare global {
   interface Window {
     __shadowCityV06?: { advanceToTick(target: number): number[];
       inspectTick(tick: number): unknown; getSnapshot(): unknown;
+      scheduleAccessCommand(command: Parameters<SimulationSessionV5['scheduleAccessCommand']>[0]): void;
+      resetSimulation(): void;
       getWorld(): unknown; getObserverView(): unknown; getCameraView(): unknown;
       focusAtWorld(x: number, y: number, z: number): void;
       inspectAtWorld(x: number, y: number, z: number): void;

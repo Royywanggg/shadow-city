@@ -35,6 +35,7 @@
 .v06-inspector dt{color:#7fa0aa}.v06-inspector dd{margin:0;overflow-wrap:anywhere}
 .v06-history{font-size:10px;color:#a8c6ca}.v06-history p{padding:5px 0;border-bottom:1px solid #31515b}
 .v06-research-list{display:grid;gap:7px;margin-top:11px;min-width:0}
+.v06-research-list>button{border:1px solid #3b6270;background:#183446;color:#cce2e3;padding:7px 9px;cursor:pointer;font-size:9px;letter-spacing:.08em;text-align:left}
 .v06-scope{margin:1px 0 5px;color:#8eb8ba;font-size:9px;letter-spacing:.1em;line-height:1.4}
 .v06-empty{margin:8px 0;color:#8baab2;font-size:10px;line-height:1.5}
 .v06-research-card{display:grid;gap:5px;padding:10px;background:#172e3e;border:1px solid #315361;overflow-wrap:anywhere}
