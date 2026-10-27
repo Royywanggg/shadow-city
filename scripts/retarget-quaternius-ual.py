@@ -5,6 +5,7 @@ Run with Blender 5.2 in background mode. This script does not alter the source G
 
 import argparse
 import bpy
+import math
 from pathlib import Path
 from mathutils import Matrix, Vector
 
@@ -21,6 +22,7 @@ MAPPING = {
     'Hips': 'pelvis', 'Abdomen': 'spine_01', 'Torso': 'spine_02',
     'Chest': 'spine_03', 'Neck': 'neck_01', 'Head': 'Head',
 }
+FINGER_BONES = []
 for side, letter in [('l', 'L'), ('r', 'R')]:
     MAPPING.update({
         f'Shoulder.{letter}': f'clavicle_{side}',
@@ -31,6 +33,11 @@ for side, letter in [('l', 'L'), ('r', 'R')]:
         f'LowerLeg.{letter}': f'calf_{side}',
         f'Foot.{letter}': f'foot_{side}',
     })
+    for finger in ('Index', 'Middle', 'Ring', 'Pinky'):
+        for joint in range(1, 5):
+            FINGER_BONES.append(f'{finger}{joint}.{letter}')
+    for joint in range(1, 4):
+        FINGER_BONES.append(f'Thumb{joint}.{letter}')
 
 
 def imported_armature(path):
@@ -42,7 +49,29 @@ def imported_armature(path):
     return arms[0], list(set(bpy.data.objects) - before)
 
 
-def retarget(source, target, source_action, output_name):
+def sample_original_fingers(target, original_action, source_action):
+    # The character pack already has suitable hand poses, including grip for accessories.
+    target.animation_data_clear()
+    target.animation_data_create()
+    target.animation_data.action = original_action
+    if original_action.slots:
+        target.animation_data.action_slot = original_action.slots[0]
+    start, end = (round(value) for value in source_action.frame_range)
+    original_start, original_end = original_action.frame_range
+    samples = {}
+    for frame in range(start, end + 1):
+        fraction = (frame - start) / max(1, end - start)
+        original_frame = original_start + fraction * (original_end - original_start)
+        whole = math.floor(original_frame)
+        bpy.context.scene.frame_set(whole, subframe=original_frame - whole)
+        bpy.context.view_layer.update()
+        samples[frame] = {name: target.pose.bones[name].matrix_basis.to_quaternion().copy()
+                          for name in FINGER_BONES}
+    target.animation_data_clear()
+    return samples
+
+
+def retarget(source, target, source_action, output_name, finger_poses):
     source.animation_data_create()
     source.animation_data.action = source_action
     if source_action.slots:
@@ -77,6 +106,8 @@ def retarget(source, target, source_action, output_name):
                                source.data.bones[source_name].matrix_local.translation)
             transform = Matrix.Translation(translation) @ desired.to_matrix().to_4x4()
             dst_bone.matrix = transform
+            # Child pose matrices otherwise read the previous frame's parent transform.
+            bpy.context.view_layer.update()
             dst_bone.keyframe_insert(data_path='rotation_quaternion', frame=frame, group=target_name)
             if target_name.startswith('Foot.'):
                 dst_bone.keyframe_insert(data_path='location', frame=frame, group=target_name)
@@ -89,6 +120,10 @@ def retarget(source, target, source_action, output_name):
                                       Vector((0, 0, bob)))
         body.matrix = body_transform
         body.keyframe_insert(data_path='location', frame=frame, group='Body')
+        for name, rotation in finger_poses[frame].items():
+            bone = target.pose.bones[name]
+            bone.rotation_quaternion = rotation
+            bone.keyframe_insert(data_path='rotation_quaternion', frame=frame, group=name)
     target.animation_data.action = None
     return action
 
@@ -107,12 +142,20 @@ def main():
         bpy.ops.wm.read_factory_settings(use_empty=True)
         source, source_objects = imported_armature(args.source)
         source_actions = {action.name: action for action in bpy.data.actions}
+        # Use a single source action at a time, independent of the imported NLA strips.
+        source.animation_data_clear()
         target, target_objects = imported_armature(args.input_dir / f'{name}.glb')
+        target_actions = {action.name: action for action in bpy.data.actions
+                          if action.name not in source_actions}
+        finger_samples = {output_name: sample_original_fingers(target,
+            target_actions[output_name if output_name in target_actions else 'Idle'],
+            source_actions[source_name]) for output_name, source_name in CLIPS.items()}
         target.animation_data_clear()
         for action in list(bpy.data.actions):
             if action.name not in source_actions:
                 bpy.data.actions.remove(action)
-        created = [retarget(source, target, source_actions[source_name], output_name)
+        created = [retarget(source, target, source_actions[source_name], output_name,
+                            finger_samples[output_name])
                    for output_name, source_name in CLIPS.items()]
         for obj in source_objects:
             bpy.data.objects.remove(obj, do_unlink=True)
