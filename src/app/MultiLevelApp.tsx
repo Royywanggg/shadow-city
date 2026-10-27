@@ -8,7 +8,6 @@ import { WorldSceneV2, WorldOffenceLayer, WorldSelectedRoute } from '../scene/Wo
 import { WorldAgentLayerV5 } from '../scene/WorldAgentLayerV5'
 import { EncounterLayerV1 } from '../scene/EncounterLayerV1'
 import { CharacterPortraitV5 } from '../scene/character/CharacterPortraitV5'
-import { selectCharacterProofIds } from '../scene/character/proofSelection'
 import { createCitizenIdentity } from '../simulation/population'
 import { DEFAULT_ENCOUNTER_SCENARIO_V1 } from '../simulation/encounter/config'
 import { relationshipCategoryV1 } from '../simulation/encounter/relationships'
@@ -70,7 +69,6 @@ function V5Panel({ session, selectedId, onSelect, selectedEncounterId, onSelectE
     'encounters' | 'memory' | 'timeline'>('profile')
   const identities = useMemo(() => new Map(session.getProfiles().map((profile) =>
     [profile.id, createCitizenIdentity(profile.id)])), [session])
-  const proofIds = useMemo(() => selectCharacterProofIds(identities), [identities])
   useEffect(() => {
     if (!selectedId) return
     const row = document.querySelector(`.v06-list [data-agent-id="${selectedId}"]`)
@@ -180,9 +178,7 @@ function V5Panel({ session, selectedId, onSelect, selectedEncounterId, onSelectE
             activity={selected.activity} movementMode={selected.movementMode}
             tick={snapshot.tick} playing={playing && !snapshot.isInspecting}
             ticksPerSecond={4 * speed}
-            animationRate={profile.travellerCosts.speedMmPerSecond / 1300}
-            proof={new URLSearchParams(window.location.search).get('animationProof') === '1' &&
-              proofIds.has(selected.id)} />
+            animationRate={profile.travellerCosts.speedMmPerSecond / 1300} />
           <div className="v06-action-row"><button onClick={focus}>FOCUS</button>
             <button onClick={follow}>{status}</button></div>
           <div className="v06-tabs" aria-label="Researcher resident sections">

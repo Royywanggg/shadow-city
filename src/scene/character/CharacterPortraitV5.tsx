@@ -1,8 +1,7 @@
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useRef, useState } from 'react'
 import type { CitizenAppearance } from '../../simulation/population'
-import { CharacterManager, loadCharacterAssets, loadProofCharacterAssets,
-  type CharacterPreviewClip } from './CharacterManager'
+import { CharacterManager, loadCharacterAssets, type CharacterPreviewClip } from './CharacterManager'
 import { sampleAnimationTime } from './animationClock'
 
 interface PortraitPlayback {
@@ -66,36 +65,32 @@ function Portrait({ manager, agentId, appearance, activity, movementMode, tick, 
   </>
 }
 
-export function CharacterPortraitV5({ proof, agentId, appearance, activity, movementMode, tick,
+export function CharacterPortraitV5({ agentId, appearance, activity, movementMode, tick,
   playing, ticksPerSecond, animationRate }:
-  { proof: boolean; agentId: string; appearance: CitizenAppearance; activity: string;
+  { agentId: string; appearance: CitizenAppearance; activity: string;
     movementMode: 'walk' | 'jog'; tick: number; playing: boolean;
     ticksPerSecond: number; animationRate: number }) {
   const [manager, setManager] = useState<CharacterManager | null>(null)
   const [preview, setPreview] = useState<CharacterPreviewClip | null>(null)
   const [previewTime, setPreviewTime] = useState<number | null>(null)
   useEffect(() => {
-    if (!import.meta.env.DEV || !proof) return
+    if (!import.meta.env.DEV) return
     const controls = { setClip: setPreview, setTime: setPreviewTime }
     window.__shadowCityV5CharacterPreview = controls
     return () => { if (window.__shadowCityV5CharacterPreview === controls)
       delete window.__shadowCityV5CharacterPreview }
-  }, [proof])
+  }, [])
   useEffect(() => {
     let cancelled = false
     let active: CharacterManager | null = null
     setManager(null)
-    Promise.all([loadCharacterAssets(), proof ? loadProofCharacterAssets().catch(() => null) :
-      Promise.resolve(null)])
-      .then(([assets, proofAssets]) => {
-        if (cancelled) return
-        active = new CharacterManager(assets, proofAssets ? {
-          assets: proofAssets, agentIds: new Set(['portrait']),
-        } : null)
-        setManager(active)
-      }).catch(() => {})
+    loadCharacterAssets().then((assets) => {
+      if (cancelled) return
+      active = new CharacterManager(assets)
+      setManager(active)
+    }).catch(() => {})
     return () => { cancelled = true; active?.dispose() }
-  }, [proof])
+  }, [])
   return <div className="v06-portrait" aria-label="Selected resident 3D portrait">
     {manager && <Canvas camera={{ position: [1.45, 1.55, 3.05], fov: 38 }}
       dpr={[1, 1.5]} frameloop={playing ? 'always' : 'demand'}>

@@ -41,16 +41,11 @@ interface LoadedAsset {
   readonly feetOffset: number
 }
 
-export interface CharacterProofOptions {
-  readonly assets: ReadonlyMap<string, LoadedAsset>
-  readonly agentIds: ReadonlySet<string>
-}
-
 export type CharacterPreviewClip = 'Idle' | 'Walk' | 'Run' | 'SitDown' | 'SitIdle' | 'StandUp'
+export type CharacterAssetMode = 'upgraded' | 'legacy'
 
 interface CharacterInstance {
   readonly presetId: string
-  readonly assetKey: string
   readonly tier: 'medium' | 'close'
   readonly root: Group
   readonly rig: Object3D
@@ -60,6 +55,7 @@ interface CharacterInstance {
   readonly clips: ReadonlyMap<string, AnimationClip>
   readonly meshes: readonly Mesh[]
   colors: string
+  previewActionName: CharacterPreviewClip | null
 }
 
 export function animationWeights(activity: string, previousActivity?: string, transitionProgress = 1,
@@ -129,17 +125,13 @@ export function bakeStaticPose(scene: Object3D, idleClip: AnimationClip): Object
   return staticRoot
 }
 
-function prepareAsset(definition: CharacterAsset, gltf: GLTF, proof = false): LoadedAsset {
+function prepareAsset(definition: CharacterAsset, gltf: GLTF): LoadedAsset {
   const bounds = new Box3().setFromObject(gltf.scene)
   const height = bounds.max.y - bounds.min.y
   if (!(height > 0) || !Number.isFinite(height)) throw new Error(`Invalid character bounds: ${definition.presetId}`)
-  const proofNames: Readonly<Record<string, string>> = {
-    PoCIdle: 'Idle', PoCWalk: 'Walk', PoCJog: 'Run',
-    PoCSitDown: 'SitDown', PoCSitIdle: 'SitIdle', PoCStandUp: 'StandUp',
-  }
   const clips = new Map(gltf.animations
-    .filter((clip) => proof ? clip.name in proofNames : ['Idle', 'Walk', 'Run'].includes(clip.name))
-    .map((clip) => [proof ? proofNames[clip.name] : clip.name, stripHorizontalRootMotion(clip)]))
+    .filter((clip) => ['Idle', 'Walk', 'Run', 'SitDown', 'SitIdle', 'StandUp'].includes(clip.name))
+    .map((clip) => [clip.name, stripHorizontalRootMotion(clip)]))
   if (!clips.has('Idle') || !clips.has('Walk') || !clips.has('Run')) {
     throw new Error(`Missing movement clips: ${definition.presetId}`)
   }
@@ -148,49 +140,45 @@ function prepareAsset(definition: CharacterAsset, gltf: GLTF, proof = false): Lo
   return { definition, scene: gltf.scene, mediumScene, clips, scale, feetOffset: -bounds.min.y * scale }
 }
 
-let characterAssetPromise: Promise<ReadonlyMap<string, LoadedAsset>> | null = null
+const characterAssetPromises: Partial<Record<CharacterAssetMode,
+  Promise<ReadonlyMap<string, LoadedAsset>>>> = {}
+const characterAssetLoadDurationMs: Partial<Record<CharacterAssetMode, number>> = {}
+let resolvedCharacterAssetMode: CharacterAssetMode | null = null
 
-async function loadAllCharacterAssets(): Promise<ReadonlyMap<string, LoadedAsset>> {
+function requestedCharacterAssetMode(): CharacterAssetMode {
+  return typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('characterAssets') === 'legacy' ? 'legacy' : 'upgraded'
+}
+
+async function loadAllCharacterAssets(mode: CharacterAssetMode): Promise<ReadonlyMap<string, LoadedAsset>> {
+  const started = performance.now()
   const loader = new GLTFLoader()
-  const loaded = await Promise.all(CHARACTER_ASSETS.map(async (definition) =>
-    prepareAsset(definition, await loader.loadAsync(definition.url))))
+  const loaded = await Promise.all(CHARACTER_ASSETS.map(async (definition) => {
+    const url = mode === 'upgraded' ? definition.url.replace('/quaternius-v01/', '/quaternius-ual-v1/') :
+      definition.url
+    return prepareAsset(definition, await loader.loadAsync(url))
+  }))
+  characterAssetLoadDurationMs[mode] = performance.now() - started
+  resolvedCharacterAssetMode = mode
   return new Map(loaded.map((asset) => [asset.definition.presetId, asset]))
 }
 
 /** World and portrait share parsed source assets; each active rig receives its own bones. */
-export function loadCharacterAssets(): Promise<ReadonlyMap<string, LoadedAsset>> {
-  characterAssetPromise ??= loadAllCharacterAssets().catch((error: unknown) => {
-    characterAssetPromise = null
+export function loadCharacterAssets(mode = requestedCharacterAssetMode()): Promise<ReadonlyMap<string, LoadedAsset>> {
+  characterAssetPromises[mode] ??= loadAllCharacterAssets(mode).catch(async (error: unknown) => {
+    delete characterAssetPromises[mode]
+    if (mode === 'upgraded') return loadCharacterAssets('legacy')
     throw error
   })
-  return characterAssetPromise
+  return characterAssetPromises[mode]
 }
 
-let proofAssetPromise: Promise<ReadonlyMap<string, LoadedAsset>> | null = null
-let proofAssetLoadDurationMs: number | null = null
-
-export function getProofAssetLoadDurationMs(): number | null { return proofAssetLoadDurationMs }
-
-/** Supplemental assets are loaded only for the four opt-in proof residents. */
-export function loadProofCharacterAssets(): Promise<ReadonlyMap<string, LoadedAsset>> {
-  proofAssetPromise ??= (async () => {
-    const started = performance.now()
-    const loader = new GLTFLoader()
-    const definitions = CHARACTER_ASSETS.filter((asset) =>
-      ['character-0', 'character-3', 'character-5', 'character-9'].includes(asset.presetId))
-    const filenames: Readonly<Record<string, string>> = {
-      'character-0': 'men-casual2', 'character-3': 'men-suit',
-      'character-5': 'women-casual', 'character-9': 'women-worker',
-    }
-    const loaded = await Promise.all(definitions.map(async (definition) => prepareAsset(definition,
-      await loader.loadAsync(`/characters/quaternius-ual-poc/${filenames[definition.presetId]}.glb`), true)))
-    proofAssetLoadDurationMs = performance.now() - started
-    return new Map(loaded.map((asset) => [asset.definition.presetId, asset]))
-  })().catch((error: unknown) => { proofAssetPromise = null; throw error })
-  return proofAssetPromise
+export function getResolvedCharacterAssetMode(): CharacterAssetMode | null { return resolvedCharacterAssetMode }
+export function getCharacterAssetLoadDurationMs(): number | null {
+  return resolvedCharacterAssetMode ? characterAssetLoadDurationMs[resolvedCharacterAssetMode] ?? null : null
 }
 
-function createInstance(asset: LoadedAsset, tier: 'medium' | 'close', assetKey: string): CharacterInstance {
+function createInstance(asset: LoadedAsset, tier: 'medium' | 'close'): CharacterInstance {
   const rig = tier === 'close' ? cloneSkeleton(asset.scene) : asset.mediumScene.clone(true)
   const root = new Group()
   rig.scale.setScalar(asset.scale)
@@ -212,11 +200,14 @@ function createInstance(asset: LoadedAsset, tier: 'medium' | 'close', assetKey: 
     object.material = Array.isArray(object.material) ? clones : clones[0]
   })
   const mixer = tier === 'close' ? new AnimationMixer(rig) : null
-  if (mixer) for (const clip of asset.clips.values()) mixer.clipAction(clip).play().setEffectiveWeight(0)
+  if (mixer) for (const name of ['Idle', 'Walk', 'Run']) {
+    const clip = asset.clips.get(name)
+    if (clip) mixer.clipAction(clip).play().setEffectiveWeight(0)
+  }
   return {
-    presetId: asset.definition.presetId, assetKey, tier, root, rig, mixer, materials,
+    presetId: asset.definition.presetId, tier, root, rig, mixer, materials,
     originalColors: new Map(materials.map((material) => [material, material.color.clone()])),
-    clips: asset.clips, meshes, colors: '',
+    clips: asset.clips, meshes, colors: '', previewActionName: null,
   }
 }
 
@@ -242,13 +233,24 @@ function animate(instance: CharacterInstance, item: CharacterRenderItem, logical
     item.movementMode, item.previousMovementMode)
   const walkRate = Math.max(0.75, Math.min(1.35, item.animationRate ?? 1))
   const canPreview = preview && instance.clips.has(preview)
-  for (const [name, clip] of instance.clips) {
+  const previewActionName = canPreview && preview !== 'Idle' && preview !== 'Walk' && preview !== 'Run'
+    ? preview : null
+  if (instance.previewActionName !== previewActionName) {
+    if (instance.previewActionName) instance.mixer.clipAction(instance.clips.get(instance.previewActionName)!).stop()
+    if (previewActionName) instance.mixer.clipAction(instance.clips.get(previewActionName)!).reset().play()
+    instance.previewActionName = previewActionName
+  }
+  for (const name of ['Idle', 'Walk', 'Run'] as const) {
+    const clip = instance.clips.get(name)
+    if (!clip) continue
     instance.mixer.clipAction(clip)
       .setEffectiveWeight(canPreview ? Number(name === preview) :
-        name === 'Idle' || name === 'Walk' || name === 'Run' ? weights[name] : 0)
+        weights[name])
       .setEffectiveTimeScale(name === 'Idle' ? 0.72 + item.appearance.animationPhaseOffset * 0.28
         : name === 'Run' ? walkRate * 1.45 : walkRate)
   }
+  if (previewActionName) instance.mixer.clipAction(instance.clips.get(previewActionName)!)
+    .setEffectiveWeight(1).setEffectiveTimeScale(1)
   instance.mixer.setTime(logicalTime + (canPreview ? 0 : item.appearance.animationPhaseOffset * 2))
 }
 
@@ -256,15 +258,13 @@ function animate(instance: CharacterInstance, item: CharacterRenderItem, logical
 export class CharacterManager {
   readonly group = new Group()
   private readonly assets: ReadonlyMap<string, LoadedAsset>
-  private readonly proof: CharacterProofOptions | null
   private readonly active = new Map<string, CharacterInstance>()
   private readonly pool = new Map<string, CharacterInstance[]>()
   private readonly previousTiers = new Map<string, CharacterTier>()
   private previewClip: CharacterPreviewClip | null = null
 
-  constructor(assets: ReadonlyMap<string, LoadedAsset>, proof: CharacterProofOptions | null = null) {
+  constructor(assets: ReadonlyMap<string, LoadedAsset>) {
     this.assets = assets
-    this.proof = proof
   }
 
   /** Development preview only; authored clips do not create simulated activities. */
@@ -288,7 +288,7 @@ export class CharacterManager {
       this.active.delete(id)
       this.group.remove(instance.root)
       instance.root.visible = false
-      const poolKey = `${instance.assetKey}:${instance.tier}`
+      const poolKey = `${instance.presetId}:${instance.tier}`
       const available = this.pool.get(poolKey) ?? []
       if (available.length < 8) {
         available.push(instance)
@@ -301,25 +301,22 @@ export class CharacterManager {
       const tier = tiers.get(item.id) ?? 'far'
       this.previousTiers.set(item.id, tier)
       if (tier === 'far') continue
-      const enhanced = this.proof?.agentIds.has(item.id) ?? false
-      const asset = (enhanced ? this.proof?.assets.get(item.appearance.presetId) : null) ??
-        this.assets.get(item.appearance.presetId)
+      const asset = this.assets.get(item.appearance.presetId)
       if (!asset) continue
-      const assetKey = `${enhanced && this.proof?.assets.has(item.appearance.presetId) ? 'proof' : 'base'}:${asset.definition.presetId}`
       let instance = this.active.get(item.id)
-      if (!instance || instance.assetKey !== assetKey || instance.tier !== tier) {
+      if (!instance || instance.presetId !== asset.definition.presetId || instance.tier !== tier) {
         if (instance) {
           this.group.remove(instance.root)
           this.active.delete(item.id)
           instance.root.visible = false
-          const poolKey = `${instance.assetKey}:${instance.tier}`
+          const poolKey = `${instance.presetId}:${instance.tier}`
           const available = this.pool.get(poolKey) ?? []
           if (available.length < 8) {
             available.push(instance)
             this.pool.set(poolKey, available)
           } else this.disposeInstance(instance)
         }
-        instance = this.pool.get(`${assetKey}:${tier}`)?.pop() ?? createInstance(asset, tier, assetKey)
+        instance = this.pool.get(`${asset.definition.presetId}:${tier}`)?.pop() ?? createInstance(asset, tier)
         this.active.set(item.id, instance)
         this.group.add(instance.root)
       }

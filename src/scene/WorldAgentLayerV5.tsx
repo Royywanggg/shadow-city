@@ -5,11 +5,11 @@ import { CanvasTexture, Color, DoubleSide, MeshBasicMaterial, Object3D, PlaneGeo
 import type { SimulationSessionV5 } from '../simulation/sessionV5'
 import { createCitizenIdentity } from '../simulation/population'
 import type { SimulationStateV5 } from '../simulation/v5Types'
-import { CharacterManager, getProofAssetLoadDurationMs, loadCharacterAssets,
-  loadProofCharacterAssets, type CharacterRenderItem } from './character/CharacterManager'
+import { CharacterManager, getCharacterAssetLoadDurationMs, getResolvedCharacterAssetMode,
+  loadCharacterAssets, type CharacterRenderItem } from './character/CharacterManager'
 import { CHARACTER_ASSETS } from './character/catalog'
 import { sampleAnimationTime } from './character/animationClock'
-import { selectCharacterProofIds } from './character/proofSelection'
+import { selectCharacterReviewIds } from './character/reviewSelection'
 import { interpolateHeading } from './character/heading'
 
 interface MotionPair { prior: SimulationStateV5 | null; current: SimulationStateV5; changedAt: number }
@@ -24,8 +24,7 @@ export function WorldAgentLayerV5({ session, selectedId, onSelect, playing, tick
     [profile.id, createCitizenIdentity(profile.id)])), [session])
   const profiles = useMemo(() => new Map(session.getProfiles().map((profile) =>
     [profile.id, profile])), [session])
-  const proofEnabled = useMemo(() => new URLSearchParams(window.location.search).get('animationProof') === '1', [])
-  const proofIds = useMemo(() => selectCharacterProofIds(identities), [identities])
+  const reviewIds = useMemo(() => selectCharacterReviewIds(identities), [identities])
   const surfaces = useMemo(() => new Map(session.getWorld().surfaces.map((surface) =>
     [surface.id, surface])), [session])
   const managerRef = useRef<CharacterManager | null>(null)
@@ -68,17 +67,15 @@ export function WorldAgentLayerV5({ session, selectedId, onSelect, playing, tick
   useEffect(() => {
     let cancelled = false
     setManager(null)
-    Promise.all([loadCharacterAssets(), proofEnabled ? loadProofCharacterAssets().catch(() => null) :
-      Promise.resolve(null)])
-      .then(([assets, proofAssets]) => {
-        if (cancelled) return
-        const next = new CharacterManager(assets, proofAssets ? { assets: proofAssets, agentIds: proofIds } : null)
-        managerRef.current = next
-        setManager(next)
-        invalidate()
-      }).catch(() => { /* Far impostors remain visible if a rig fails to load. */ })
+    loadCharacterAssets().then((assets) => {
+      if (cancelled) return
+      const next = new CharacterManager(assets)
+      managerRef.current = next
+      setManager(next)
+      invalidate()
+    }).catch(() => { /* Far impostors remain visible if a rig fails to load. */ })
     return () => { cancelled = true; managerRef.current?.dispose(); managerRef.current = null }
-  }, [invalidate, proofEnabled, proofIds])
+  }, [invalidate])
 
   useEffect(() => {
     let cancelled = false
@@ -192,9 +189,11 @@ export function WorldAgentLayerV5({ session, selectedId, onSelect, playing, tick
         mediumCount: result?.diagnostics.mediumCount ?? 0,
         closeCount: result?.diagnostics.closeCount ?? 0,
         activeInstances: result?.diagnostics.activeInstances ?? 0,
-        animationProofIds: proofEnabled ? [...proofIds] : [],
+        reviewAgentIds: [...reviewIds],
         animationUpdateMs,
-        proofAssetLoadMs: proofEnabled ? getProofAssetLoadDurationMs() : null,
+        characterAssetMode: getResolvedCharacterAssetMode(),
+        characterAssetLoadMs: getCharacterAssetLoadDurationMs(),
+        assetPresetCount: result?.diagnostics.assetPresetCount ?? 0,
         textures: gl.info.memory.textures }
       lastDebug.current = performance.now()
     }
@@ -236,7 +235,8 @@ declare global {
       candidates: { id: string; x: number; y: number }[];
       farCount: number; mediumCount: number; closeCount: number;
       activeInstances: number;
-      animationProofIds: string[]; animationUpdateMs: number;
-      proofAssetLoadMs: number | null; textures: number }
+      reviewAgentIds: string[]; animationUpdateMs: number;
+      characterAssetMode: 'upgraded' | 'legacy' | null;
+      characterAssetLoadMs: number | null; assetPresetCount: number; textures: number }
   }
 }

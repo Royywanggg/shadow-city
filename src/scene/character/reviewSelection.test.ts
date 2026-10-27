@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { selectCharacterProofIds } from './proofSelection'
+import { selectCharacterReviewIds } from './reviewSelection'
 
-describe('animation proof sample', () => {
+describe('character review sample', () => {
   it('selects one stable existing resident per supported preset', () => {
     const identities = new Map([
       ['citizen-3', { appearance: { presetId: 'character-0' } }],
@@ -11,8 +11,8 @@ describe('animation proof sample', () => {
       ['citizen-5', { appearance: { presetId: 'character-9' } }],
       ['citizen-6', { appearance: { presetId: 'character-2' } }],
     ])
-    expect([...selectCharacterProofIds(identities)]).toEqual([
-      'citizen-1', 'citizen-2', 'citizen-4', 'citizen-5',
+    expect([...selectCharacterReviewIds(identities)]).toEqual([
+      'citizen-1', 'citizen-6', 'citizen-2', 'citizen-4', 'citizen-5',
     ])
   })
 })
