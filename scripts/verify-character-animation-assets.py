@@ -1,4 +1,4 @@
-"""Check the four retargeted GLBs against their unchanged source characters."""
+"""Check every retargeted GLB against its unchanged source character."""
 
 import json
 import struct
@@ -7,8 +7,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 BASE = ROOT / 'public/characters/quaternius-v01'
-PROOF = ROOT / 'public/characters/quaternius-ual-poc'
-CLIPS = {'PoCIdle', 'PoCWalk', 'PoCJog', 'PoCSitDown', 'PoCSitIdle', 'PoCStandUp'}
+UPGRADED = ROOT / 'public/characters/quaternius-ual-v1'
+CLIPS = {'Idle', 'Walk', 'Run', 'SitDown', 'SitIdle', 'StandUp'}
 
 
 def glb(path):
@@ -34,9 +34,10 @@ def positions(data, binary, accessor_id):
             for index in range(accessor['count'])]
 
 
-for filename in ['men-casual2', 'men-suit', 'women-casual', 'women-worker']:
+for entry in json.loads((BASE / 'manifest.json').read_text()):
+    filename = entry['name']
     original, _ = glb(BASE / f'{filename}.glb')
-    derived, binary = glb(PROOF / f'{filename}.glb')
+    derived, binary = glb(UPGRADED / f'{filename}.glb')
     source_joints = [original['nodes'][node]['name'] for node in original['skins'][0]['joints']]
     proof_joints = [derived['nodes'][node]['name'] for node in derived['skins'][0]['joints']]
     assert set(source_joints) == set(proof_joints) and len(source_joints) == 62, (

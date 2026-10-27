@@ -10,12 +10,12 @@ from mathutils import Matrix, Vector
 
 
 CLIPS = {
-    'PoCIdle': 'Idle_Loop',
-    'PoCWalk': 'Walk_Loop',
-    'PoCJog': 'Jog_Fwd_Loop',
-    'PoCSitDown': 'Sitting_Enter',
-    'PoCSitIdle': 'Sitting_Idle_Loop',
-    'PoCStandUp': 'Sitting_Exit',
+    'Idle': 'Idle_Loop',
+    'Walk': 'Walk_Loop',
+    'Run': 'Jog_Fwd_Loop',
+    'SitDown': 'Sitting_Enter',
+    'SitIdle': 'Sitting_Idle_Loop',
+    'StandUp': 'Sitting_Exit',
 }
 MAPPING = {
     'Hips': 'pelvis', 'Abdomen': 'spine_01', 'Torso': 'spine_02',
@@ -97,15 +97,21 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--source', type=Path, required=True)
     parser.add_argument('--input-dir', type=Path, default=Path('public/characters/quaternius-v01'))
-    parser.add_argument('--output-dir', type=Path, default=Path('public/characters/quaternius-ual-poc'))
-    parser.add_argument('--characters', nargs='+', default=['men-casual2', 'men-suit', 'women-casual', 'women-worker'])
+    parser.add_argument('--output-dir', type=Path, default=Path('public/characters/quaternius-ual-v1'))
+    parser.add_argument('--characters', nargs='+')
     args = parser.parse_args(__import__('sys').argv[__import__('sys').argv.index('--') + 1:])
+    names = args.characters or [entry['name'] for entry in
+                                __import__('json').loads((args.input_dir / 'manifest.json').read_text())]
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    for name in args.characters:
+    for name in names:
         bpy.ops.wm.read_factory_settings(use_empty=True)
         source, source_objects = imported_armature(args.source)
         source_actions = {action.name: action for action in bpy.data.actions}
         target, target_objects = imported_armature(args.input_dir / f'{name}.glb')
+        target.animation_data_clear()
+        for action in list(bpy.data.actions):
+            if action.name not in source_actions:
+                bpy.data.actions.remove(action)
         created = [retarget(source, target, source_actions[source_name], output_name)
                    for output_name, source_name in CLIPS.items()]
         for obj in source_objects:
