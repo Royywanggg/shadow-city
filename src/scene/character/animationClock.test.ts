@@ -11,5 +11,6 @@ describe('character animation clock', () => {
 
   it('does not use the six simulated seconds represented by one tick', () => {
     expect(sampleAnimationTime(100, 101, 1) - sampleAnimationTime(100, 101, 0)).toBeCloseTo(0.1)
+    expect(sampleAnimationTime(100, 101, 1, 4) - sampleAnimationTime(100, 101, 0, 4)).toBeCloseTo(0.25)
   })
 })

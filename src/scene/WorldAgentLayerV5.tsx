@@ -5,8 +5,12 @@ import { CanvasTexture, Color, DoubleSide, MeshBasicMaterial, Object3D, PlaneGeo
 import type { SimulationSessionV5 } from '../simulation/sessionV5'
 import { createCitizenIdentity } from '../simulation/population'
 import type { SimulationStateV5 } from '../simulation/v5Types'
-import { CharacterManager, loadCharacterAssets, type CharacterRenderItem } from './character/CharacterManager'
+import { CharacterManager, getProofAssetLoadDurationMs, loadCharacterAssets,
+  loadProofCharacterAssets, type CharacterRenderItem } from './character/CharacterManager'
 import { CHARACTER_ASSETS } from './character/catalog'
+import { sampleAnimationTime } from './character/animationClock'
+import { selectCharacterProofIds } from './character/proofSelection'
+import { interpolateHeading } from './character/heading'
 
 interface MotionPair { prior: SimulationStateV5 | null; current: SimulationStateV5; changedAt: number }
 
@@ -20,6 +24,8 @@ export function WorldAgentLayerV5({ session, selectedId, onSelect, playing, tick
     [profile.id, createCitizenIdentity(profile.id)])), [session])
   const profiles = useMemo(() => new Map(session.getProfiles().map((profile) =>
     [profile.id, profile])), [session])
+  const proofEnabled = useMemo(() => new URLSearchParams(window.location.search).get('animationProof') === '1', [])
+  const proofIds = useMemo(() => selectCharacterProofIds(identities), [identities])
   const surfaces = useMemo(() => new Map(session.getWorld().surfaces.map((surface) =>
     [surface.id, surface])), [session])
   const managerRef = useRef<CharacterManager | null>(null)
@@ -61,15 +67,18 @@ export function WorldAgentLayerV5({ session, selectedId, onSelect, playing, tick
 
   useEffect(() => {
     let cancelled = false
-    loadCharacterAssets().then((assets) => {
-      if (cancelled) return
-      const next = new CharacterManager(assets)
-      managerRef.current = next
-      setManager(next)
-      invalidate()
-    }).catch(() => { /* Far impostors remain visible if a rig fails to load. */ })
+    setManager(null)
+    Promise.all([loadCharacterAssets(), proofEnabled ? loadProofCharacterAssets().catch(() => null) :
+      Promise.resolve(null)])
+      .then(([assets, proofAssets]) => {
+        if (cancelled) return
+        const next = new CharacterManager(assets, proofAssets ? { assets: proofAssets, agentIds: proofIds } : null)
+        managerRef.current = next
+        setManager(next)
+        invalidate()
+      }).catch(() => { /* Far impostors remain visible if a rig fails to load. */ })
     return () => { cancelled = true; managerRef.current?.dispose(); managerRef.current = null }
-  }, [invalidate])
+  }, [invalidate, proofEnabled, proofIds])
 
   useEffect(() => {
     let cancelled = false
@@ -126,14 +135,16 @@ export function WorldAgentLayerV5({ session, selectedId, onSelect, playing, tick
         movementMode: citizen.movementMode, previousActivity: previous?.activity,
         previousMovementMode: previous?.movementMode, transitionProgress: alpha,
         animationRate: profiles.get(citizen.id)!.travellerCosts.speedMmPerSecond / 1300,
-        pose: { x, y, z, yaw: citizen.headingRadians, visible: true }, pixelHeight })
+        pose: { x, y, z, yaw: previous ? interpolateHeading(previous.headingRadians,
+          citizen.headingRadians, alpha) : citizen.headingRadians, visible: true }, pixelHeight })
       const screen = vector.set(x, y + 0.9, z).project(camera)
       screenCandidates.push({ id: citizen.id, x: canvasBounds.left + (screen.x + 1) * size.width / 2,
         y: canvasBounds.top + (1 - screen.y) * size.height / 2 })
     }
+    const animationStart = performance.now()
     const result = manager?.update(items, selectedId,
-      current.tick * session.getConfig().logicalSecondsPerTick +
-      alpha * session.getConfig().logicalSecondsPerTick)
+      sampleAnimationTime(prior?.tick ?? null, current.tick, alpha, 4))
+    const animationUpdateMs = performance.now() - animationStart
     const countByPreset = new Map<string, number>()
     let glowCount = 0
     for (const item of items) {
@@ -179,7 +190,12 @@ export function WorldAgentLayerV5({ session, selectedId, onSelect, playing, tick
       window.__shadowCityV06Agents = { tick: current.tick, visibleCount: items.length,
         candidates: screenCandidates, farCount: result?.diagnostics.farCount ?? items.length,
         mediumCount: result?.diagnostics.mediumCount ?? 0,
-        closeCount: result?.diagnostics.closeCount ?? 0 }
+        closeCount: result?.diagnostics.closeCount ?? 0,
+        activeInstances: result?.diagnostics.activeInstances ?? 0,
+        animationProofIds: proofEnabled ? [...proofIds] : [],
+        animationUpdateMs,
+        proofAssetLoadMs: proofEnabled ? getProofAssetLoadDurationMs() : null,
+        textures: gl.info.memory.textures }
       lastDebug.current = performance.now()
     }
   })
@@ -218,6 +234,9 @@ declare global {
   interface Window {
     __shadowCityV06Agents?: { tick: number; visibleCount: number;
       candidates: { id: string; x: number; y: number }[];
-      farCount: number; mediumCount: number; closeCount: number }
+      farCount: number; mediumCount: number; closeCount: number;
+      activeInstances: number;
+      animationProofIds: string[]; animationUpdateMs: number;
+      proofAssetLoadMs: number | null; textures: number }
   }
 }

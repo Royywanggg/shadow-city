@@ -8,6 +8,7 @@ import { WorldSceneV2, WorldOffenceLayer, WorldSelectedRoute } from '../scene/Wo
 import { WorldAgentLayerV5 } from '../scene/WorldAgentLayerV5'
 import { EncounterLayerV1 } from '../scene/EncounterLayerV1'
 import { CharacterPortraitV5 } from '../scene/character/CharacterPortraitV5'
+import { selectCharacterProofIds } from '../scene/character/proofSelection'
 import { createCitizenIdentity } from '../simulation/population'
 import { DEFAULT_ENCOUNTER_SCENARIO_V1 } from '../simulation/encounter/config'
 import { relationshipCategoryV1 } from '../simulation/encounter/relationships'
@@ -69,6 +70,7 @@ function V5Panel({ session, selectedId, onSelect, selectedEncounterId, onSelectE
     'encounters' | 'memory' | 'timeline'>('profile')
   const identities = useMemo(() => new Map(session.getProfiles().map((profile) =>
     [profile.id, createCitizenIdentity(profile.id)])), [session])
+  const proofIds = useMemo(() => selectCharacterProofIds(identities), [identities])
   useEffect(() => {
     if (!selectedId) return
     const row = document.querySelector(`.v06-list [data-agent-id="${selectedId}"]`)
@@ -175,7 +177,9 @@ function V5Panel({ session, selectedId, onSelect, selectedEncounterId, onSelectE
             <button onClick={() => onSelect(null)} aria-label="Clear selection">×</button></div>
           <h3>{identity.displayName}</h3><small>{selected.id} · {selectedSurface?.levelId ?? 'unknown level'}</small>
           <CharacterPortraitV5 appearance={identity.appearance} activity={selected.activity}
-            movementMode={selected.movementMode} logicalTime={snapshot.tick * 6} />
+            movementMode={selected.movementMode} logicalTime={snapshot.tick / 4}
+            proof={new URLSearchParams(window.location.search).get('animationProof') === '1' &&
+              proofIds.has(selected.id)} />
           <div className="v06-action-row"><button onClick={focus}>FOCUS</button>
             <button onClick={follow}>{status}</button></div>
           <div className="v06-tabs" aria-label="Researcher resident sections">
