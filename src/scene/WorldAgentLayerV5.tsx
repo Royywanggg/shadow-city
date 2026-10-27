@@ -11,6 +11,7 @@ import { CHARACTER_ASSETS } from './character/catalog'
 import { sampleAnimationTime } from './character/animationClock'
 import { selectCharacterReviewIds } from './character/reviewSelection'
 import { interpolateHeading } from './character/heading'
+import { lifePoseForTick } from './character/lifePose'
 
 interface MotionPair { prior: SimulationStateV5 | null; current: SimulationStateV5 }
 
@@ -114,6 +115,9 @@ export function WorldAgentLayerV5({ session, selectedId, onSelect, playing, getP
     const lifeById = new Map(current.life?.people.map((person) => [person.agentId, person]) ?? [])
     const activeInjuryById = new Map(current.life?.injuries.filter((injury) =>
       injury.status === 'active').map((injury) => [injury.victimAgentId, injury]) ?? [])
+    const standingIds = new Set(current.life?.recoveryEvents.filter((event) =>
+      event.kind === 'improved' && event.tick === current.tick)
+      .map((event) => event.agentId) ?? [])
     const screenCandidates: { id: string; x: number; y: number }[] = []
     const canvasBounds = gl.domElement.getBoundingClientRect()
     for (const citizen of current.citizens) {
@@ -135,11 +139,11 @@ export function WorldAgentLayerV5({ session, selectedId, onSelect, playing, getP
       const onsetTick = life?.lifeStatus === 'deceased' ? life.deathTick :
         life?.functionalStatus === 'incapacitated' ?
           activeInjuryById.get(citizen.id)?.onsetTick : undefined
-      const collapseProgress = onsetTick === undefined ? 0 :
-        Math.max(0, Math.min(1, current.tick - onsetTick + alpha))
+      const { collapseProgress, standProgress } = lifePoseForTick(current.tick,
+        alpha, onsetTick, standingIds.has(citizen.id) ? current.tick : undefined)
       items.push({ id: citizen.id, appearance, activity: citizen.activity,
         lifeStatus: life?.lifeStatus, functionalStatus: life?.functionalStatus,
-        collapseProgress,
+        collapseProgress, standProgress,
         movementMode: citizen.movementMode, previousActivity: previous?.activity,
         previousMovementMode: previous?.movementMode, transitionProgress: alpha,
         animationRate: profiles.get(citizen.id)!.travellerCosts.speedMmPerSecond / 1300 *
@@ -172,9 +176,11 @@ export function WorldAgentLayerV5({ session, selectedId, onSelect, playing, getP
       const mesh = meshRefs.current.get(preset)
       if (!mesh) continue
       const slot = countByPreset.get(preset) ?? 0
-      object.position.set(item.pose.x, item.pose.y + (item.collapseProgress ? 0.3 : 0.9), item.pose.z)
+      const tilted = item.standProgress === undefined ? item.collapseProgress ?? 0 :
+        1 - item.standProgress
+      object.position.set(item.pose.x, item.pose.y + (tilted ? 0.3 : 0.9), item.pose.z)
       object.quaternion.copy(camera.quaternion)
-      if (item.collapseProgress) object.rotateZ(-1.4 * item.collapseProgress)
+      if (tilted) object.rotateZ(-1.4 * tilted)
       object.scale.setScalar(1)
       object.updateMatrix()
       mesh.setMatrixAt(slot, object.matrix)

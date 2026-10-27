@@ -86,8 +86,11 @@ describe('life-v1 persistent state', () => {
     expect(tick2.citizens[1].activity).toBe('incapacitated')
     const tick3 = advanceStateV5(tick2, seriousEnvironment)
     expect(tick3.life!.people[1]).toMatchObject({ functionalStatus: 'impaired' })
+    expect(tick3.citizens[1]).toMatchObject({ activity: 'standingUp', position: victim.position })
     expect(tick3.life!.recoveryEvents.some((item) => item.kind === 'improved')).toBe(true)
-    expect(progressLifeRecoveryV1(tick3, 7).life!.people[1]).toMatchObject({
+    const tick4 = advanceStateV5(tick3, seriousEnvironment)
+    expect(tick4.citizens[1].activity).not.toBe('standingUp')
+    expect(progressLifeRecoveryV1(tick4, 7).life!.people[1]).toMatchObject({
       functionalStatus: 'unimpaired' })
   })
 

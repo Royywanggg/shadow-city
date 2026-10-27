@@ -29,6 +29,7 @@ try {
     if (scenario === 'scale200Legacy') url.searchParams.set('life', 'off')
     if (scenario === 'diagnostic') url.searchParams.set('lifeScenario', 'high-harm-diagnostic')
     if (scenario === 'fatal') url.searchParams.set('lifeScenario', 'fatal-diagnostic')
+    if (scenario === 'recovery') url.searchParams.set('lifeScenario', 'recovery-diagnostic')
     await page.goto(url.toString(), { waitUntil: 'domcontentloaded', timeout: 60000 })
     await page.waitForFunction(() => window.__shadowCityV06?.getSnapshot()?.tick === 100,
       undefined, { timeout: 60000 })
@@ -71,6 +72,8 @@ try {
           state.life?.people.find((item) => item.lifeStatus === 'deceased')?.agentId ?? null,
         injuredId: state.life?.people.find((item) => item.lifeStatus === 'alive' &&
           item.functionalStatus !== 'unimpaired')?.agentId ?? null,
+        incapCase: state.life?.injuries.find((item) => item.stepDownTick !== null &&
+          item.recoveryTick !== null) ?? null,
         rendering: window.__shadowCityDiagnostics ?? null,
         character: window.__shadowCityV06Agents ? {
           assetLoadMs: window.__shadowCityV06Agents.characterAssetLoadMs,
@@ -84,7 +87,7 @@ try {
     })
     const lifeTimings = await page.evaluate(() => window.__shadowCityV06.getLifeTimings())
     await page.screenshot({ path: resolve(output, `life-${scenario}-hero-tick500-1440x900.png`) })
-    const selectedId = result.deadId ?? result.injuredId
+    const selectedId = result.deadId ?? result.injuredId ?? result.incapCase?.victimAgentId
     if (selectedId) {
       await page.locator(`[data-agent-id="${selectedId}"]`).click()
       await page.getByRole('button', { name: 'LIFE', exact: true }).click()
@@ -123,6 +126,29 @@ try {
         await page.getByRole('button', { name: 'RETURN LIVE', exact: true }).click()
         await page.getByRole('button', { name: 'RESET VIEW', exact: true }).click()
       }
+      if (scenario === 'recovery' && result.incapCase) {
+        const states = []
+        for (const [phase, tick] of [
+          ['incapacitated', result.incapCase.stepDownTick - 1],
+          ['standing', result.incapCase.stepDownTick],
+          ['resumed', result.incapCase.stepDownTick + 1],
+        ]) {
+          const state = await page.evaluate(({ tick, id }) => {
+            const result = window.__shadowCityV06.inspectTick(tick)
+            return { tick, person: result.life.people.find((item) => item.agentId === id),
+              citizen: result.citizens.find((item) => item.id === id) }
+          }, { tick, id: result.incapCase.victimAgentId })
+          states.push({ phase, tick: state.tick, activity: state.citizen.activity,
+            functionalStatus: state.person.functionalStatus,
+            position: state.citizen.position })
+          await page.locator('.v06-inspector').evaluate((element) => { element.scrollTop = 0 })
+          await page.waitForTimeout(300)
+          await page.screenshot({ path: resolve(output,
+            `life-recovery-${phase}-1440x900.png`) })
+        }
+        result.recoveryReview = states
+        await page.getByRole('button', { name: 'RETURN LIVE', exact: true }).click()
+      }
     }
     await page.getByRole('button', { name: 'PLAY', exact: true }).click()
     const stamps = await page.evaluate(async () => {
@@ -153,8 +179,11 @@ try {
   }
   const report = { date: new Date().toISOString(), browserVersion: browser.version(),
     viewport: '1440x900', dpr: 1, checks, errors }
-  await writeFile(resolve(output, process.env.SHADOW_CITY_LIFE_SCENARIOS ?
-    'life-browser-legacy-results.json' : 'life-browser-results.json'),
+  const outputName = !process.env.SHADOW_CITY_LIFE_SCENARIOS ?
+    'life-browser-results.json' : scenarios.length === 1 &&
+      scenarios[0] === 'scale200Legacy' ? 'life-browser-legacy-results.json' :
+        `life-browser-${scenarios.join('-')}-results.json`
+  await writeFile(resolve(output, outputName),
     JSON.stringify(report, null, 2) + '\n')
   process.stdout.write(JSON.stringify(report, null, 2) + '\n')
 } finally {

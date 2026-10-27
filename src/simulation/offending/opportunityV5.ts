@@ -31,7 +31,8 @@ export function updateOpportunityV5(state: SimulationStateV5,
   environment: SimulationEnvironmentV5, traces: readonly MovementTracePoint[]): SimulationStateV5 {
   const bySecond = new Map<number, MovementTracePoint[]>()
   const activeIds = new Set(state.citizens.filter((citizen) => citizen.activity !== 'atHome' &&
-    citizen.activity !== 'deceased' && citizen.activity !== 'incapacitated')
+    citizen.activity !== 'deceased' && citizen.activity !== 'incapacitated' &&
+    citizen.activity !== 'standingUp')
     .map((citizen) => citizen.id))
   for (const trace of traces) {
     if (!activeIds.has(trace.agentId)) continue

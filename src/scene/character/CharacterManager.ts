@@ -22,6 +22,7 @@ export interface CharacterRenderItem {
   readonly functionalStatus?: 'unimpaired' | 'impaired' | 'incapacitated' | null
   /** Tick-based pose progress, never browser wall-clock time. */
   readonly collapseProgress?: number
+  readonly standProgress?: number
   readonly pose: AgentRenderPose
   readonly pixelHeight: number
 }
@@ -232,6 +233,23 @@ function colorize(instance: CharacterInstance, appearance: CitizenAppearance): v
 
 function animate(instance: CharacterInstance, item: CharacterRenderItem, logicalTime: number, preview: CharacterPreviewClip | null): void {
   if (!instance.mixer) return
+  if (item.standProgress !== undefined) {
+    if (instance.previewActionName) {
+      instance.mixer.clipAction(instance.clips.get(instance.previewActionName)!).stop()
+      instance.previewActionName = null
+    }
+    const clip = instance.clips.get('StandUp')
+    for (const name of ['Idle', 'Walk', 'Run'] as const) {
+      const action = instance.clips.get(name)
+      if (action) instance.mixer.clipAction(action)
+        .setEffectiveWeight(Number(name === 'Idle' && !clip))
+    }
+    if (instance.clips.has('SitDown')) instance.mixer.clipAction(instance.clips.get('SitDown')!).stop()
+    if (clip) instance.mixer.clipAction(clip).play().setEffectiveWeight(1)
+    instance.mixer.setTime(clip ? Math.min(clip.duration - 0.01,
+      clip.duration * item.standProgress) : 0.3)
+    return
+  }
   if (item.lifeStatus === 'deceased' || item.functionalStatus === 'incapacitated') {
     if (instance.previewActionName) {
       instance.mixer.clipAction(instance.clips.get(instance.previewActionName)!).stop()
@@ -250,6 +268,9 @@ function animate(instance: CharacterInstance, item: CharacterRenderItem, logical
   }
   if (instance.clips.has('SitDown') && preview !== 'SitDown') {
     instance.mixer.clipAction(instance.clips.get('SitDown')!).stop()
+  }
+  if (instance.clips.has('StandUp') && preview !== 'StandUp') {
+    instance.mixer.clipAction(instance.clips.get('StandUp')!).stop()
   }
   const weights = animationWeights(item.activity, item.previousActivity, item.transitionProgress,
     preview === 'Idle' || preview === 'Walk' || preview === 'Run' ? preview : null,
@@ -345,9 +366,10 @@ export class CharacterManager {
       }
       instance.root.visible = true
       instance.root.position.set(item.pose.x, item.pose.y, item.pose.z)
-      instance.root.rotation.set(0, item.pose.yaw,
-        -1.45 * (item.collapseProgress ?? 0))
-      if (item.collapseProgress) instance.root.position.y += 0.06 * item.collapseProgress
+      const tilted = item.standProgress === undefined ? item.collapseProgress ?? 0 :
+        1 - item.standProgress
+      instance.root.rotation.set(0, item.pose.yaw, -1.45 * tilted)
+      if (tilted) instance.root.position.y += 0.06 * tilted
       instance.root.userData.agentId = item.id
       for (const mesh of instance.meshes) mesh.userData.agentId = item.id
       colorize(instance, item.appearance)

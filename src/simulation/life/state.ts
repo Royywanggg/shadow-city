@@ -64,7 +64,8 @@ export function assertLifeStateInvariantsV1(state: SimulationStateV5): void {
     } else {
       if (citizen.activity === 'deceased' ||
         person.activeInjuryIds.some((id) => injuries.get(id)?.status !== 'active') ||
-        (person.functionalStatus === 'incapacitated' && citizen.activity !== 'incapacitated')) {
+        (person.functionalStatus === 'incapacitated' && citizen.activity !== 'incapacitated') ||
+        (citizen.activity === 'standingUp' && person.functionalStatus !== 'impaired')) {
         throw new Error(`Invalid living state ${citizen.id}`)
       }
     }
@@ -118,8 +119,7 @@ export function progressLifeRecoveryV1(state: SimulationStateV5,
       }
       const citizen = citizenById.get(person.agentId)!
       citizenById.set(person.agentId, { ...citizen,
-        activity: person.resumeToSafeNode && citizen.route.length ?
-          'travelling' : 'waitingForSpace', nextDecisionTick: tick,
+        activity: 'standingUp', nextDecisionTick: tick + 1,
       })
     }
     return { ...person, functionalStatus: nextStatus,

@@ -94,7 +94,8 @@ function opportunitySnapshot(environment: SimulationEnvironmentV5, offender: Mov
     position: { x: offender.position.x / 1000, y: offender.position.y / 1000,
       z: offender.position.z / 1000 },
     activity: offender.activity === 'interacting' ||
-      offender.activity === 'incapacitated' || offender.activity === 'deceased' ?
+      offender.activity === 'incapacitated' || offender.activity === 'standingUp' ||
+      offender.activity === 'deceased' ?
       'atDestination' : offender.activity ?? 'atDestination',
     pedestrianAnchor: offender.edgeId ? { kind: 'edge', id: offender.edgeId } :
       { kind: 'publicAnchor', id: offender.surfaceId },

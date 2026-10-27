@@ -1,0 +1,146 @@
+{
+  "date": "2026-10-27T13:41:21.492Z",
+  "browserVersion": "156.0.8078.48",
+  "viewport": "1440x900",
+  "dpr": 1,
+  "checks": [
+    {
+      "scenario": "recovery",
+      "url": "http://127.0.0.1:5181/?seed=shadow-city-hero-01&population=120&lifeScenario=recovery-diagnostic",
+      "initial": {
+        "tick": 100,
+        "injuries": 0,
+        "deaths": 0,
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+        "api": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+        "rendering": {
+          "drawCalls": 316,
+          "triangles": 312289,
+          "geometries": 190,
+          "textures": 38,
+          "geometryBufferBytes": 413036,
+          "instanceBufferBytes": 1416180,
+          "textureSourceBytesEstimated": 1201494,
+          "medianActiveFrameMs": 16.69999999552965,
+          "p50ActiveFrameMs": 16.69999999552965,
+          "p95ActiveFrameMs": 17.600000001490116,
+          "sampledFrames": 43,
+          "renderedFrames": 46
+        },
+        "character": {
+          "assetLoadMs": 376.5,
+          "assetMode": "upgraded",
+          "farCount": 118,
+          "mediumCount": 0,
+          "closeCount": 0,
+          "animationUpdateMs": 0
+        }
+      },
+      "result": {
+        "tick": 500,
+        "injuries": 5,
+        "deaths": 0,
+        "deathLocations": [],
+        "observations": 2,
+        "reports": 0,
+        "sceneCount": 0,
+        "deadId": null,
+        "injuredId": null,
+        "incapCase": {
+          "id": "injury:offence:citizen-0003:citizen:citizen-0108:119@ground:citizen-0108",
+          "victimAgentId": "citizen-0108",
+          "sourceOffenceId": "offence:citizen-0003:citizen:citizen-0108:119@ground",
+          "onsetTick": 172,
+          "severity": "serious",
+          "position": {
+            "x": -63154,
+            "y": 250,
+            "z": 59550
+          },
+          "surfaceId": "ground",
+          "levelId": "L0",
+          "placeId": "public:block-1-5",
+          "stepDownTick": 182,
+          "recoveryTick": 202,
+          "status": "recovered"
+        },
+        "rendering": {
+          "drawCalls": 319,
+          "triangles": 312521,
+          "geometries": 193,
+          "textures": 38,
+          "geometryBufferBytes": 413036,
+          "instanceBufferBytes": 1416180,
+          "textureSourceBytesEstimated": 1201494,
+          "medianActiveFrameMs": 16.69999999552965,
+          "p50ActiveFrameMs": 16.69999999552965,
+          "p95ActiveFrameMs": 17.5,
+          "sampledFrames": 94,
+          "renderedFrames": 98
+        },
+        "character": {
+          "assetLoadMs": 376.5,
+          "assetMode": "upgraded",
+          "farCount": 105,
+          "mediumCount": 0,
+          "closeCount": 0,
+          "animationUpdateMs": 0.10000000149011612
+        },
+        "usedJsHeapBytes": 205359850,
+        "recoveryReview": [
+          {
+            "phase": "incapacitated",
+            "tick": 181,
+            "activity": "incapacitated",
+            "functionalStatus": "incapacitated",
+            "position": {
+              "x": -63154,
+              "y": 250,
+              "z": 59550
+            }
+          },
+          {
+            "phase": "standing",
+            "tick": 182,
+            "activity": "standingUp",
+            "functionalStatus": "impaired",
+            "position": {
+              "x": -63154,
+              "y": 250,
+              "z": 59550
+            }
+          },
+          {
+            "phase": "resumed",
+            "tick": 183,
+            "activity": "travelling",
+            "functionalStatus": "impaired",
+            "position": {
+              "x": -63154,
+              "y": 250,
+              "z": 55488
+            }
+          }
+        ]
+      },
+      "replay500": null,
+      "lifeTimingMs": {
+        "outcomeP50": 0,
+        "outcomeP95": 0,
+        "discoveryP95": 0,
+        "newDeaths": 0
+      },
+      "tickMs": {
+        "p50": 2.5,
+        "p95": 5.200000002980232
+      },
+      "frames": {
+        "count": 120,
+        "meanFps": 59.473237043374795,
+        "p50IntervalMs": 16.700000002980232,
+        "p95IntervalMs": 31.80000000447035
+      }
+    }
+  ],
+  "errors": []
+}

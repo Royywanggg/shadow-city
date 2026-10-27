@@ -17,7 +17,7 @@ This is an incremental `SimulationStateV5` extension on branch `codex/life-state
 
 Real Chrome 156.0.8078.48 on **Apple M4 / ANGLE Metal**, 1440 × 900 CSS pixels, DPR 1, integrated `shadow-city-hero-01` world. [Full machine-readable result](screenshots/life-browser-results.json) and [life-off 200-person comparison](screenshots/life-browser-legacy-results.json) were produced by `scripts/life-browser-check.mjs`. This was hardware WebGL, not SwiftShader. Page errors: none. The renderer records source texture bytes as an estimate; that number is **not GPU VRAM allocation**. WebGL draw calls/triangles are renderer counters. `requestAnimationFrame` intervals are browser frame cadence, **not GPU frame time**. No GPU timer query or shadow-pass timing was collected.
 
-To reproduce locally, start `SHADOW_CITY_VITE_CACHE_DIR=/private/tmp/shadow-city-vite-life npm run dev -- --host 127.0.0.1 --port 5181 --strictPort`, then run `npm run visual:life` in another shell. The script requires the installed `/Applications/Google Chrome.app`, overwrites only its `life-*` screenshot/result files, and uses development-only diagnostic scenarios to make the rare nonfatal/fatal branches visible. The default scenario has no scripted outcome.
+To reproduce locally, start `SHADOW_CITY_VITE_CACHE_DIR=/private/tmp/shadow-city-vite-life npm run dev -- --host 127.0.0.1 --port 5181 --strictPort`, then run `npm run visual:life` in another shell. Run `SHADOW_CITY_LIFE_SCENARIOS=recovery npm run visual:life` for the three-Tick recovery sequence. The script requires the installed `/Applications/Google Chrome.app`, overwrites only its `life-*` screenshot/result files, and uses development-only diagnostic scenarios to make the rare nonfatal/fatal branches visible. The default scenario has no scripted outcome.
 
 | Scenario at Tick 500 | Injury / death / scene | Tick p50 / p95 | 500-Tick replay | Mean FPS / frame p95 | Draws / triangles |
 | --- | --- | --- | --- | --- | --- |
@@ -37,8 +37,9 @@ Actual inspected images:
 - [Death event focus at Tick 172](screenshots/life-fatal-death-event-close-1440x900.png)
 - [Same resident alive at Tick 171](screenshots/life-fatal-before-death-1440x900.png)
 - [200-person hero](screenshots/life-scale200-hero-tick500-1440x900.png)
+- [Incapacitated at Tick 181](screenshots/life-recovery-incapacitated-1440x900.png), [standing at Tick 182](screenshots/life-recovery-standing-1440x900.png), and [resumed at Tick 183](screenshots/life-recovery-resumed-1440x900.png)
 
-The fatal development scenario generated a qualifying offence through the actual encounter/offender pipeline; five victims died by Tick 500, seven later scene reports were delivered, and one inspected death showed `alive` at Tick 171 and `deceased` at Tick 172. The selected portrait retains the character preset and clothing, but its rotated `SitDown` pose is visually stiff. At scene scale the body is tiny; nearby trees can obscure it, and an indoor body remains hidden behind exterior walls. The selected marker identifies the authoritative location. These screenshots verify interface behavior and reveal a **remaining visual-quality gap**; they do not approve the death animation as final art.
+The fatal development scenario generated a qualifying offence through the actual encounter/offender pipeline; five victims died by Tick 500, seven later scene reports were delivered, and one inspected death showed `alive` at Tick 171 and `deceased` at Tick 172. A separate [recovery browser result](screenshots/life-browser-recovery-results.json) follows a real injury in the same simulation: the resident is incapacitated at Tick 181, stays at exactly the same millimetre position through the `standingUp` Tick 182, then travels from Tick 183. This recovery run used 120 residents on the same Metal renderer, with Tick p95 5.2 ms, mean 59.5 FPS and frame p95 31.8 ms. The selected portrait retains the character preset and clothing, but its rotated `SitDown` pose is visually stiff. At scene scale the body is tiny; nearby trees can obscure it, and an indoor body remains hidden behind exterior walls. The selected marker identifies the authoritative location. These screenshots verify interface behavior and reveal a **remaining visual-quality gap**; they do not approve the death animation as final art.
 
 ## Requirement traceability matrix
 
@@ -57,13 +58,13 @@ Status vocabulary: `VERIFIED`, `PARTIALLY VERIFIED`, `NOT IMPLEMENTED`, `DEFERRE
 | R3-09 | P0 | Dead residents stop travel, routine, offending and new social contact | `engineV5.ts`, `habits/state.ts`, `life/state.ts` | Natural 500-Tick integration; prior-position check | Fatal diagnostic | VERIFIED |
 | R3-10 | P0 | Injury changes speed and capability; serious injury stops current route | `engineV5.ts`, `life/state.ts` | Incapacitation/recovery unit test | Nonfatal Inspector | PARTIALLY VERIFIED |
 | R3-11 | P0 | Interrupt actual intentions/interactions once; retain histories | `habits/state.ts`, `life/state.ts` | Existing habits/encounter regression; state checks | Inspector timeline | PARTIALLY VERIFIED |
-| R3-12 | P0 | Fixed-Tick recovery and no resurrection | `life/state.ts` | Recovery Tick unit test | n/a | VERIFIED |
+| R3-12 | P0 | Fixed-Tick recovery, stationary standing and no resurrection | `life/state.ts`, `character/lifePose.ts` | Recovery Tick and pose unit tests | Tick 181/182/183 sequence | VERIFIED |
 | R3-13 | P1 | Existing relationships/memories survive death; no global death knowledge | `life/state.ts`, `encounter/state.ts` | Natural integration and observer test | God View remains available | PARTIALLY VERIFIED |
 | R3-14 | P1 | Distinguish offence witness from later scene discovery | `life/state.ts`, `life/types.ts` | Cross-floor/discovery tests | 17 observations in fatal diagnostic | VERIFIED |
 | R3-15 | P0 | Same-surface, line of sight, attention and scene persistence for discovery | `life/state.ts` | Cross-floor negative and later discovery tests | 5 scenes at Tick 500 | VERIFIED |
 | R3-16 | P0 | Delayed scene report, observer field allowlist, no duplicate truth death | `observerProjection.ts`, `life/state.ts` | Delay/leakage/duplicate tests | 7 reports, 5 deaths | VERIFIED |
 | R3-17 | P1 | Explicit scene persistence/cleanup semantics | `life/types.ts`, `life/state.ts` | Scene count and replay tests | Persistent selected scene | PARTIALLY VERIFIED |
-| R3-18 | P1 | Tick-driven pose, Pause/Seek, identity and LOD compatibility | `CharacterManager.ts`, `WorldAgentLayerV5.tsx`, `CharacterPortraitV5.tsx` | Existing character tests; natural replay | Portrait and event screenshots | PARTIALLY VERIFIED |
+| R3-18 | P1 | Tick-driven collapse/stand, Pause/Seek, identity and LOD compatibility | `CharacterManager.ts`, `WorldAgentLayerV5.tsx`, `CharacterPortraitV5.tsx` | Existing character and pose tests; natural replay | Portrait, death and recovery screenshots | PARTIALLY VERIFIED |
 | R3-19 | P1 | God View life tab, linked history and spatial event focus | `MultiLevelApp.tsx` | Natural state integration | Inspector/event focus screenshots | VERIFIED |
 | R3-20 | P0 | Config permits zero death; no scripted product death | `life/types.ts`, `MultiLevelApp.tsx` | Default vs diagnostic natural runs | Default zero-death image | VERIFIED |
 | R3-21 | P0 | Replay fingerprint includes life config and fixed-Tick state | `engineV5.ts`, `sessionV5.ts` | Natural replay equality and reset | Tick 171/172 browser seek | VERIFIED |
@@ -78,7 +79,7 @@ Status vocabulary: `VERIFIED`, `PARTIALLY VERIFIED`, `NOT IMPLEMENTED`, `DEFERRE
 
 ## Engineering, science and visual acceptance
 
-- **Engineering:** v5 extension is integrated and type safe. Final `npm run typecheck`, `npm test` (40 files, 209 tests) and `npm run build` passed; there is no push/merge/deploy.
+- **Engineering:** v5 extension is integrated and type safe. Final `npm run typecheck`, `npm test` (41 files, 211 tests) and `npm run build` passed; there is no push/merge/deploy.
 - **Simulation correctness:** The tested fatal and nonfatal paths are deterministic and causally attributed. Long-duration memory growth, every possible interaction interruption ordering, and every multi-level scene camera angle have not been exhaustively checked.
 - **Scientific validity:** Parameters are synthetic and uncalibrated. `witnessedHarmfulOffence` means witnessing an offence, not witnessing biological death. No real-world causal inference follows from these runs.
 - **Visual quality:** God View works and the portrait shows the same resident before/after death, but the current resting pose and indoor occlusion are below the desired cinematic standard.

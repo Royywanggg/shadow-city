@@ -226,6 +226,8 @@ function V5Panel({ session, selectedId, onSelect, selectedEncounterId, onSelectE
             onsetTick={lifePerson?.lifeStatus === 'deceased' ? lifePerson.deathTick :
               lifePerson?.functionalStatus === 'incapacitated' ?
                 injuries.find((item) => item.status === 'active' && item.stepDownTick !== null)?.onsetTick : undefined}
+            standTick={recoveries.find((item) => item.kind === 'improved' &&
+              item.tick === snapshot.tick)?.tick}
             animationRate={profile.travellerCosts.speedMmPerSecond / 1300} />
           <div className="v06-action-row"><button onClick={focus}>FOCUS</button>
             <button onClick={follow}>{status}</button></div>
@@ -523,18 +525,26 @@ export function MultiLevelApp() {
   const lifeEnabled = params.get('life') !== 'off'
   const lifeDiagnostic = import.meta.env.DEV &&
     (params.get('lifeScenario') === 'high-harm-diagnostic' ||
-      params.get('lifeScenario') === 'fatal-diagnostic')
+      params.get('lifeScenario') === 'fatal-diagnostic' ||
+      params.get('lifeScenario') === 'recovery-diagnostic')
   const fatalDiagnostic = import.meta.env.DEV &&
     params.get('lifeScenario') === 'fatal-diagnostic'
+  const recoveryDiagnostic = import.meta.env.DEV &&
+    params.get('lifeScenario') === 'recovery-diagnostic'
   const lifeConfig = lifeDiagnostic ? { ...DEFAULT_LIFE_SCENARIO_V1,
     seed: fatalDiagnostic ? 'shadow-city-life-fatal-diagnostic-01' :
-      'shadow-city-life-diagnostic-01',
+      recoveryDiagnostic ? 'shadow-city-life-recovery-diagnostic-01' :
+        'shadow-city-life-diagnostic-01',
     assaultProbability: { minor: 1, serious: 1 },
     injuryProbability: { minor: 1, serious: 1 },
-    severityWeights: { minor: { minor: fatalDiagnostic ? 0 : 1,
-      serious: 0, critical: fatalDiagnostic ? 1 : 0 },
-      serious: { minor: 0, serious: 0, critical: 1 } },
-    fatalProbabilityCritical: fatalDiagnostic ? 1 : 0.5 } : DEFAULT_LIFE_SCENARIO_V1
+    severityWeights: { minor: { minor: fatalDiagnostic || recoveryDiagnostic ? 0 : 1,
+      serious: recoveryDiagnostic ? 1 : 0, critical: fatalDiagnostic ? 1 : 0 },
+      serious: { minor: 0, serious: recoveryDiagnostic ? 1 : 0,
+        critical: recoveryDiagnostic ? 0 : 1 } },
+    fatalProbabilityCritical: fatalDiagnostic ? 1 : recoveryDiagnostic ? 0 : 0.5,
+    ...(recoveryDiagnostic ? { incapacitatedTicks: { serious: 10, critical: 10 },
+      recoveryTicks: { minor: 30, serious: 30, critical: 30 } } : {}),
+  } : DEFAULT_LIFE_SCENARIO_V1
   const simulationSeed = params.get('simSeed') || DEFAULT_SIMULATION_CONFIG_V5.simulationSeed
   const habitSeed = params.get('habitSeed') || DEFAULT_HABIT_SCENARIO_V1.seed
   const offendingSeed = params.get('offendingSeed') || DEFAULT_SIMULATION_CONFIG_V5.offendingSeed
@@ -560,7 +570,7 @@ export function MultiLevelApp() {
     for (let tick = 0; tick < 100; tick += 1) next.advanceOneTick()
     return next
   }, [encounterEnabled, habitSeed, habitWeight, habitsEnabled, lifeEnabled, lifeDiagnostic,
-    fatalDiagnostic, observationSeed,
+    fatalDiagnostic, recoveryDiagnostic, observationSeed,
     offendingSeed, populationSize, simulationSeed, world])
   const lifeTimings = useMemo<LifeTimingSampleV1[]>(() => [], [session])
   useEffect(() => {

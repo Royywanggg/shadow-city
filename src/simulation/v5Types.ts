@@ -7,7 +7,7 @@ import type { LifeScenarioConfigV1, LifeStateV1 } from './life/types'
 
 export type CitizenActivityV5 = 'atHome' | 'planningTrip' | 'waitingForSpace' |
   'travelling' | 'atDestination' | 'returningHome' | 'interacting' |
-  'incapacitated' | 'deceased'
+  'incapacitated' | 'standingUp' | 'deceased'
 
 export interface CitizenProfileV5 {
   readonly id: string

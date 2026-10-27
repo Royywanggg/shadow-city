@@ -238,9 +238,12 @@ export function advanceStateV5(state: SimulationStateV5, environment: Simulation
     hashSeed(`${environment.config.simulationSeed}:${tick}:${a.id}:priority`) -
     hashSeed(`${environment.config.simulationSeed}:${tick}:${b.id}:priority`) || a.id.localeCompare(b.id))
   const nextById = new Map<string, CitizenStateV5>()
+  const standingIds = new Set(state.life?.recoveryEvents.filter((item) =>
+    item.kind === 'improved' && item.tick === tick).map((item) => item.agentId) ?? [])
   for (const prior of priority) {
     const life = lifeById.get(prior.id)
-    if (life?.lifeStatus === 'deceased' || life?.functionalStatus === 'incapacitated') {
+    if (life?.lifeStatus === 'deceased' || life?.functionalStatus === 'incapacitated' ||
+      standingIds.has(prior.id)) {
       nextById.set(prior.id, prior)
       continue
     }
@@ -250,7 +253,10 @@ export function advanceStateV5(state: SimulationStateV5, environment: Simulation
         speedMmPerSecond: Math.max(1, Math.round(baseProfile.travellerCosts.speedMmPerSecond *
           environment.config.life!.impairedSpeedFactor)) },
     } : baseProfile
-    let citizen = prior
+    let citizen: CitizenStateV5 = prior.activity === 'standingUp' ? {
+      ...prior, activity: prior.route.length ? 'travelling' : 'waitingForSpace',
+      nextDecisionTick: tick,
+    } : prior
     if (citizen.engagement) {
       const interaction = state.social?.interactions.find((item) =>
         item.id === citizen.engagement!.interactionId)
@@ -389,9 +395,11 @@ export function advanceStateV5(state: SimulationStateV5, environment: Simulation
   const next: SimulationStateV5 = { ...state, tick, citizens, accessModes: modes,
     events: [...state.events, ...events],
     ...(habitTick ? { habits: habitTick.finish() } : {}) }
-  const eligible = new Set(state.life?.people.filter((item) =>
-    item.lifeStatus === 'alive' && item.functionalStatus !== 'incapacitated')
-    .map((item) => item.agentId) ?? citizens.map((item) => item.id))
+  const eligible = new Set(citizens.filter((item) => {
+    const life = lifeById.get(item.id)
+    return item.activity !== 'standingUp' && life?.lifeStatus !== 'deceased' &&
+      life?.functionalStatus !== 'incapacitated'
+  }).map((item) => item.id))
   const activeTraces = traces.filter((item) => eligible.has(item.agentId))
   if (!environment.config.encounter) return finalizeLifeTickV1(
     updateOpportunityV5(next, environment, activeTraces), environment)
