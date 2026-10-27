@@ -176,8 +176,11 @@ function V5Panel({ session, selectedId, onSelect, selectedEncounterId, onSelectE
           <div className="v06-selected-head"><span>SELECTED RESIDENT</span>
             <button onClick={() => onSelect(null)} aria-label="Clear selection">×</button></div>
           <h3>{identity.displayName}</h3><small>{selected.id} · {selectedSurface?.levelId ?? 'unknown level'}</small>
-          <CharacterPortraitV5 appearance={identity.appearance} activity={selected.activity}
-            movementMode={selected.movementMode} logicalTime={snapshot.tick / 4}
+          <CharacterPortraitV5 agentId={selected.id} appearance={identity.appearance}
+            activity={selected.activity} movementMode={selected.movementMode}
+            tick={snapshot.tick} playing={playing && !snapshot.isInspecting}
+            ticksPerSecond={4 * speed}
+            animationRate={profile.travellerCosts.speedMmPerSecond / 1300}
             proof={new URLSearchParams(window.location.search).get('animationProof') === '1' &&
               proofIds.has(selected.id)} />
           <div className="v06-action-row"><button onClick={focus}>FOCUS</button>

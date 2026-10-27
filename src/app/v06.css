@@ -25,7 +25,7 @@
 .v06-selected-head button{border:0;background:none;color:#c2d6d8;font-size:19px;cursor:pointer}
 .v06-inspector h3{margin:5px 0 1px;font-size:19px;font-weight:500}
 .v06-inspector>small{color:#8ca9b3;font-size:10px}
-.v06-portrait{height:138px;margin:10px 0;background:radial-gradient(circle,#274859,#0a1927);border:1px solid #3a5860}
+.v06-portrait{height:clamp(184px,24vh,220px);margin:10px 0;background:radial-gradient(circle,#274859,#0a1927);border:1px solid #3a5860;overflow:hidden}
 .v06-action-row,.v06-tabs{display:flex;gap:4px;margin:8px 0}
 .v06-tabs{flex-wrap:wrap}
 .v06-action-row button,.v06-tabs button,.v06-world-controls button,.v06-bottom button{border:1px solid #3b6270;background:#183446;color:#cce2e3;padding:7px 9px;cursor:pointer;font-size:9px;letter-spacing:.1em}
