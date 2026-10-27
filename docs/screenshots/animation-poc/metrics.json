@@ -1,0 +1,81 @@
+{
+  "after": {
+    "proofIds": [
+      "citizen-0006",
+      "citizen-0010",
+      "citizen-0003",
+      "citizen-0007"
+    ],
+    "selectedId": "citizen-0010",
+    "selectedTick": 100,
+    "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+    "assetLoads": [
+      {
+        "name": "men-casual2.glb",
+        "durationMs": 12,
+        "transferBytes": 1023452
+      },
+      {
+        "name": "men-suit.glb",
+        "durationMs": 14.399999998509884,
+        "transferBytes": 1230824
+      },
+      {
+        "name": "women-casual.glb",
+        "durationMs": 15.399999998509884,
+        "transferBytes": 1074640
+      },
+      {
+        "name": "women-worker.glb",
+        "durationMs": 14.799999997019768,
+        "transferBytes": 1044516
+      }
+    ],
+    "proofAssetLoadMs": 385.09999999403954,
+    "frameCount": 166,
+    "averageFps": 54.52202359322027,
+    "frameP95Ms": 47.599999994039536,
+    "animationUpdateP95Ms": 1.3999999985098839,
+    "averageDrawCallsPerFrame": 175.03030303030303,
+    "averageTrianglesPerFrame": 229061.52727272728,
+    "closeCountP95": 10,
+    "activeInstancesP95": 34,
+    "texturesP95": 73,
+    "pausedTick": 114,
+    "stillTick": 114,
+    "replayCitizenMatches": true,
+    "cameraPreservedFingerprint": true,
+    "speedStartTick": 114,
+    "speedEndTick": 119,
+    "errors": []
+  },
+  "before": {
+    "proofIds": [
+      "citizen-0006",
+      "citizen-0010",
+      "citizen-0003",
+      "citizen-0007"
+    ],
+    "selectedId": "citizen-0010",
+    "selectedTick": 100,
+    "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+    "assetLoads": [],
+    "proofAssetLoadMs": null,
+    "frameCount": 164,
+    "averageFps": 54.342390398399736,
+    "frameP95Ms": 52.399999998509884,
+    "animationUpdateP95Ms": 0.6000000014901161,
+    "averageDrawCallsPerFrame": 175.09202453987731,
+    "averageTrianglesPerFrame": 229114.65030674846,
+    "closeCountP95": 10,
+    "activeInstancesP95": 34,
+    "texturesP95": 61,
+    "pausedTick": 114,
+    "stillTick": 114,
+    "replayCitizenMatches": true,
+    "cameraPreservedFingerprint": true,
+    "speedStartTick": 114,
+    "speedEndTick": 120,
+    "errors": []
+  }
+}
