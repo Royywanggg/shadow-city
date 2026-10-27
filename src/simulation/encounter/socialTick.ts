@@ -28,6 +28,7 @@ export interface SocialTickInputV1 {
   readonly perceptions: readonly DirectedPerceptionSample[]
   readonly interruptedInteractionIds: ReadonlySet<string>
   readonly interactionsEnabled: boolean
+  readonly sociabilityOverrides?: ReadonlyMap<string, number>
 }
 
 export interface SocialTickResultV1 {
@@ -93,8 +94,12 @@ export function advanceSocialTickV1(input: SocialTickInputV1): SocialTickResultV
   const decisionTraces: EncounterDecisionTraceV1[] = []
   const newDecisions = [] as SocialStateV1['interactionDecisions'][number][]
   const interactions: SocialInteractionV1[] = []
-  const profiles = new Map(input.citizens.map((citizen) =>
-    [citizen.id, createSocialProfileV1(citizen.id, config.seed)]))
+  const profiles = new Map(input.citizens.map((citizen) => {
+    const profile = createSocialProfileV1(citizen.id, config.seed)
+    const sociability = input.sociabilityOverrides?.get(citizen.id)
+    return [citizen.id, sociability === undefined ? profile :
+      { ...profile, sociability }] as const
+  }))
 
   function experience(ownerAgentId: string, referentAgentId: string,
     kind: RelationshipExperienceV1, interaction?: SocialInteractionV1,

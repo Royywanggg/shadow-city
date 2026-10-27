@@ -61,7 +61,10 @@ export function advanceEncounterPipelineV1(state: SimulationStateV5,
     previous: { ...afterCrime.social!, encounters: state.social.encounters,
       encounterEvents: state.social.encounterEvents }, lifecycle: lifecycle.state,
     lifecycleEvents: lifecycle.events, candidates, perceptions,
-    interruptedInteractionIds, interactionsEnabled: scenario.interactionsEnabled })
+    interruptedInteractionIds, interactionsEnabled: scenario.interactionsEnabled,
+    sociabilityOverrides: environment.habitProfiles ? new Map(
+      environment.habitProfiles.map((item) => [item.agentId,
+        item.sociability / 1_000])) : undefined })
   if (timingObserver) {
     const ended = performance.now()
     timingObserver({ tick: state.tick, spatialQueryMs: queried - started,

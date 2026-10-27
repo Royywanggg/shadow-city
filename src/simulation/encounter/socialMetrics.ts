@@ -138,7 +138,8 @@ export function summarizeSocialMetricsV1(end: SimulationStateV5,
     contacts.get(second)?.add(first)
   }
   const hour = (tick: number) => String(Math.floor((config.startHour * 3600 +
-    Math.max(0, tick - 1) * config.logicalSecondsPerTick) / 3600) % 24)
+    Math.max(0, tick - 1) * (config.habit?.calendarSecondsPerTick ??
+      config.logicalSecondsPerTick)) / 3600) % 24)
     .padStart(2, '0')
   const interactions = social.interactions
   const accepted = interactions.filter((item) => within(item.decisionTick))

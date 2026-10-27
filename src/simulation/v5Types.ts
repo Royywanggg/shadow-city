@@ -2,6 +2,7 @@ import type { ActivityKind, WorldModelV2, WorldPointMm } from '../world/model'
 import type { AccessMode, RouteStepV5, TravellerCosts } from '../world/navigation/routeV2'
 import type { EncounterScenarioConfigV1 } from './encounter/config'
 import type { SocialStateV1 } from './encounter/state'
+import type { HabitProfileV1, HabitScenarioConfigV1, HabitsStateV1 } from './habits/types'
 
 export type CitizenActivityV5 = 'atHome' | 'planningTrip' | 'waitingForSpace' |
   'travelling' | 'atDestination' | 'returningHome' | 'interacting'
@@ -56,7 +57,7 @@ export interface MovementTracePoint {
 export type AccessCommandV5 = Readonly<{
   id: string
   effectiveTick: number
-  accessId: 'bridge-entry' | 'mall-entry' | 'galleria-escalator'
+  accessId: 'bridge-entry' | 'mall-entry' | 'galleria-escalator' | `place:${string}`
   mode: AccessMode
 }>
 
@@ -151,6 +152,7 @@ export interface SimulationConfigV5 {
   readonly placeOpeningHours?: Readonly<Record<string,
     readonly Readonly<{ openMinute: number; closeMinute: number }>[]> >
   readonly encounter?: EncounterScenarioConfigV1
+  readonly habit?: HabitScenarioConfigV1
 }
 
 export interface SimulationStateV5 {
@@ -168,12 +170,14 @@ export interface SimulationStateV5 {
   readonly resourceCooldowns: Readonly<Record<string, number>>
   readonly commands: readonly AccessCommandV5[]
   readonly social?: SocialStateV1
+  readonly habits?: HabitsStateV1
 }
 
 export interface SimulationEnvironmentV5 {
   readonly world: WorldModelV2
   readonly config: SimulationConfigV5
   readonly profiles: readonly CitizenProfileV5[]
+  readonly habitProfiles?: readonly HabitProfileV1[]
   readonly fingerprint: string
 }
 

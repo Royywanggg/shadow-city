@@ -68,6 +68,13 @@ export function canTraverseV2(index: NavigationIndexV2, edge: NavEdgeV2, fromNod
   toNodeId: string, modes: ReadonlyMap<string, AccessMode>): boolean {
   const from = index.nodeById.get(fromNodeId)!
   const to = index.nodeById.get(toNodeId)!
+  const fromPlaceId = index.surfaceById.get(from.surfaceId)?.placeId
+  const toPlaceId = index.surfaceById.get(to.surfaceId)?.placeId
+  const evacuatingShopToMall = from.surfaceId.startsWith('galleria-shop-') &&
+    (to.surfaceId === 'galleria-l0' || to.surfaceId === 'galleria-l1')
+  if (toPlaceId && toPlaceId !== fromPlaceId &&
+    modes.get(`place:${toPlaceId}`) === 'closed' &&
+    !evacuatingShopToMall) return false
   return (edge.accessIds ?? (edge.accessId ? [edge.accessId] : [])).every((accessId) => {
     const mode = modes.get(accessId) ?? 'open'
     if (mode === 'closed' && accessId !== 'mall-entry') return false

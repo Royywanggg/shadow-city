@@ -82,7 +82,8 @@ function opportunitySnapshot(environment: SimulationEnvironmentV5, offender: Mov
   tick: number, nearbyIds: readonly string[], risk: number): OpportunitySnapshot {
   const config = modelConfig(environment)
   const district = districtFor(environment.world, offender.position)
-  const timeBand = syntheticTimeBand(tick, environment.config.logicalSecondsPerTick,
+  const timeBand = syntheticTimeBand(tick,
+    environment.config.habit?.calendarSecondsPerTick ?? environment.config.logicalSecondsPerTick,
     environment.config.startHour)
   const crowd = Math.min(1, nearbyIds.length / config.nearbySaturation)
   const minorFactor = config.minorCrowdFloor + (1 - config.minorCrowdFloor) * crowd

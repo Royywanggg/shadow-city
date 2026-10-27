@@ -12,6 +12,11 @@ import { validateWitnessModelConfig } from './encounter/crimeWitness'
 import { validateOffendingConfig } from './offending/profiles'
 import { createInitialSocialStateV1 } from './encounter/state'
 import { advanceEncounterPipelineV1 } from './encounter/pipeline'
+import { validateHabitConfig } from './habits/calendar'
+import { createHabitProfilesV1 } from './habits/profiles'
+import { createInitialHabitsStateV1, HabitTickV1 } from './habits/state'
+import { chooseHabitDestinationV1, habitPlaceIsOpenV1, reportHabitReplanTimingV1,
+  type HabitChoiceV1 } from './habits/decision'
 import type { AccessCommandV5, CitizenEventV5, CitizenProfileV5, CitizenStateV5,
   MovementTracePoint, SimulationConfigV5, SimulationEnvironmentV5, SimulationStateV5 } from './v5Types'
 
@@ -73,15 +78,20 @@ export function createEnvironmentV5(world: WorldModelV2, config: SimulationConfi
       observationSeed: config.observationSeed,
       reportingProbability: config.reportingProbability })
   }
+  if (config.habit) validateHabitConfig(config.habit)
   const ids = new Set<string>()
   for (const command of commands) {
     if (ids.has(command.id) || !Number.isSafeInteger(command.effectiveTick) ||
-      command.effectiveTick < 1 || !['open', 'entryClosed', 'closed'].includes(command.mode)) {
+      command.effectiveTick < 1 || !['open', 'entryClosed', 'closed'].includes(command.mode) ||
+      command.accessId.startsWith('place:') &&
+      (!placeIds.has(command.accessId.slice(6)) || command.mode === 'entryClosed')) {
       throw new Error('Invalid v5 access command')
     }
     ids.add(command.id)
   }
-  return { world, config, profiles: createCitizenProfilesV5(world, config),
+  const profiles = createCitizenProfilesV5(world, config)
+  return { world, config, profiles,
+    ...(config.habit ? { habitProfiles: createHabitProfilesV1(world, profiles, config.habit) } : {}),
     fingerprint: worldFingerprintV5(world, config, commands) }
 }
 
@@ -106,7 +116,10 @@ export function createInitialStateV5(environment: SimulationEnvironmentV5,
     accessModes: { ...environment.config.initialAccessModes }, events: [],
     encounterEpisodes: [], offences: [], reports: [], pendingReports: [],
     offenderCooldowns: {}, resourceCooldowns: {}, commands: [...commands],
-    ...(environment.config.encounter ? { social: createInitialSocialStateV1() } : {}) }
+    ...(environment.config.encounter ? { social: createInitialSocialStateV1() } : {}),
+    ...(environment.config.habit ? { habits: createInitialHabitsStateV1(
+      environment.habitProfiles!, environment.profiles, environment.config,
+      environment.config.habit) } : {}) }
 }
 
 function chooseDestination(citizen: CitizenStateV5, profile: CitizenProfileV5,
@@ -174,7 +187,16 @@ export function advanceStateV5(state: SimulationStateV5, environment: Simulation
   const modes = { ...state.accessModes }
   for (const command of state.commands) if (command.effectiveTick === tick) modes[command.accessId] = command.mode
   const accessModes = accessMap(modes)
+  if (environment.config.habit) for (const place of environment.world.places) {
+    if (place.kind !== 'home' && !habitPlaceIsOpenV1(place,
+      environment.config, accessModes, tick)) accessModes.set(`place:${place.id}`, 'closed')
+  }
   const profiles = new Map(environment.profiles.map((item) => [item.id, item]))
+  const habitProfiles = new Map(environment.habitProfiles?.map((item) =>
+    [item.agentId, item]) ?? [])
+  const habitTick = environment.config.habit ?
+    new HabitTickV1(state, environment.habitProfiles!, environment.profiles,
+      environment.config) : null
   const places = new Map(environment.world.places.map((item) => [item.id, item]))
   const occupied = new Set(state.citizens.flatMap((item) => item.reservedSlotNodeId ?
     [item.reservedSlotNodeId] : []))
@@ -201,7 +223,9 @@ export function advanceStateV5(state: SimulationStateV5, environment: Simulation
     .filter((interaction) => interaction.status === 'active' && interaction.placeId &&
       (modes['mall-entry'] !== 'open' && (interaction.placeId === 'central-galleria' ||
         interaction.placeId.startsWith('galleria-')) ||
-        !placeIsOpen(places.get(interaction.placeId)!, environment.config, tick)))
+        !(environment.config.habit ? habitPlaceIsOpenV1(places.get(interaction.placeId)!,
+          environment.config, accessModes, tick) :
+          placeIsOpen(places.get(interaction.placeId)!, environment.config, tick))))
     .map((interaction) => interaction.id))
   const priority = [...state.citizens].sort((a, b) =>
     hashSeed(`${environment.config.simulationSeed}:${tick}:${a.id}:priority`) -
@@ -229,19 +253,53 @@ export function advanceStateV5(state: SimulationStateV5, environment: Simulation
     const mustEvacuate = citizen.activity === 'atDestination' &&
       Boolean(currentPlace && (modes['mall-entry'] !== 'open' &&
         (currentPlace.id === 'central-galleria' || currentPlace.id.startsWith('galleria-')) ||
-        !placeIsOpen(currentPlace, environment.config, tick)))
+        !(environment.config.habit ? habitPlaceIsOpenV1(currentPlace,
+          environment.config, accessModes, tick) :
+          placeIsOpen(currentPlace, environment.config, tick))))
     if ((citizen.activity === 'atHome' || citizen.activity === 'atDestination' ||
       citizen.activity === 'waitingForSpace') && (tick >= citizen.nextDecisionTick || mustEvacuate)) {
       if (citizen.reservedSlotNodeId) occupied.delete(citizen.reservedSlotNodeId)
       if (citizen.activity === 'atDestination') events.push(event(tick, citizen, 'ActivityFinished', citizen.placeId))
+      if (habitTick && (citizen.activity === 'atHome' ||
+        citizen.activity === 'atDestination')) {
+        const arrivedTick = habitTick.get(citizen.id).arrivedTick ?? tick
+        const hadSocialInteraction = state.social?.interactions.some((item) =>
+          item.participantIds.includes(citizen.id) && item.placeId === citizen.placeId &&
+          item.startTick >= arrivedTick && item.endTick !== null &&
+          item.endTick <= tick && item.status === 'completed') ?? false
+        habitTick.finishActivity(citizen, mustEvacuate ? 'interrupted' : 'completed',
+          mustEvacuate ? 'place closed or inaccessible' :
+            'planned activity duration completed', hadSocialInteraction)
+      }
       const goHome = mustEvacuate || citizen.activity === 'atDestination' &&
         citizen.placeId !== profile.homePlaceId && citizen.visitOrdinal % 3 === 0
-      const choice = chooseDestination(citizen, profile, environment, index,
+      let habitChoice: HabitChoiceV1 | null = null
+      let choice: NonNullable<ReturnType<typeof chooseDestination>> | HabitChoiceV1 | null
+      if (habitTick) {
+        const result = chooseHabitDestinationV1(citizen, profile, habitTick.get(citizen.id),
+          habitProfiles.get(citizen.id)!, environment.world, environment.config,
+          environment.config.habit!, index, occupied, accessModes, tick,
+          priorEdgeCrowd, priorPlaceCrowd, state)
+        habitTick.recordDecision(citizen.id, result.trace)
+        habitChoice = result.choice
+        choice = habitChoice
+      } else choice = chooseDestination(citizen, profile, environment, index,
         occupied, accessModes, tick, priorEdgeCrowd, priorPlaceCrowd, goHome)
       if (choice) {
-        citizen = beginTrip(citizen, choice, tick)
-        if (citizen.reservedSlotNodeId) occupied.add(citizen.reservedSlotNodeId)
-        events.push(event(tick, citizen, 'TripStarted', choice.place.id))
+        if (habitChoice) habitTick!.startIntention(citizen.id,
+          habitChoice.habitKind, choice.place.id, habitChoice.trace.id,
+          choice.place.id === citizen.placeId)
+        if (habitChoice && choice.place.id === citizen.placeId) {
+          citizen = { ...citizen, activity: choice.place.kind === 'home' ?
+            'atHome' : 'atDestination', activityKind: choice.activityKind,
+          nextDecisionTick: tick + habitChoice.dwellTicks,
+          reservedSlotNodeId: choice.place.kind === 'home' ? null : choice.slotId }
+          if (citizen.reservedSlotNodeId) occupied.add(citizen.reservedSlotNodeId)
+        } else {
+          citizen = beginTrip(citizen, choice, tick)
+          if (citizen.reservedSlotNodeId) occupied.add(citizen.reservedSlotNodeId)
+          events.push(event(tick, citizen, 'TripStarted', choice.place.id))
+        }
       } else {
         citizen = { ...citizen, reservedSlotNodeId: null, activity: 'waitingForSpace',
           nextDecisionTick: tick + 4 }
@@ -256,15 +314,20 @@ export function advanceStateV5(state: SimulationStateV5, environment: Simulation
         traces.push(...result.trace)
         if (result.trace.length > 0) tracedCitizenIds.add(citizen.id)
         if (result.blocked === 'capacity') {
+          habitTick?.delay(citizen.id, 'connector at capacity')
           events.push(event(tick, citizen, 'TripDeferred', citizen.destinationPlaceId,
             'Connector at capacity'))
         } else if (result.blocked === 'access' && citizen.currentNodeId && citizen.destinationNodeId) {
+          const replanStarted = habitTick ? performance.now() : 0
           const route = findRouteV2(index, citizen.currentNodeId, citizen.destinationNodeId,
             profile.travellerCosts, accessModes, priorEdgeCrowd)
+          if (habitTick) reportHabitReplanTimingV1(tick, citizen.id,
+            performance.now() - replanStarted)
           if (route.status === 'ok') {
             citizen = { ...citizen, route: route.steps, routeIndex: 0, distanceOnEdgeMm: 0 }
             events.push(event(tick, citizen, 'TripRerouted', citizen.destinationPlaceId))
           } else {
+            habitTick?.cancel(citizen.id, 'destination inaccessible')
             if (citizen.reservedSlotNodeId) occupied.delete(citizen.reservedSlotNodeId)
             citizen = { ...citizen, route: [], routeIndex: 0, distanceOnEdgeMm: 0,
               reservedSlotNodeId: null, destinationPlaceId: null, destinationNodeId: null,
@@ -276,7 +339,10 @@ export function advanceStateV5(state: SimulationStateV5, environment: Simulation
       if (citizen.destinationNodeId && citizen.routeIndex >= citizen.route.length) {
         const place = places.get(citizen.destinationPlaceId!)!
         const isHome = place.kind === 'home'
-        const dwell = isHome ? profile.homeDwellTicks : profile.visitDwellTicks
+        const habitState = habitTick?.get(citizen.id)
+        const dwell = habitState?.intention ?
+          habitProfiles.get(citizen.id)!.durations[habitState.intention.kind] :
+          isHome ? profile.homeDwellTicks : profile.visitDwellTicks
         citizen = { ...citizen, activity: isHome ? 'atHome' : 'atDestination',
           placeId: place.id, activityKind: isHome ? 'home' : citizen.activityKind,
           currentNodeId: citizen.destinationNodeId, destinationNodeId: null,
@@ -284,6 +350,7 @@ export function advanceStateV5(state: SimulationStateV5, environment: Simulation
           movementMode: 'walk', visitOrdinal: citizen.visitOrdinal + (isHome ? 0 : 1),
           nextDecisionTick: tick + dwell, arrivedTick: tick }
         events.push(event(tick, citizen, 'DestinationReached', place.id))
+        habitTick?.arrival(citizen.id)
       }
     }
     if (!tracedCitizenIds.has(citizen.id)) {
@@ -296,7 +363,8 @@ export function advanceStateV5(state: SimulationStateV5, environment: Simulation
   }
   const citizens = state.citizens.map((citizen) => nextById.get(citizen.id)!)
   const next: SimulationStateV5 = { ...state, tick, citizens, accessModes: modes,
-    events: [...state.events, ...events] }
+    events: [...state.events, ...events],
+    ...(habitTick ? { habits: habitTick.finish() } : {}) }
   if (!environment.config.encounter) return updateOpportunityV5(next, environment, traces)
   const socialNext = advanceEncounterPipelineV1(next, environment,
     completeTickTraces(traces, citizens, environment.config.logicalSecondsPerTick),

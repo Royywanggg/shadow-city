@@ -45,6 +45,7 @@ export class SimulationSessionV5 {
   getObserverView() { return observerViewV5(this.viewed) }
   getWorld() { return this.world }
   getProfiles() { return this.environment.profiles }
+  getHabitProfiles() { return this.environment.habitProfiles ?? [] }
   getConfig() { return this.config }
 
   private publish(): void {
@@ -74,6 +75,13 @@ export class SimulationSessionV5 {
   }
 
   returnLive(): void { this.viewed = this.live; this.publish() }
+
+  reset(): void {
+    this.live = createInitialStateV5(this.environment, this.commands)
+    this.viewed = this.live
+    this.checkpoints = new Map([[0, this.live]])
+    this.publish()
+  }
 
   /** Commands are part of the experiment fingerprint; rebuild to preserve replay integrity. */
   scheduleAccessCommand(command: AccessCommandV5): void {
