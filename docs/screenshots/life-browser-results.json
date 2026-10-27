@@ -1,0 +1,521 @@
+{
+  "date": "2026-10-27T13:34:08.113Z",
+  "browserVersion": "156.0.8078.48",
+  "viewport": "1440x900",
+  "dpr": 1,
+  "checks": [
+    {
+      "scenario": "default",
+      "url": "http://127.0.0.1:5181/?seed=shadow-city-hero-01&population=120",
+      "initial": {
+        "tick": 100,
+        "injuries": 0,
+        "deaths": 0,
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+        "api": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+        "rendering": {
+          "drawCalls": 316,
+          "triangles": 312289,
+          "geometries": 190,
+          "textures": 38,
+          "geometryBufferBytes": 413036,
+          "instanceBufferBytes": 1416180,
+          "textureSourceBytesEstimated": 1201494,
+          "medianActiveFrameMs": 16.700000002980232,
+          "p50ActiveFrameMs": 16.700000002980232,
+          "p95ActiveFrameMs": 17.5,
+          "sampledFrames": 45,
+          "renderedFrames": 48
+        },
+        "character": {
+          "assetLoadMs": 353.29999999701977,
+          "assetMode": "upgraded",
+          "farCount": 118,
+          "mediumCount": 0,
+          "closeCount": 0,
+          "animationUpdateMs": 0.10000000149011612
+        }
+      },
+      "result": {
+        "tick": 500,
+        "injuries": 0,
+        "deaths": 0,
+        "deathLocations": [],
+        "observations": 0,
+        "reports": 0,
+        "sceneCount": 0,
+        "deadId": null,
+        "injuredId": null,
+        "rendering": {
+          "drawCalls": 319,
+          "triangles": 312521,
+          "geometries": 193,
+          "textures": 38,
+          "geometryBufferBytes": 413036,
+          "instanceBufferBytes": 1416180,
+          "textureSourceBytesEstimated": 1201494,
+          "medianActiveFrameMs": 16.69999999552965,
+          "p50ActiveFrameMs": 16.69999999552965,
+          "p95ActiveFrameMs": 17.600000001490116,
+          "sampledFrames": 98,
+          "renderedFrames": 102
+        },
+        "character": {
+          "assetLoadMs": 353.29999999701977,
+          "assetMode": "upgraded",
+          "farCount": 105,
+          "mediumCount": 0,
+          "closeCount": 0,
+          "animationUpdateMs": 0
+        },
+        "usedJsHeapBytes": 200374570
+      },
+      "replay500": {
+        "durationMs": 1430.8999999985099,
+        "fingerprint": "world-v2:heritage-extension-v6:b2d75275:sim-v5:bb08388d",
+        "offences": 6
+      },
+      "lifeTimingMs": {
+        "outcomeP50": 0,
+        "outcomeP95": 0,
+        "discoveryP95": 0,
+        "newDeaths": 0
+      },
+      "tickMs": {
+        "p50": 2.399999998509884,
+        "p95": 4.899999998509884
+      },
+      "frames": {
+        "count": 120,
+        "meanFps": 59.29543076390869,
+        "p50IntervalMs": 16.799999997019768,
+        "p95IntervalMs": 34.600000001490116
+      }
+    },
+    {
+      "scenario": "diagnostic",
+      "url": "http://127.0.0.1:5181/?seed=shadow-city-hero-01&population=120&lifeScenario=high-harm-diagnostic",
+      "initial": {
+        "tick": 100,
+        "injuries": 0,
+        "deaths": 0,
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+        "api": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+        "rendering": {
+          "drawCalls": 316,
+          "triangles": 312289,
+          "geometries": 190,
+          "textures": 38,
+          "geometryBufferBytes": 413036,
+          "instanceBufferBytes": 1416180,
+          "textureSourceBytesEstimated": 1201494,
+          "medianActiveFrameMs": 16.69999999552965,
+          "p50ActiveFrameMs": 16.69999999552965,
+          "p95ActiveFrameMs": 17.69999999552965,
+          "sampledFrames": 49,
+          "renderedFrames": 52
+        },
+        "character": {
+          "assetLoadMs": 293.5,
+          "assetMode": "upgraded",
+          "farCount": 118,
+          "mediumCount": 0,
+          "closeCount": 0,
+          "animationUpdateMs": 0.20000000298023224
+        }
+      },
+      "result": {
+        "tick": 500,
+        "injuries": 5,
+        "deaths": 0,
+        "deathLocations": [],
+        "observations": 2,
+        "reports": 0,
+        "sceneCount": 0,
+        "deadId": null,
+        "injuredId": "citizen-0001",
+        "rendering": {
+          "drawCalls": 319,
+          "triangles": 312521,
+          "geometries": 193,
+          "textures": 38,
+          "geometryBufferBytes": 413036,
+          "instanceBufferBytes": 1416180,
+          "textureSourceBytesEstimated": 1201494,
+          "medianActiveFrameMs": 16.69999999552965,
+          "p50ActiveFrameMs": 16.69999999552965,
+          "p95ActiveFrameMs": 17.400000005960464,
+          "sampledFrames": 100,
+          "renderedFrames": 104
+        },
+        "character": {
+          "assetLoadMs": 293.5,
+          "assetMode": "upgraded",
+          "farCount": 105,
+          "mediumCount": 0,
+          "closeCount": 0,
+          "animationUpdateMs": 0.09999999403953552
+        },
+        "usedJsHeapBytes": 193384038
+      },
+      "replay500": null,
+      "lifeTimingMs": {
+        "outcomeP50": 0,
+        "outcomeP95": 0,
+        "discoveryP95": 0,
+        "newDeaths": 0
+      },
+      "tickMs": {
+        "p50": 2.399999998509884,
+        "p95": 4.800000004470348
+      },
+      "frames": {
+        "count": 120,
+        "meanFps": 59.298385489204165,
+        "p50IntervalMs": 16.700000002980232,
+        "p95IntervalMs": 33.69999999552965
+      }
+    },
+    {
+      "scenario": "fatal",
+      "url": "http://127.0.0.1:5181/?seed=shadow-city-hero-01&population=120&lifeScenario=fatal-diagnostic",
+      "initial": {
+        "tick": 100,
+        "injuries": 0,
+        "deaths": 0,
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+        "api": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+        "rendering": {
+          "drawCalls": 316,
+          "triangles": 312289,
+          "geometries": 190,
+          "textures": 38,
+          "geometryBufferBytes": 413036,
+          "instanceBufferBytes": 1416180,
+          "textureSourceBytesEstimated": 1201494,
+          "medianActiveFrameMs": 16.69999999552965,
+          "p50ActiveFrameMs": 16.600000001490116,
+          "p95ActiveFrameMs": 18.399999998509884,
+          "sampledFrames": 46,
+          "renderedFrames": 49
+        },
+        "character": {
+          "assetLoadMs": 349.8999999985099,
+          "assetMode": "upgraded",
+          "farCount": 118,
+          "mediumCount": 0,
+          "closeCount": 0,
+          "animationUpdateMs": 0.20000000298023224
+        }
+      },
+      "result": {
+        "tick": 500,
+        "injuries": 5,
+        "deaths": 5,
+        "deathLocations": [
+          {
+            "agentId": "citizen-0108",
+            "tick": 172,
+            "surfaceId": "ground",
+            "levelId": "L0",
+            "position": {
+              "x": -63154,
+              "y": 250,
+              "z": 59550
+            }
+          },
+          {
+            "agentId": "citizen-0001",
+            "tick": 185,
+            "surfaceId": "interior:building-block-3-4-0-0",
+            "levelId": "L0",
+            "position": {
+              "x": -3267,
+              "y": 250,
+              "z": 38799
+            }
+          },
+          {
+            "agentId": "citizen-0003",
+            "tick": 203,
+            "surfaceId": "ground",
+            "levelId": "L0",
+            "position": {
+              "x": -64823,
+              "y": 250,
+              "z": 59550
+            }
+          },
+          {
+            "agentId": "citizen-0076",
+            "tick": 267,
+            "surfaceId": "interior:building-block-5-0-0-0",
+            "levelId": "L0",
+            "position": {
+              "x": 63533,
+              "y": 250,
+              "z": -88283
+            }
+          },
+          {
+            "agentId": "citizen-0073",
+            "tick": 276,
+            "surfaceId": "interior:building-block-1-7-1-0",
+            "levelId": "L0",
+            "position": {
+              "x": -63095,
+              "y": 250,
+              "z": 133165
+            }
+          }
+        ],
+        "observations": 17,
+        "reports": 7,
+        "sceneCount": 5,
+        "deadId": "citizen-0108",
+        "injuredId": null,
+        "rendering": {
+          "drawCalls": 326,
+          "triangles": 313321,
+          "geometries": 200,
+          "textures": 38,
+          "geometryBufferBytes": 413036,
+          "instanceBufferBytes": 1416180,
+          "textureSourceBytesEstimated": 1201494,
+          "medianActiveFrameMs": 16.69999999552965,
+          "p50ActiveFrameMs": 16.69999999552965,
+          "p95ActiveFrameMs": 17.700000002980232,
+          "sampledFrames": 97,
+          "renderedFrames": 101
+        },
+        "character": {
+          "assetLoadMs": 349.8999999985099,
+          "assetMode": "upgraded",
+          "farCount": 107,
+          "mediumCount": 0,
+          "closeCount": 0,
+          "animationUpdateMs": 0.10000000149011612
+        },
+        "usedJsHeapBytes": 202996404,
+        "eventReview": {
+          "atDeath": {
+            "tick": 172,
+            "person": {
+              "agentId": "citizen-0108",
+              "lifeStatus": "deceased",
+              "functionalStatus": null,
+              "activeInjuryIds": [],
+              "deathEventId": "death:injury:offence:citizen-0003:citizen:citizen-0108:119@ground:citizen-0108",
+              "deathTick": 172,
+              "resumeToSafeNode": false
+            }
+          },
+          "beforeDeath": {
+            "tick": 171,
+            "person": {
+              "agentId": "citizen-0108",
+              "lifeStatus": "alive",
+              "functionalStatus": "unimpaired",
+              "activeInjuryIds": [],
+              "resumeToSafeNode": false
+            }
+          }
+        }
+      },
+      "replay500": null,
+      "lifeTimingMs": {
+        "outcomeP50": 0,
+        "outcomeP95": 0,
+        "discoveryP95": 0.10000000149011612,
+        "newDeaths": 5
+      },
+      "tickMs": {
+        "p50": 2.3000000044703484,
+        "p95": 4.799999997019768
+      },
+      "frames": {
+        "count": 120,
+        "meanFps": 59.29838548942432,
+        "p50IntervalMs": 16.69999999552965,
+        "p95IntervalMs": 33
+      }
+    },
+    {
+      "scenario": "scale200",
+      "url": "http://127.0.0.1:5181/?seed=shadow-city-hero-01&population=200",
+      "initial": {
+        "tick": 100,
+        "injuries": 0,
+        "deaths": 0,
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+        "api": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+        "rendering": {
+          "drawCalls": 316,
+          "triangles": 312929,
+          "geometries": 190,
+          "textures": 38,
+          "geometryBufferBytes": 413036,
+          "instanceBufferBytes": 1472500,
+          "textureSourceBytesEstimated": 1201494,
+          "medianActiveFrameMs": 16.69999999552965,
+          "p50ActiveFrameMs": 16.69999999552965,
+          "p95ActiveFrameMs": 17.399999998509884,
+          "sampledFrames": 48,
+          "renderedFrames": 51
+        },
+        "character": {
+          "assetLoadMs": 297.40000000596046,
+          "assetMode": "upgraded",
+          "farCount": 198,
+          "mediumCount": 0,
+          "closeCount": 0,
+          "animationUpdateMs": 0.10000000149011612
+        }
+      },
+      "result": {
+        "tick": 500,
+        "injuries": 1,
+        "deaths": 0,
+        "deathLocations": [],
+        "observations": 0,
+        "reports": 0,
+        "sceneCount": 0,
+        "deadId": null,
+        "injuredId": "citizen-0183",
+        "rendering": {
+          "drawCalls": 322,
+          "triangles": 313417,
+          "geometries": 196,
+          "textures": 38,
+          "geometryBufferBytes": 413036,
+          "instanceBufferBytes": 1472500,
+          "textureSourceBytesEstimated": 1201494,
+          "medianActiveFrameMs": 16.69999999552965,
+          "p50ActiveFrameMs": 16.69999999552965,
+          "p95ActiveFrameMs": 17.399999998509884,
+          "sampledFrames": 100,
+          "renderedFrames": 104
+        },
+        "character": {
+          "assetLoadMs": 297.40000000596046,
+          "assetMode": "upgraded",
+          "farCount": 175,
+          "mediumCount": 0,
+          "closeCount": 0,
+          "animationUpdateMs": 0.09999999403953552
+        },
+        "usedJsHeapBytes": 204469629
+      },
+      "replay500": {
+        "durationMs": 2841.5,
+        "fingerprint": "world-v2:heritage-extension-v6:b2d75275:sim-v5:19aa9a38",
+        "offences": 17
+      },
+      "lifeTimingMs": {
+        "outcomeP50": 0,
+        "outcomeP95": 0,
+        "discoveryP95": 0,
+        "newDeaths": 0
+      },
+      "tickMs": {
+        "p50": 5.700000002980232,
+        "p95": 9.199999995529652
+      },
+      "frames": {
+        "count": 120,
+        "meanFps": 59.348660914623494,
+        "p50IntervalMs": 16.69999999552965,
+        "p95IntervalMs": 39.099999994039536
+      }
+    },
+    {
+      "scenario": "scale200Legacy",
+      "url": "http://127.0.0.1:5181/?seed=shadow-city-hero-01&population=200&life=off",
+      "initial": {
+        "tick": 100,
+        "injuries": null,
+        "deaths": null,
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+        "api": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+        "rendering": {
+          "drawCalls": 316,
+          "triangles": 312929,
+          "geometries": 190,
+          "textures": 38,
+          "geometryBufferBytes": 413036,
+          "instanceBufferBytes": 1472500,
+          "textureSourceBytesEstimated": 1201494,
+          "medianActiveFrameMs": 16.700000002980232,
+          "p50ActiveFrameMs": 16.700000002980232,
+          "p95ActiveFrameMs": 17.899999998509884,
+          "sampledFrames": 48,
+          "renderedFrames": 51
+        },
+        "character": {
+          "assetLoadMs": 305,
+          "assetMode": "upgraded",
+          "farCount": 198,
+          "mediumCount": 0,
+          "closeCount": 0,
+          "animationUpdateMs": 0.30000000447034836
+        }
+      },
+      "result": {
+        "tick": 500,
+        "injuries": null,
+        "deaths": null,
+        "deathLocations": [],
+        "observations": null,
+        "reports": null,
+        "sceneCount": null,
+        "deadId": null,
+        "injuredId": null,
+        "rendering": {
+          "drawCalls": 322,
+          "triangles": 313425,
+          "geometries": 196,
+          "textures": 38,
+          "geometryBufferBytes": 413036,
+          "instanceBufferBytes": 1472500,
+          "textureSourceBytesEstimated": 1201494,
+          "medianActiveFrameMs": 16.69999999552965,
+          "p50ActiveFrameMs": 16.69999999552965,
+          "p95ActiveFrameMs": 17.599999994039536,
+          "sampledFrames": 98,
+          "renderedFrames": 102
+        },
+        "character": {
+          "assetLoadMs": 305,
+          "assetMode": "upgraded",
+          "farCount": 176,
+          "mediumCount": 0,
+          "closeCount": 0,
+          "animationUpdateMs": 0.10000000149011612
+        },
+        "usedJsHeapBytes": 214128752
+      },
+      "replay500": {
+        "durationMs": 2855.39999999851,
+        "fingerprint": "world-v2:heritage-extension-v6:b2d75275:sim-v5:2f09fd05",
+        "offences": 18
+      },
+      "lifeTimingMs": {
+        "outcomeP50": null,
+        "outcomeP95": null,
+        "discoveryP95": null,
+        "newDeaths": 0
+      },
+      "tickMs": {
+        "p50": 5.699999995529652,
+        "p95": 9.099999994039536
+      },
+      "frames": {
+        "count": 119,
+        "meanFps": 59.302442456617115,
+        "p50IntervalMs": 16.69999999552965,
+        "p95IntervalMs": 38.600000001490116
+      }
+    }
+  ],
+  "errors": []
+}

@@ -1,0 +1,97 @@
+{
+  "date": "2026-10-27T13:26:44.978Z",
+  "browserVersion": "156.0.8078.48",
+  "viewport": "1440x900",
+  "dpr": 1,
+  "checks": [
+    {
+      "scenario": "scale200Legacy",
+      "url": "http://127.0.0.1:5181/?seed=shadow-city-hero-01&population=200&life=off",
+      "initial": {
+        "tick": 100,
+        "injuries": null,
+        "deaths": null,
+        "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+        "api": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+        "rendering": {
+          "drawCalls": 316,
+          "triangles": 312929,
+          "geometries": 190,
+          "textures": 38,
+          "geometryBufferBytes": 413036,
+          "instanceBufferBytes": 1472500,
+          "textureSourceBytesEstimated": 1201494,
+          "medianActiveFrameMs": 16.700000002980232,
+          "p50ActiveFrameMs": 16.700000002980232,
+          "p95ActiveFrameMs": 17.599999994039536,
+          "sampledFrames": 42,
+          "renderedFrames": 45
+        },
+        "character": {
+          "assetLoadMs": 395.1000000014901,
+          "assetMode": "upgraded",
+          "farCount": 198,
+          "mediumCount": 0,
+          "closeCount": 0,
+          "animationUpdateMs": 0.20000000298023224
+        }
+      },
+      "result": {
+        "tick": 500,
+        "injuries": null,
+        "deaths": null,
+        "deathLocations": [],
+        "observations": null,
+        "reports": null,
+        "sceneCount": null,
+        "deadId": null,
+        "injuredId": null,
+        "rendering": {
+          "drawCalls": 322,
+          "triangles": 313425,
+          "geometries": 196,
+          "textures": 38,
+          "geometryBufferBytes": 413036,
+          "instanceBufferBytes": 1472500,
+          "textureSourceBytesEstimated": 1201494,
+          "medianActiveFrameMs": 16.69999999552965,
+          "p50ActiveFrameMs": 16.69999999552965,
+          "p95ActiveFrameMs": 17.5,
+          "sampledFrames": 93,
+          "renderedFrames": 97
+        },
+        "character": {
+          "assetLoadMs": 395.1000000014901,
+          "assetMode": "upgraded",
+          "farCount": 176,
+          "mediumCount": 0,
+          "closeCount": 0,
+          "animationUpdateMs": 0.10000000149011612
+        },
+        "usedJsHeapBytes": 167617830
+      },
+      "replay500": {
+        "durationMs": 3695.60000000149,
+        "fingerprint": "world-v2:heritage-extension-v6:b2d75275:sim-v5:2f09fd05",
+        "offences": 18
+      },
+      "lifeTimingMs": {
+        "outcomeP50": null,
+        "outcomeP95": null,
+        "discoveryP95": null,
+        "newDeaths": 0
+      },
+      "tickMs": {
+        "p50": 6.700000002980232,
+        "p95": 10.799999997019768
+      },
+      "frames": {
+        "count": 121,
+        "meanFps": 60.00600059992587,
+        "p50IntervalMs": 16.599999994039536,
+        "p95IntervalMs": 35.5
+      }
+    }
+  ],
+  "errors": []
+}

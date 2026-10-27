@@ -182,6 +182,21 @@ This is an opt-in, fingerprinted `EncounterScenarioV1` extension to v5; old conf
 
 `HabitScenarioConfigV1` is optional in the engine and fingerprinted. The integrated app enables it by default; `?habits=off` retains the prior v5 decision path. The calendar runs at 30 seconds per Tick for scheduling while existing physical movement/contact remains 6 seconds per Tick, an explicit modelling approximation. See `DAILY_HABITS_ARCHITECTURE.md` and `DAILY_HABITS_VERIFICATION.md` for the formula, evidence, traceability and limits. Full sitting/gesture animation, school places, empirical calibration and a bounded research-history archive are not included in this milestone.
 
+## v0.6.3 — Injury, mortality and persistent life state
+
+**Goal:** Let qualifying real offences produce reproducible synthetic injury and possible death, with persistent life state, behavior consequences, scene discovery and researcher history. This extends the existing v5 Tick pipeline; it does not introduce a second simulation engine.
+
+| Gate | Exit evidence | Current status |
+| --- | --- | --- |
+| A — Life core | Typed alive/deceased and functional status, runtime invariants, stable injury/death records. | Implemented and unit tested. |
+| B — Outcomes | Explicit physical-assault eligibility, independent keyed injury/fatal draws, actual victim attribution and replay. | Implemented; default scenario can have zero deaths. |
+| C — Consequences | Incapacitation, reduced speed, activity/social interruption, recovery, irreversible death and retained history. | Implemented; longer-term adaptation after learned death remains future work. |
+| D — Information and scene | Spatially anchored scene, same-surface discovery, separate delayed report allowlist, no automatic knowledge broadcast. | Implemented foundation; official notification/hearsay deferred. |
+| E — God View and character | Life history, event seek/focus and state-driven portrayal. | Functional UI; authored collapse/death/standing animation and indoor occlusion quality remain open. |
+| F — Scientific and performance acceptance | Deterministic vertical slices, regression, Chrome screenshots, Tick/frame/memory measurements and traceability. | Evidence in `LIFE_STATE_VERIFICATION.md`; full visual quality acceptance remains open. |
+
+See `LIFE_STATE_ARCHITECTURE.md` for mechanisms and assumptions and `LIFE_STATE_VERIFICATION.md` for the requirement matrix. This work does not change the pending v0.6 200-citizen performance gate or authorize policing features.
+
 ## v0.7 — Policing strategy design and implementation
 
 **Goal:** Compare explicit police decision strategies under transparent model assumptions.
