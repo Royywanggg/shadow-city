@@ -1,0 +1,131 @@
+{
+  "dateUtc": "2026-10-27T12:49:43.245Z",
+  "conditions": "Node/Vite SSR CPU sample on integrated 300m world; serial runs; not GPU timings",
+  "samples": [
+    {
+      "population": 100,
+      "ticks": 500,
+      "encounter": true,
+      "replayEqual": true,
+      "tickMs": {
+        "p50": 2.306374999999889,
+        "p95": 5.45554200000015
+      },
+      "preparationMs": {
+        "p50": 0.020374999999830834,
+        "p95": 0.04095800000004601
+      },
+      "activityDecisions": 272,
+      "decisionRouteTreeMs": {
+        "p50": 1.2513750000000528,
+        "p95": 1.6251249999999686
+      },
+      "candidateScoringMs": {
+        "p50": 0.1555839999998625,
+        "p95": 0.2263749999999618
+      },
+      "replanning": {
+        "count": 0,
+        "p95Ms": null
+      },
+      "replayMs": 1398.3404170000001,
+      "stateBytes": 6186393,
+      "heapBeforeBytes": 50932240,
+      "heapAfterBytes": 195166768,
+      "citizenEvents": 651,
+      "habitDecisionTraces": 272,
+      "habitActivityRecords": 272,
+      "habitChanges": 550,
+      "socialInteractionEvents": 99,
+      "maximumWaitingStreakTicks": 0,
+      "maximumWaitingSample": null,
+      "maximumStepMm": 13640
+    },
+    {
+      "population": 200,
+      "ticks": 500,
+      "encounter": true,
+      "replayEqual": true,
+      "tickMs": {
+        "p50": 6.630458000000544,
+        "p95": 10.536291999999776
+      },
+      "preparationMs": {
+        "p50": 0.0397080000002461,
+        "p95": 0.07437500000014552
+      },
+      "activityDecisions": 511,
+      "decisionRouteTreeMs": {
+        "p50": 1.2124170000006416,
+        "p95": 1.5154169999996157
+      },
+      "candidateScoringMs": {
+        "p50": 0.1790419999997539,
+        "p95": 0.25008400000024267
+      },
+      "replanning": {
+        "count": 0,
+        "p95Ms": null
+      },
+      "replayMs": 3421.89675,
+      "stateBytes": 12496398,
+      "heapBeforeBytes": 211115832,
+      "heapAfterBytes": 209778656,
+      "citizenEvents": 1247,
+      "habitDecisionTraces": 511,
+      "habitActivityRecords": 511,
+      "habitChanges": 1053,
+      "socialInteractionEvents": 417,
+      "maximumWaitingStreakTicks": 0,
+      "maximumWaitingSample": null,
+      "maximumStepMm": 13667
+    },
+    {
+      "population": 20,
+      "ticks": 7700,
+      "encounter": true,
+      "replayEqual": true,
+      "tickMs": {
+        "p50": 0.29099999999925785,
+        "p95": 1.4989580000001297
+      },
+      "preparationMs": {
+        "p50": 0.0031250000010913936,
+        "p95": 0.004582999999911408
+      },
+      "activityDecisions": 644,
+      "decisionRouteTreeMs": {
+        "p50": 1.1074580000004062,
+        "p95": 1.3383340000000317
+      },
+      "candidateScoringMs": {
+        "p50": 0.11279199999989942,
+        "p95": 0.13175000000046566
+      },
+      "replanning": {
+        "count": 2,
+        "p95Ms": 1.0654170000016165
+      },
+      "replayMs": 3160.788207999998,
+      "stateBytes": 11973741,
+      "heapBeforeBytes": 217202096,
+      "heapAfterBytes": 75126936,
+      "citizenEvents": 1576,
+      "habitDecisionTraces": 644,
+      "habitActivityRecords": 644,
+      "habitChanges": 1769,
+      "socialInteractionEvents": 94,
+      "maximumWaitingStreakTicks": 3,
+      "maximumWaitingSample": {
+        "agentId": "citizen-0006",
+        "tick": 1700,
+        "activity": "waitingForSpace",
+        "placeId": null,
+        "destinationPlaceId": null,
+        "currentNodeId": "mall:west-mid",
+        "nextDecisionTick": 1701
+      },
+      "maximumStepMm": 13587
+    }
+  ]
+}

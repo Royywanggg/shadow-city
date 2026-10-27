@@ -1,0 +1,502 @@
+{
+  "dateUtc": "2026-10-27T12:59:54.081Z",
+  "browserVersion": "156.0.8078.48",
+  "url": "http://127.0.0.1:5181/?seed=shadow-city-hero-01&population=12&simSeed=habits-paired-1%3Aactivity&habitSeed=habits-paired-1%3Ahabit&habitWeight=0.2&offendingSeed=habits-paired-1%3Aoffending&observationSeed=habits-paired-1%3Aobservation&encounter=off",
+  "viewport": "1440x900",
+  "dpr": 1,
+  "command": {
+    "id": "habit-close:1",
+    "effectiveTick": 1920,
+    "accessId": "place:building:building-block-3-0-0-0",
+    "mode": "closed"
+  },
+  "decision": {
+    "tick": 3042,
+    "intention": {
+      "id": "habit-intention:citizen-0000:3042:habit-decision:citizen-0000:11",
+      "kind": "eat",
+      "placeId": "building:building-block-3-1-1-0",
+      "status": "travelling",
+      "createdTick": 3042,
+      "decisionId": "habit-decision:citizen-0000:11",
+      "goalId": "habit-goal:citizen-0000:1:eat:0",
+      "reason": "highest feasible utility"
+    },
+    "citizen": {
+      "id": "citizen-0000",
+      "activity": "travelling",
+      "activityKind": "eat",
+      "movementMode": "walk",
+      "position": {
+        "x": 61758,
+        "y": 250,
+        "z": -114076
+      },
+      "surfaceId": "ground",
+      "placeId": null,
+      "currentNodeId": null,
+      "destinationPlaceId": "building:building-block-3-1-1-0",
+      "destinationNodeId": "interior:building-block-3-1-1-0:slot:0",
+      "reservedSlotNodeId": "interior:building-block-3-1-1-0:slot:0",
+      "route": [
+        {
+          "edgeId": "ped-public-block-5--1-column-0-3",
+          "fromNodeId": "ped-place-block-5--1-0-2",
+          "toNodeId": "ped-place-block-5--1-0-3",
+          "lengthMm": 6460
+        },
+        {
+          "edgeId": "ped-public-block-5--1-column-0-4",
+          "fromNodeId": "ped-place-block-5--1-0-3",
+          "toNodeId": "ped-place-block-5--1-0-4",
+          "lengthMm": 6460
+        },
+        {
+          "edgeId": "ped-public-block-5--1-column-0-south",
+          "fromNodeId": "ped-place-block-5--1-0-4",
+          "toNodeId": "ped-block-5--1-1-1",
+          "lengthMm": 6800
+        },
+        {
+          "edgeId": "ped-block-5--1-h-1-0",
+          "fromNodeId": "ped-block-5--1-1-1",
+          "toNodeId": "ped-block-5--1-0-1",
+          "lengthMm": 7887
+        },
+        {
+          "edgeId": "ped-cross-south-block-5--1-approach-a",
+          "fromNodeId": "ped-block-5--1-0-1",
+          "toNodeId": "ped-cross-south-block-5--1-curb-a",
+          "lengthMm": 530
+        },
+        {
+          "edgeId": "ped-cross-south-block-5--1",
+          "fromNodeId": "ped-cross-south-block-5--1-curb-a",
+          "toNodeId": "ped-cross-south-block-5--1-curb-b",
+          "lengthMm": 4500
+        },
+        {
+          "edgeId": "ped-cross-south-block-5--1-approach-b",
+          "fromNodeId": "ped-cross-south-block-5--1-curb-b",
+          "toNodeId": "ped-block-5-0-0-0",
+          "lengthMm": 530
+        },
+        {
+          "edgeId": "ped-cross-east-block-4-0-approach-b",
+          "fromNodeId": "ped-block-5-0-0-0",
+          "toNodeId": "ped-cross-east-block-4-0-curb-b",
+          "lengthMm": 530
+        },
+        {
+          "edgeId": "ped-cross-east-block-4-0",
+          "fromNodeId": "ped-cross-east-block-4-0-curb-b",
+          "toNodeId": "ped-cross-east-block-4-0-curb-a",
+          "lengthMm": 4500
+        },
+        {
+          "edgeId": "ped-cross-east-block-4-0-approach-a",
+          "fromNodeId": "ped-cross-east-block-4-0-curb-a",
+          "toNodeId": "ped-block-4-0-2-0",
+          "lengthMm": 530
+        },
+        {
+          "edgeId": "ped-block-4-0-h-0-1",
+          "fromNodeId": "ped-block-4-0-2-0",
+          "toNodeId": "ped-block-4-0-1-0",
+          "lengthMm": 6020
+        },
+        {
+          "edgeId": "ped-block-4-0-h-0-0",
+          "fromNodeId": "ped-block-4-0-1-0",
+          "toNodeId": "ped-block-4-0-0-0",
+          "lengthMm": 10361
+        },
+        {
+          "edgeId": "ped-block-4-0-v-0-0",
+          "fromNodeId": "ped-block-4-0-0-0",
+          "toNodeId": "ped-block-4-0-0-1",
+          "lengthMm": 16188
+        },
+        {
+          "edgeId": "ped-cross-south-block-4-0-approach-a",
+          "fromNodeId": "ped-block-4-0-0-1",
+          "toNodeId": "ped-cross-south-block-4-0-curb-a",
+          "lengthMm": 530
+        },
+        {
+          "edgeId": "ped-cross-south-block-4-0",
+          "fromNodeId": "ped-cross-south-block-4-0-curb-a",
+          "toNodeId": "ped-cross-south-block-4-0-curb-b",
+          "lengthMm": 5500
+        },
+        {
+          "edgeId": "ped-cross-south-block-4-0-approach-b",
+          "fromNodeId": "ped-cross-south-block-4-0-curb-b",
+          "toNodeId": "ped-block-4-1-0-0",
+          "lengthMm": 530
+        },
+        {
+          "edgeId": "ped-cross-east-block-3-1-approach-b",
+          "fromNodeId": "ped-block-4-1-0-0",
+          "toNodeId": "ped-cross-east-block-3-1-curb-b",
+          "lengthMm": 530
+        },
+        {
+          "edgeId": "ped-cross-east-block-3-1",
+          "fromNodeId": "ped-cross-east-block-3-1-curb-b",
+          "toNodeId": "ped-cross-east-block-3-1-curb-a",
+          "lengthMm": 8800
+        },
+        {
+          "edgeId": "ped-cross-east-block-3-1-approach-a",
+          "fromNodeId": "ped-cross-east-block-3-1-curb-a",
+          "toNodeId": "ped-block-3-1-4-0",
+          "lengthMm": 530
+        },
+        {
+          "edgeId": "ped-block-3-1-v-4-0",
+          "fromNodeId": "ped-block-3-1-4-0",
+          "toNodeId": "ped-block-3-1-4-1",
+          "lengthMm": 17743
+        },
+        {
+          "edgeId": "ped-block-3-1-h-1-3",
+          "fromNodeId": "ped-block-3-1-4-1",
+          "toNodeId": "ped-block-3-1-3-1",
+          "lengthMm": 11488
+        },
+        {
+          "edgeId": "ped-access-building-block-3-1-1-0",
+          "fromNodeId": "ped-block-3-1-3-1",
+          "toNodeId": "ped-entrance-building-block-3-1-1-0",
+          "lengthMm": 2554
+        },
+        {
+          "edgeId": "portal:building-block-3-1-1-0",
+          "fromNodeId": "ped-entrance-building-block-3-1-1-0",
+          "toNodeId": "interior:building-block-3-1-1-0:entry",
+          "lengthMm": 2153
+        },
+        {
+          "edgeId": "access:interior:building-block-3-1-1-0:slot:0",
+          "fromNodeId": "interior:building-block-3-1-1-0:entry",
+          "toNodeId": "interior:building-block-3-1-1-0:slot:0",
+          "lengthMm": 8795
+        }
+      ],
+      "routeIndex": 1,
+      "distanceOnEdgeMm": 1964,
+      "headingRadians": 0,
+      "tripOrdinal": 9,
+      "nextDecisionTick": 3043,
+      "visitOrdinal": 6,
+      "arrivedTick": 2824
+    },
+    "trace": {
+      "id": "habit-decision:citizen-0000:11",
+      "chosenKind": "eat",
+      "chosenPlaceId": "building:building-block-3-1-1-0",
+      "chosen": {
+        "kind": "eat",
+        "placeId": "building:building-block-3-1-1-0",
+        "feasible": true,
+        "reason": null,
+        "terms": {
+          "needs": 300,
+          "obligation": 0,
+          "learned": 5,
+          "preference": 59,
+          "social": 0,
+          "valence": 0,
+          "time": 85,
+          "variation": 19,
+          "travel": -9,
+          "crowd": 0,
+          "risk": 0,
+          "commitment": 0
+        },
+        "score": 459
+      },
+      "closed": [
+        {
+          "kind": "eat",
+          "placeId": "building:building-block-3-0-0-0",
+          "feasible": false,
+          "reason": "closed",
+          "terms": {},
+          "score": null
+        },
+        {
+          "kind": "leisure",
+          "placeId": "building:building-block-3-0-0-0",
+          "feasible": false,
+          "reason": "closed",
+          "terms": {},
+          "score": null
+        },
+        {
+          "kind": "social",
+          "placeId": "building:building-block-3-0-0-0",
+          "feasible": false,
+          "reason": "closed",
+          "terms": {},
+          "score": null
+        }
+      ]
+    }
+  },
+  "actual": {
+    "tick": 3123,
+    "matching": {
+      "intentionId": "habit-intention:citizen-0000:3042:habit-decision:citizen-0000:11",
+      "agentId": "citizen-0000",
+      "kind": "eat",
+      "placeId": "building:building-block-3-1-1-0",
+      "startTick": 3057,
+      "endTick": 3123,
+      "outcome": "completed",
+      "reason": "planned activity duration completed"
+    }
+  },
+  "replay": {
+    "tick": 3042,
+    "intentionId": "habit-intention:citizen-0000:3042:habit-decision:citizen-0000:11",
+    "lastDecisionId": "habit-decision:citizen-0000:11"
+  },
+  "later": {
+    "tick": 7700,
+    "day": 3,
+    "day1": [
+      {
+        "intentionId": "habit-intention:citizen-0000:1955:habit-decision:citizen-0000:9",
+        "agentId": "citizen-0000",
+        "kind": "rest",
+        "placeId": "building:building-block-6--1-1-0",
+        "startTick": 1976,
+        "endTick": 2814,
+        "outcome": "completed",
+        "reason": "planned activity duration completed"
+      },
+      {
+        "intentionId": "habit-intention:citizen-0000:2814:habit-decision:citizen-0000:10",
+        "agentId": "citizen-0000",
+        "kind": "leisure",
+        "placeId": "public:block-5--1",
+        "startTick": 2824,
+        "endTick": 3042,
+        "outcome": "completed",
+        "reason": "planned activity duration completed"
+      },
+      {
+        "intentionId": "habit-intention:citizen-0000:3042:habit-decision:citizen-0000:11",
+        "agentId": "citizen-0000",
+        "kind": "eat",
+        "placeId": "building:building-block-3-1-1-0",
+        "startTick": 3057,
+        "endTick": 3123,
+        "outcome": "completed",
+        "reason": "planned activity duration completed"
+      },
+      {
+        "intentionId": "habit-intention:citizen-0000:3123:habit-decision:citizen-0000:12",
+        "agentId": "citizen-0000",
+        "kind": "shop",
+        "placeId": "galleria-retail-l1",
+        "startTick": 3140,
+        "endTick": 3218,
+        "outcome": "completed",
+        "reason": "planned activity duration completed"
+      },
+      {
+        "intentionId": "habit-intention:citizen-0000:3218:habit-decision:citizen-0000:13",
+        "agentId": "citizen-0000",
+        "kind": "work",
+        "placeId": "building:building-block-4-0-0-0",
+        "startTick": 3227,
+        "endTick": 4066,
+        "outcome": "completed",
+        "reason": "planned activity duration completed"
+      },
+      {
+        "intentionId": "habit-intention:citizen-0000:4066:habit-decision:citizen-0000:14",
+        "agentId": "citizen-0000",
+        "kind": "eat",
+        "placeId": "building:building-block-7-4-0-0",
+        "startTick": 4094,
+        "endTick": 4160,
+        "outcome": "completed",
+        "reason": "planned activity duration completed"
+      },
+      {
+        "intentionId": "habit-intention:citizen-0000:4160:habit-decision:citizen-0000:15",
+        "agentId": "citizen-0000",
+        "kind": "leisure",
+        "placeId": "building:building-block-3-4-0-0",
+        "startTick": 4178,
+        "endTick": 4318,
+        "outcome": "completed",
+        "reason": "social visit ended without an interaction"
+      },
+      {
+        "intentionId": "habit-intention:citizen-0000:4318:habit-decision:citizen-0000:16",
+        "agentId": "citizen-0000",
+        "kind": "shop",
+        "placeId": "building:building-block--1-2-0-0",
+        "startTick": 4347,
+        "endTick": 4425,
+        "outcome": "completed",
+        "reason": "planned activity duration completed"
+      },
+      {
+        "intentionId": "habit-intention:citizen-0000:4425:habit-decision:citizen-0000:17",
+        "agentId": "citizen-0000",
+        "kind": "rest",
+        "placeId": "building:building-block-6--1-1-0",
+        "startTick": 4462,
+        "endTick": 5300,
+        "outcome": "completed",
+        "reason": "planned activity duration completed"
+      }
+    ],
+    "day2": [
+      {
+        "intentionId": "habit-intention:citizen-0000:5300:habit-decision:citizen-0000:18",
+        "agentId": "citizen-0000",
+        "kind": "leisure",
+        "placeId": "public:block-4-4",
+        "startTick": 5324,
+        "endTick": 5464,
+        "outcome": "completed",
+        "reason": "social visit ended without an interaction"
+      },
+      {
+        "intentionId": "habit-intention:citizen-0000:5464:habit-decision:citizen-0000:19",
+        "agentId": "citizen-0000",
+        "kind": "leisure",
+        "placeId": "public:block-1-5",
+        "startTick": 5478,
+        "endTick": 5618,
+        "outcome": "completed",
+        "reason": "social visit ended without an interaction"
+      },
+      {
+        "intentionId": "habit-intention:citizen-0000:5618:habit-decision:citizen-0000:20",
+        "agentId": "citizen-0000",
+        "kind": "leisure",
+        "placeId": "public:block--1-4",
+        "startTick": 5625,
+        "endTick": 5765,
+        "outcome": "completed",
+        "reason": "social visit ended without an interaction"
+      },
+      {
+        "intentionId": "habit-intention:citizen-0000:5765:habit-decision:citizen-0000:21",
+        "agentId": "citizen-0000",
+        "kind": "eat",
+        "placeId": "building:building-block-3-4-0-0",
+        "startTick": 5782,
+        "endTick": 5848,
+        "outcome": "completed",
+        "reason": "planned activity duration completed"
+      },
+      {
+        "intentionId": "habit-intention:citizen-0000:5848:habit-decision:citizen-0000:22",
+        "agentId": "citizen-0000",
+        "kind": "leisure",
+        "placeId": "public:block-7-6",
+        "startTick": 5872,
+        "endTick": 6012,
+        "outcome": "completed",
+        "reason": "social visit ended without an interaction"
+      },
+      {
+        "intentionId": "habit-intention:citizen-0000:6012:habit-decision:citizen-0000:23",
+        "agentId": "citizen-0000",
+        "kind": "work",
+        "placeId": "building:building-block-4-0-0-0",
+        "startTick": 6045,
+        "endTick": 6884,
+        "outcome": "completed",
+        "reason": "planned activity duration completed"
+      },
+      {
+        "intentionId": "habit-intention:citizen-0000:6884:habit-decision:citizen-0000:24",
+        "agentId": "citizen-0000",
+        "kind": "shop",
+        "placeId": "building:building-block--1-2-0-0",
+        "startTick": 6912,
+        "endTick": 6990,
+        "outcome": "completed",
+        "reason": "planned activity duration completed"
+      },
+      {
+        "intentionId": "habit-intention:citizen-0000:6990:habit-decision:citizen-0000:25",
+        "agentId": "citizen-0000",
+        "kind": "eat",
+        "placeId": "building:building-block-4-7-0-0",
+        "startTick": 7033,
+        "endTick": 7099,
+        "outcome": "completed",
+        "reason": "planned activity duration completed"
+      },
+      {
+        "intentionId": "habit-intention:citizen-0000:7099:habit-decision:citizen-0000:26",
+        "agentId": "citizen-0000",
+        "kind": "leisure",
+        "placeId": "building:building-block-1-6-0-0",
+        "startTick": 7118,
+        "endTick": 7258,
+        "outcome": "completed",
+        "reason": "social visit ended without an interaction"
+      },
+      {
+        "intentionId": "habit-intention:citizen-0000:7258:habit-decision:citizen-0000:27",
+        "agentId": "citizen-0000",
+        "kind": "leisure",
+        "placeId": "building:building-block-3-4-0-0",
+        "startTick": 7268,
+        "endTick": 7408,
+        "outcome": "completed",
+        "reason": "social visit ended without an interaction"
+      },
+      {
+        "intentionId": "habit-intention:citizen-0000:7408:habit-decision:citizen-0000:28",
+        "agentId": "citizen-0000",
+        "kind": "leisure",
+        "placeId": "building:building-block-3-4-0-0",
+        "startTick": 7408,
+        "endTick": 7548,
+        "outcome": "completed",
+        "reason": "social visit ended without an interaction"
+      }
+    ],
+    "learnedPlaces": {
+      "building:building-block-6--1-1-0": 317,
+      "building:building-block-3-0-0-0": 341,
+      "building:building-block-3--1-0-0": 232,
+      "public:block-3-3": 232,
+      "public:block-5--1": 232,
+      "building:building-block-3-1-1-0": 232,
+      "galleria-retail-l1": 232,
+      "building:building-block-4-0-0-0": 262,
+      "building:building-block-7-4-0-0": 232,
+      "building:building-block-3-4-0-0": 318,
+      "building:building-block--1-2-0-0": 262,
+      "public:block-4-4": 232,
+      "public:block-1-5": 232,
+      "public:block--1-4": 232,
+      "public:block-7-6": 232,
+      "building:building-block-4-7-0-0": 232,
+      "building:building-block-1-6-0-0": 232
+    }
+  },
+  "uiGrounded": true,
+  "errors": [],
+  "screenshots": [
+    "habits-demo-decision-day1-tick3042-1440x900.png",
+    "habits-demo-closed-candidate-day1-tick3042-1440x900.png",
+    "habits-demo-actual-day1-tick3123-1440x900.png",
+    "habits-demo-replay-day1-tick3042-1440x900.png",
+    "habits-demo-day2-tick7600-1440x900.png"
+  ]
+}

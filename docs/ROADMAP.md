@@ -169,6 +169,19 @@ The v0.6 implementation is split into reviewable gates:
 
 This is an opt-in, fingerprinted `EncounterScenarioV1` extension to v5; old configs retain the legacy incident pipeline. Synthetic rules are research assumptions, not predictions about people or real cities. See `V061_ENCOUNTER_ARCHITECTURE.md` for the tick phases and model boundaries. **Status:** functional gates A–F have code, test and real Chrome evidence in `V061_VERIFICATION.md`. The 200-citizen hardware Chrome and replay performance targets remain open; this milestone is not performance-complete.
 
+## v0.6.2 — Daily habits and adaptive routines
+
+**Goal:** Give each resident a deterministic but individual routine whose actual activity decisions respond to needs, obligations, learned preference, directed social experience and legal place access. Preserve the integrated v5 world, Encounter, offending, replay and character rendering boundaries.
+
+| Gate | Deliverable | Exit evidence |
+| --- | --- | --- |
+| **A — Calendar and individual profiles** | Versioned calendar, independent per-agent habit seed, appropriate home/work obligations and variable activity windows. | Day rollover, Reset, fixed Tick, separate seed and multi-day replay tests; no real-time clock input. |
+| **B — Decisions and adaptation** | One current intention, feasible-place utility with stored candidate terms, real activity history, previous-Tick feedback and learned strengths/valence. | Closure/capacity/route tests, actual before/after change records, paired habit-weight and place-closure runs, no scripted demonstration event. |
+| **C — Encounter and God View** | Existing social interaction and memory feed relevant later decisions; Routine/Today/Decisions/Habits researcher tabs read state and traces. | No social reward without an actual interaction, ObserverPort remains isolated, past-Tick inspector and Chrome captures show actual decision/history. |
+| **D — Scientific and performance review** | 100–200-citizen CPU/Chrome samples, continuous multi-day run, replay equality, screenshots and requirement matrix. | Record p50/p95 Tick/frame values, route/scheduling/replanning cost, history growth, legal slots/surfaces and waiting streaks; missed prior performance targets remain open. |
+
+`HabitScenarioConfigV1` is optional in the engine and fingerprinted. The integrated app enables it by default; `?habits=off` retains the prior v5 decision path. The calendar runs at 30 seconds per Tick for scheduling while existing physical movement/contact remains 6 seconds per Tick, an explicit modelling approximation. See `DAILY_HABITS_ARCHITECTURE.md` and `DAILY_HABITS_VERIFICATION.md` for the formula, evidence, traceability and limits. Full sitting/gesture animation, school places, empirical calibration and a bounded research-history archive are not included in this milestone.
+
 ## v0.7 — Policing strategy design and implementation
 
 **Goal:** Compare explicit police decision strategies under transparent model assumptions.

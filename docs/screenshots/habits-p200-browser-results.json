@@ -1,0 +1,56 @@
+{
+  "date": "2026-10-27T12:55:59.161Z",
+  "url": "http://127.0.0.1:5181/?seed=shadow-city-hero-01&population=200",
+  "browserVersion": "156.0.8078.48",
+  "viewport": "1440x900",
+  "dpr": 1,
+  "renderer": {
+    "name": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+    "api": "WebGL 2.0 (OpenGL ES 3.0 Chromium)"
+  },
+  "gpuKind": "hardware",
+  "initial": {
+    "tick": 100,
+    "habitCitizens": 200,
+    "decisions": 204,
+    "activities": 204
+  },
+  "final": {
+    "tick": 200,
+    "decisions": 274,
+    "activities": 274
+  },
+  "decisionPanelGrounded": true,
+  "errors": [],
+  "rendering": {
+    "drawCalls": 314,
+    "triangles": 316019,
+    "geometries": 202,
+    "textures": 48,
+    "geometryBufferBytes": 1113808,
+    "instanceBufferBytes": 1495908,
+    "textureSourceBytesEstimated": 5745328,
+    "medianActiveFrameMs": 16.69999999552965,
+    "p50ActiveFrameMs": 16.69999999552965,
+    "p95ActiveFrameMs": 20.100000001490116,
+    "sampledFrames": 120,
+    "renderedFrames": 306
+  },
+  "usedJsHeapBytes": 219866098,
+  "tickMs": {
+    "p50": 7.200000002980232,
+    "p95": 11.100000001490116
+  },
+  "frames": {
+    "count": 181,
+    "meanFps": 60.01600426774511,
+    "p50IntervalMs": 16.600000001490116,
+    "p95IntervalMs": 32.600000001490116
+  },
+  "screenshots": [
+    "habits-p200-hero-tick100-1440x900.png",
+    "habits-p200-routine-tick100-1440x900.png",
+    "habits-p200-decision-tick100-1440x900.png",
+    "habits-p200-evolution-tick200-1440x900.png"
+  ]
+}
