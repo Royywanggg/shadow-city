@@ -1,4 +1,5 @@
 import type { ReportV5 } from '../v5Types'
+import type { LifeSceneReportV1, LifeStateV1 } from '../life/types'
 
 export interface ObserverReportViewV5 extends ReportV5 {
   readonly source?: 'victim' | 'witness'
@@ -8,7 +9,9 @@ export interface ObserverReportViewV5 extends ReportV5 {
 export function projectObserverViewV5(state: Readonly<{
   tick: number
   reports: readonly (ReportV5 & Readonly<{ source?: 'victim' | 'witness' }>)[]
-}>): Readonly<{ tick: number; reports: readonly ObserverReportViewV5[] }> {
+  life?: LifeStateV1
+}>): Readonly<{ tick: number; reports: readonly ObserverReportViewV5[];
+  lifeReports?: readonly LifeSceneReportV1[] }> {
   const reports = state.reports.filter((report) => report.availableTick <= state.tick)
     .map((report): ObserverReportViewV5 => Object.freeze({
       id: report.id,
@@ -31,5 +34,15 @@ export function projectObserverViewV5(state: Readonly<{
       ...(report.source === 'victim' || report.source === 'witness' ?
         { source: report.source } : {}),
     }))
-  return Object.freeze({ tick: state.tick, reports: Object.freeze(reports) })
+  const lifeReports = state.life?.reports.filter((item) => item.availableTick <= state.tick)
+    .map((item): LifeSceneReportV1 => Object.freeze({
+      id: item.id, availableTick: item.availableTick,
+      reportedPosition: Object.freeze({ x: item.reportedPosition.x,
+        y: item.reportedPosition.y, z: item.reportedPosition.z }),
+      reportedLevelId: item.reportedLevelId,
+      reportedPlaceId: item.reportedPlaceId,
+      reportedStatus: item.reportedStatus, source: item.source,
+    }))
+  return Object.freeze({ tick: state.tick, reports: Object.freeze(reports),
+    ...(lifeReports ? { lifeReports: Object.freeze(lifeReports) } : {}) })
 }

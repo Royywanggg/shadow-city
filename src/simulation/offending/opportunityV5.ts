@@ -3,6 +3,7 @@ import type { WorldPointMm } from '../../world/model'
 import type { MovementTracePoint, OffenceV5, OpportunityTargetV5,
   ReportV5, SimulationEnvironmentV5, SimulationStateV5 } from '../v5Types'
 import { projectObserverViewV5 } from '../encounter/observerProjection'
+import { classifyHarmMechanismV1 } from '../life/outcome'
 
 const unit = (key: string) => (hashSeed(key) + 0.5) / 0x1_0000_0000
 const distance = (a: WorldPointMm, b: WorldPointMm) =>
@@ -29,7 +30,8 @@ function makeReport(offence: OffenceV5, observationSeed: string): ReportV5 {
 export function updateOpportunityV5(state: SimulationStateV5,
   environment: SimulationEnvironmentV5, traces: readonly MovementTracePoint[]): SimulationStateV5 {
   const bySecond = new Map<number, MovementTracePoint[]>()
-  const activeIds = new Set(state.citizens.filter((citizen) => citizen.activity !== 'atHome')
+  const activeIds = new Set(state.citizens.filter((citizen) => citizen.activity !== 'atHome' &&
+    citizen.activity !== 'deceased' && citizen.activity !== 'incapacitated')
     .map((citizen) => citizen.id))
   for (const trace of traces) {
     if (!activeIds.has(trace.agentId)) continue
@@ -132,7 +134,11 @@ export function updateOpportunityV5(state: SimulationStateV5,
             ? 'serious' : 'minor', position: contact.position,
           surfaceId: contact.surfaceId, levelId: surface.levelId,
           placeId: contact.placeId, encounterId: episode.id, opportunity }
-        offences.push(offence)
+        if (environment.config.life) {
+          const mechanism = classifyHarmMechanismV1(id, contact.target.kind,
+            offence.severity, environment.config.life)
+          offences.push({ ...offence, mechanism })
+        } else offences.push(offence)
         cooldowns[contact.offender] = state.tick + 18
         if (contact.target.kind === 'placeResource') resourceCooldowns[contact.target.id] = state.tick + 30
         if (unit(`${environment.config.observationSeed}:report:${id}`) <
@@ -157,6 +163,6 @@ export function updateOpportunityV5(state: SimulationStateV5,
     pendingReports: stillPending, offenderCooldowns: cooldowns, resourceCooldowns }
 }
 
-export function observerViewV5(state: SimulationStateV5): Readonly<{ tick: number; reports: readonly ReportV5[] }> {
+export function observerViewV5(state: SimulationStateV5) {
   return projectObserverViewV5(state)
 }

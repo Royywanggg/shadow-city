@@ -15,6 +15,9 @@ import { advanceEncounterPipelineV1 } from './encounter/pipeline'
 import { validateHabitConfig } from './habits/calendar'
 import { createHabitProfilesV1 } from './habits/profiles'
 import { createInitialHabitsStateV1, HabitTickV1 } from './habits/state'
+import { validateLifeConfigV1 } from './life/outcome'
+import { createInitialLifeStateV1 } from './life/types'
+import { finalizeLifeTickV1, progressLifeRecoveryV1 } from './life/state'
 import { chooseHabitDestinationV1, habitPlaceIsOpenV1, reportHabitReplanTimingV1,
   type HabitChoiceV1 } from './habits/decision'
 import type { AccessCommandV5, CitizenEventV5, CitizenProfileV5, CitizenStateV5,
@@ -79,6 +82,7 @@ export function createEnvironmentV5(world: WorldModelV2, config: SimulationConfi
       reportingProbability: config.reportingProbability })
   }
   if (config.habit) validateHabitConfig(config.habit)
+  if (config.life) validateLifeConfigV1(config.life)
   const ids = new Set<string>()
   for (const command of commands) {
     if (ids.has(command.id) || !Number.isSafeInteger(command.effectiveTick) ||
@@ -119,7 +123,8 @@ export function createInitialStateV5(environment: SimulationEnvironmentV5,
     ...(environment.config.encounter ? { social: createInitialSocialStateV1() } : {}),
     ...(environment.config.habit ? { habits: createInitialHabitsStateV1(
       environment.habitProfiles!, environment.profiles, environment.config,
-      environment.config.habit) } : {}) }
+      environment.config.habit) } : {}),
+    ...(environment.config.life ? { life: createInitialLifeStateV1(citizens.map((item) => item.id)) } : {}) }
 }
 
 function chooseDestination(citizen: CitizenStateV5, profile: CitizenProfileV5,
@@ -184,6 +189,7 @@ export function advanceStateV5(state: SimulationStateV5, environment: Simulation
     throw new Error('V5 replay requires identical world, model and command fingerprint')
   }
   const tick = state.tick + 1
+  state = progressLifeRecoveryV1(state, tick)
   const modes = { ...state.accessModes }
   for (const command of state.commands) if (command.effectiveTick === tick) modes[command.accessId] = command.mode
   const accessModes = accessMap(modes)
@@ -192,6 +198,7 @@ export function advanceStateV5(state: SimulationStateV5, environment: Simulation
       environment.config, accessModes, tick)) accessModes.set(`place:${place.id}`, 'closed')
   }
   const profiles = new Map(environment.profiles.map((item) => [item.id, item]))
+  const lifeById = new Map(state.life?.people.map((item) => [item.agentId, item]) ?? [])
   const habitProfiles = new Map(environment.habitProfiles?.map((item) =>
     [item.agentId, item]) ?? [])
   const habitTick = environment.config.habit ?
@@ -232,7 +239,17 @@ export function advanceStateV5(state: SimulationStateV5, environment: Simulation
     hashSeed(`${environment.config.simulationSeed}:${tick}:${b.id}:priority`) || a.id.localeCompare(b.id))
   const nextById = new Map<string, CitizenStateV5>()
   for (const prior of priority) {
-    const profile = profiles.get(prior.id)!
+    const life = lifeById.get(prior.id)
+    if (life?.lifeStatus === 'deceased' || life?.functionalStatus === 'incapacitated') {
+      nextById.set(prior.id, prior)
+      continue
+    }
+    const baseProfile = profiles.get(prior.id)!
+    const profile = life?.lifeStatus === 'alive' && life.functionalStatus === 'impaired' ? {
+      ...baseProfile, travellerCosts: { ...baseProfile.travellerCosts,
+        speedMmPerSecond: Math.max(1, Math.round(baseProfile.travellerCosts.speedMmPerSecond *
+          environment.config.life!.impairedSpeedFactor)) },
+    } : baseProfile
     let citizen = prior
     if (citizen.engagement) {
       const interaction = state.social?.interactions.find((item) =>
@@ -306,6 +323,10 @@ export function advanceStateV5(state: SimulationStateV5, environment: Simulation
         events.push(event(tick, citizen, 'TripDeferred', null, 'No open reachable place with capacity'))
       }
     }
+    if (life?.lifeStatus === 'alive' && life.functionalStatus === 'impaired' &&
+      citizen.movementMode !== 'walk') {
+      citizen = { ...citizen, movementMode: 'walk' }
+    }
     if (citizen.activity === 'travelling' || citizen.activity === 'returningHome') {
       if (citizen.routeIndex < citizen.route.length) {
         const result = moveCitizenOneTick(citizen, profile, index, accessModes,
@@ -351,6 +372,9 @@ export function advanceStateV5(state: SimulationStateV5, environment: Simulation
           nextDecisionTick: tick + dwell, arrivedTick: tick }
         events.push(event(tick, citizen, 'DestinationReached', place.id))
         habitTick?.arrival(citizen.id)
+      } else if (!citizen.destinationNodeId && citizen.routeIndex >= citizen.route.length) {
+        citizen = { ...citizen, activity: 'waitingForSpace', route: [], routeIndex: 0,
+          distanceOnEdgeMm: 0, nextDecisionTick: tick + 1 }
       }
     }
     if (!tracedCitizenIds.has(citizen.id)) {
@@ -365,10 +389,16 @@ export function advanceStateV5(state: SimulationStateV5, environment: Simulation
   const next: SimulationStateV5 = { ...state, tick, citizens, accessModes: modes,
     events: [...state.events, ...events],
     ...(habitTick ? { habits: habitTick.finish() } : {}) }
-  if (!environment.config.encounter) return updateOpportunityV5(next, environment, traces)
+  const eligible = new Set(state.life?.people.filter((item) =>
+    item.lifeStatus === 'alive' && item.functionalStatus !== 'incapacitated')
+    .map((item) => item.agentId) ?? citizens.map((item) => item.id))
+  const activeTraces = traces.filter((item) => eligible.has(item.agentId))
+  if (!environment.config.encounter) return finalizeLifeTickV1(
+    updateOpportunityV5(next, environment, activeTraces), environment)
   const socialNext = advanceEncounterPipelineV1(next, environment,
-    completeTickTraces(traces, citizens, environment.config.logicalSecondsPerTick),
+    completeTickTraces(activeTraces, citizens.filter((item) => eligible.has(item.id)),
+      environment.config.logicalSecondsPerTick),
     interruptedInteractionIds)
-  return environment.config.encounter.offenceMode === 'legacy' ?
-    updateOpportunityV5(socialNext, environment, traces) : socialNext
+  return finalizeLifeTickV1(environment.config.encounter.offenceMode === 'legacy' ?
+    updateOpportunityV5(socialNext, environment, activeTraces) : socialNext, environment)
 }

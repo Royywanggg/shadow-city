@@ -3,9 +3,11 @@ import type { AccessMode, RouteStepV5, TravellerCosts } from '../world/navigatio
 import type { EncounterScenarioConfigV1 } from './encounter/config'
 import type { SocialStateV1 } from './encounter/state'
 import type { HabitProfileV1, HabitScenarioConfigV1, HabitsStateV1 } from './habits/types'
+import type { LifeScenarioConfigV1, LifeStateV1 } from './life/types'
 
 export type CitizenActivityV5 = 'atHome' | 'planningTrip' | 'waitingForSpace' |
-  'travelling' | 'atDestination' | 'returningHome' | 'interacting'
+  'travelling' | 'atDestination' | 'returningHome' | 'interacting' |
+  'incapacitated' | 'deceased'
 
 export interface CitizenProfileV5 {
   readonly id: string
@@ -115,6 +117,8 @@ export interface OffenceV5 {
   readonly offenderAgentId: string
   readonly target: OpportunityTargetV5
   readonly severity: 'minor' | 'serious'
+  /** Absent in pre-life experiments; severity alone never implies physical harm. */
+  readonly mechanism?: 'physicalAssault' | 'nonPhysical'
   readonly position: WorldPointMm
   readonly surfaceId: string
   readonly levelId: string
@@ -153,6 +157,7 @@ export interface SimulationConfigV5 {
     readonly Readonly<{ openMinute: number; closeMinute: number }>[]> >
   readonly encounter?: EncounterScenarioConfigV1
   readonly habit?: HabitScenarioConfigV1
+  readonly life?: LifeScenarioConfigV1
 }
 
 export interface SimulationStateV5 {
@@ -171,6 +176,7 @@ export interface SimulationStateV5 {
   readonly commands: readonly AccessCommandV5[]
   readonly social?: SocialStateV1
   readonly habits?: HabitsStateV1
+  readonly life?: LifeStateV1
 }
 
 export interface SimulationEnvironmentV5 {

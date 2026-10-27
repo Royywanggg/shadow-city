@@ -6,6 +6,7 @@ import type { WorldModelV2, WorldPointMm } from '../../world/model'
 import type { MovementTracePoint, OffenceV5, OpportunityTargetV5,
   SimulationEnvironmentV5, SimulationStateV5 } from '../v5Types'
 import { hasClearSurfaceSegment, querySpatialCandidates } from './spatial'
+import { classifyHarmMechanismV1 } from '../life/outcome'
 import { evaluatePerception } from './perception'
 import { assessWitnessesForOffence, createWitnessObservations,
   decideEncounterAwareOffence, resolveSubjectiveRecognitionV1,
@@ -92,8 +93,9 @@ function opportunitySnapshot(environment: SimulationEnvironmentV5, offender: Mov
   return { agentId: offender.agentId, tick,
     position: { x: offender.position.x / 1000, y: offender.position.y / 1000,
       z: offender.position.z / 1000 },
-    activity: offender.activity === 'interacting' ? 'atDestination' :
-      offender.activity ?? 'atDestination',
+    activity: offender.activity === 'interacting' ||
+      offender.activity === 'incapacitated' || offender.activity === 'deceased' ?
+      'atDestination' : offender.activity ?? 'atDestination',
     pedestrianAnchor: offender.edgeId ? { kind: 'edge', id: offender.edgeId } :
       { kind: 'publicAnchor', id: offender.surfaceId },
     blockId: district.id, district: district.kind, timeBand,
@@ -286,7 +288,10 @@ export function advanceEncounterCrimeV1(state: SimulationStateV5,
           const id = `offence:${episode.id}`
           const offence: OffenceV5 = { id, incidentId: `incident:${id}`,
             tick: state.tick, second: offender.second, offenderAgentId: offender.agentId,
-            target, severity: choice.severity, position: offender.position,
+            target, severity: choice.severity,
+            ...(environment.config.life ? { mechanism: classifyHarmMechanismV1(id,
+              target.kind, choice.severity, environment.config.life) } : {}),
+            position: offender.position,
             surfaceId: offender.surfaceId, levelId: surface.levelId,
             placeId: offender.placeId, encounterId: socialEpisode?.id ?? episode.id,
             opportunity }

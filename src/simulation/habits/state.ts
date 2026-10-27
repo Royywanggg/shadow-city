@@ -94,11 +94,16 @@ export class HabitTickV1 {
     const memories = previous.social?.memories.filter((item) =>
       item.createdTick === previous.tick && item.placeId) ?? []
     const memoriesByOwner = new Map<string, typeof memories>()
+    const lifeById = new Map(previous.life?.people.map((item) =>
+      [item.agentId, item]) ?? [])
     for (const memory of memories) {
       const group = memoriesByOwner.get(memory.ownerAgentId) ?? []
       memoriesByOwner.set(memory.ownerAgentId, [...group, memory])
     }
     for (const citizen of previous.citizens) {
+      const life = lifeById.get(citizen.id)
+      if (life?.lifeStatus === 'deceased' ||
+        life?.functionalStatus === 'incapacitated') continue
       let habit = this.get(citizen.id)
       const profile = this.profiles.get(citizen.id)!
       if (habit.day !== day) {
@@ -273,4 +278,33 @@ export class HabitTickV1 {
   finish(): HabitsStateV1 {
     return { version: 'habit-v1', citizens: [...this.byId.values()] }
   }
+}
+
+/** A life event terminates one existing intention without inventing an activity. */
+export function interruptHabitForLifeV1(habits: HabitsStateV1, agentId: string,
+  tick: number, reason: string, terminal: boolean): HabitsStateV1 {
+  return { ...habits, citizens: habits.citizens.map((habit) => {
+    if (habit.agentId !== agentId) return habit
+    const goals = terminal ? habit.dailyGoals.map((goal) =>
+      goal.status === 'planned' || goal.status === 'active' || goal.status === 'delayed' ?
+        { ...goal, status: 'cancelled' as const } : goal) : habit.dailyGoals
+    if (!habit.intention ||
+      habit.intention.status === 'completed' ||
+      habit.intention.status === 'cancelled') return terminal ?
+      { ...habit, dailyGoals: goals } : habit
+    const intention = habit.intention
+    const outcome = habit.arrivedTick === null ? 'cancelled' as const :
+      'interrupted' as const
+    const record: ActivityHistoryV1 = { intentionId: intention.id, agentId,
+      kind: intention.kind === 'social' ? 'leisure' : intention.kind,
+      placeId: intention.placeId,
+      startTick: habit.arrivedTick ?? intention.createdTick, endTick: tick,
+      outcome, reason }
+    return { ...habit, intention: { ...intention,
+      status: terminal ? 'cancelled' as const : 'interrupted' as const,
+      reason }, arrivedTick: null,
+    history: appendHabitLog(habit.history, record),
+    dailyGoals: goals.map((goal) => goal.id === intention.goalId ?
+      { ...goal, status: terminal ? 'cancelled' as const : 'delayed' as const } : goal) }
+  }) }
 }
