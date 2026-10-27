@@ -15,6 +15,9 @@ import { createSocialProfileV1 } from '../simulation/encounter/socialProfiles'
 import { SimulationSessionV5 } from '../simulation/sessionV5'
 import { DEFAULT_SIMULATION_CONFIG_V5 } from '../simulation/v5Types'
 import { DEFAULT_HABIT_SCENARIO_V1, readHabitLog } from '../simulation/habits/types'
+import { DEFAULT_LIFE_SCENARIO_V1 } from '../simulation/life/types'
+import { computeLifeMetricsV1 } from '../simulation/life/metrics'
+import { setLifeTimingObserverV1, type LifeTimingSampleV1 } from '../simulation/life/state'
 import { calendarAtTick } from '../simulation/habits/calendar'
 import { DEFAULT_WORLD_CONFIG_V2 } from '../world/model'
 import { generateWorldV2 } from '../world/generation/generateWorldV2'
@@ -71,7 +74,8 @@ function V5Panel({ session, selectedId, onSelect, selectedEncounterId, onSelectE
   const [activityFilter, setActivityFilter] = useState('all')
   const [tab, setTab] = useState<'profile' | 'activity' | 'history' | 'relationships' |
     'encounters' | 'memory' | 'timeline' | 'routine' | 'today' |
-    'decisions' | 'habits'>('profile')
+    'decisions' | 'habits' | 'life'>('profile')
+  const [selectedLifeEventId, setSelectedLifeEventId] = useState<string | null>(null)
   const [showAllHabitCandidates, setShowAllHabitCandidates] = useState(false)
   const identities = useMemo(() => new Map(session.getProfiles().map((profile) =>
     [profile.id, createCitizenIdentity(profile.id)])), [session])
@@ -91,6 +95,12 @@ function V5Panel({ session, selectedId, onSelect, selectedEncounterId, onSelectE
   const habitChanges = habit ? readHabitLog(habit.changes) : []
   const latestHabitDecision = habitDecisions.at(-1)
   const identity = selected ? identities.get(selected.id)! : null
+  const life = snapshot.state.life
+  const lifePerson = life?.people.find((item) => item.agentId === selectedId)
+  const injuries = life?.injuries.filter((item) => item.victimAgentId === selectedId) ?? []
+  const death = life?.deaths.find((item) => item.victimAgentId === selectedId)
+  const recoveries = life?.recoveryEvents.filter((item) => item.agentId === selectedId) ?? []
+  const lifeMetrics = computeLifeMetricsV1(snapshot.state)
   const social = snapshot.state.social
   const socialProfile = selected && session.getConfig().encounter ? {
     ...createSocialProfileV1(selected.id, session.getConfig().encounter!.social.seed),
@@ -114,7 +124,9 @@ function V5Panel({ session, selectedId, onSelect, selectedEncounterId, onSelectE
     item.encounterId === selectedEncounterId) ?? []
   const selectedTraces = social?.decisionTraces.filter((item) =>
     item.episodeId === selectedEncounterId) ?? []
-  const timeline = selectedId ? [
+  const timeline: { id: string; tick: number; label: string;
+    scope: 'OBJECTIVE' | 'SUBJECTIVE'; episodeId: string | null;
+    position?: Readonly<{ x: number; y: number; z: number }> }[] = selectedId ? [
     ...snapshot.state.events.filter((item) => item.agentId === selectedId).map((item) => ({
       id: item.id, tick: item.tick, label: item.type,
       scope: 'OBJECTIVE' as const, episodeId: null as string | null,
@@ -135,6 +147,21 @@ function V5Panel({ session, selectedId, onSelect, selectedEncounterId, onSelectE
         label: `${item.source} observation`, scope: 'SUBJECTIVE' as const,
         episodeId: null as string | null,
       })) ?? []),
+    ...habitHistory.map((item) => ({ id: `activity:${item.intentionId}:${item.endTick}`,
+      tick: item.endTick, label: `${item.kind} ${item.outcome}`,
+      scope: 'OBJECTIVE' as const, episodeId: null })),
+    ...snapshot.state.offences.filter((item) => item.offenderAgentId === selectedId ||
+      item.target.kind === 'citizen' && item.target.id === selectedId).map((item) => ({
+      id: item.id, tick: item.tick, label: `Offence ${item.severity} ${item.mechanism ?? ''}`,
+      scope: 'OBJECTIVE' as const, episodeId: null, position: item.position })),
+    ...injuries.map((item) => ({ id: item.id, tick: item.onsetTick,
+      label: `Injury ${item.severity}`, scope: 'OBJECTIVE' as const,
+      episodeId: null, position: item.position })),
+    ...recoveries.map((item) => ({ id: item.id, tick: item.tick,
+      label: `Recovery ${item.kind}`, scope: 'OBJECTIVE' as const,
+      episodeId: null })),
+    ...(death ? [{ id: death.id, tick: death.tick, label: 'Death',
+      scope: 'OBJECTIVE' as const, episodeId: null, position: death.position }] : []),
   ].sort((a, b) => b.tick - a.tick || a.id.localeCompare(b.id)) : []
   const selectedSurface = selected ? session.getWorld().surfaces.find((item) => item.id === selected.surfaceId) : null
   const filtered = snapshot.state.citizens.filter((citizen) => {
@@ -168,6 +195,7 @@ function V5Panel({ session, selectedId, onSelect, selectedEncounterId, onSelectE
       {sidebarOpen && <>
         <div className="v06-sidebar-head"><span>RESEARCHER / GOD VIEW</span>
           <h2>Population <em>{snapshot.state.citizens.length}</em></h2>
+          {lifeMetrics && <p>{lifeMetrics.livingPopulation} living · {lifeMetrics.deceasedPopulation} deceased · {lifeMetrics.injuredAgents} injured</p>}
           <p>Complete synthetic identities and recorded state, independent of report visibility.</p>
         </div>
         <div className="v06-filters">
@@ -194,12 +222,16 @@ function V5Panel({ session, selectedId, onSelect, selectedEncounterId, onSelectE
             activity={selected.activity} movementMode={selected.movementMode}
             tick={snapshot.tick} playing={playing && !snapshot.isInspecting}
             getPlaybackAlpha={getPlaybackAlpha}
+            lifeStatus={lifePerson?.lifeStatus} functionalStatus={lifePerson?.functionalStatus}
+            onsetTick={lifePerson?.lifeStatus === 'deceased' ? lifePerson.deathTick :
+              lifePerson?.functionalStatus === 'incapacitated' ?
+                injuries.find((item) => item.status === 'active' && item.stepDownTick !== null)?.onsetTick : undefined}
             animationRate={profile.travellerCosts.speedMmPerSecond / 1300} />
           <div className="v06-action-row"><button onClick={focus}>FOCUS</button>
             <button onClick={follow}>{status}</button></div>
           <div className="v06-tabs" aria-label="Researcher resident sections">
             {(['profile', 'activity', 'history', 'relationships', 'encounters',
-              'memory', 'timeline', 'routine', 'today', 'decisions', 'habits'] as const).map((value) =>
+              'memory', 'timeline', 'routine', 'today', 'decisions', 'habits', 'life'] as const).map((value) =>
               <button key={value} className={tab === value ? 'active' : ''}
                 onClick={() => setTab(value)}>{value.toUpperCase()}</button>)}
           </div>
@@ -218,6 +250,47 @@ function V5Panel({ session, selectedId, onSelect, selectedEncounterId, onSelectE
             <dt>Position</dt><dd>{(selected.position.x / 1000).toFixed(1)}, {(selected.position.y / 1000).toFixed(1)}, {(selected.position.z / 1000).toFixed(1)} m</dd>
             <dt>Destination</dt><dd>{selected.destinationPlaceId ?? 'None'}</dd>
           </dl>}
+          {tab === 'life' && <div className="v06-research-list">
+            {!lifePerson ? <p className="v06-empty">Life-state model is disabled for this experiment.</p> : <>
+              <p className="v06-scope">GROUND TRUTH · SYNTHETIC LIFE STATE</p>
+              <dl><dt>Biological status</dt><dd>{lifePerson.lifeStatus}</dd>
+                <dt>Functional status</dt><dd>{lifePerson.functionalStatus ?? 'not applicable'}</dd>
+                <dt>Active injuries</dt><dd>{lifePerson.activeInjuryIds.length}</dd>
+                <dt>Death tick</dt><dd>{lifePerson.lifeStatus === 'deceased' ? `T${lifePerson.deathTick}` : '—'}</dd></dl>
+              <p className="v06-scope">INJURY AND RECOVERY RECORD</p>
+              {injuries.length === 0 && <p className="v06-empty">No recorded injury.</p>}
+              {injuries.map((injury) => <button className="v06-timeline-row" key={injury.id}
+                onClick={() => { setSelectedLifeEventId(injury.id); setPlaying(false)
+                  session.inspectTick(injury.onsetTick)
+                  cameraController.inspectAt([injury.position.x / 1000,
+                    injury.position.y / 1000, injury.position.z / 1000]) }}>
+                <span>T{injury.onsetTick} · {injury.severity} injury · {injury.status}</span>
+                <small>{injury.surfaceId} / {injury.levelId} · INSPECT ↗</small>
+              </button>)}
+              {recoveries.map((item) => <p key={item.id}>T{item.tick} · {item.kind}: {item.before} → {item.after}</p>)}
+              {death && <button className="v06-timeline-row" onClick={() => {
+                setSelectedLifeEventId(death.id); setPlaying(false)
+                session.inspectTick(death.tick)
+                cameraController.inspectAt([death.position.x / 1000,
+                  death.position.y / 1000, death.position.z / 1000]) }}>
+                <span>T{death.tick} · Death · immediate physical assault outcome</span>
+                <small>{death.surfaceId} / {death.levelId} · INSPECT ↗</small>
+              </button>}
+              {selectedLifeEventId && <div className="v06-research-card">
+                {injuries.find((item) => item.id === selectedLifeEventId) && (() => {
+                  const injury = injuries.find((item) => item.id === selectedLifeEventId)!
+                  return <><strong>{injury.id}</strong><small>Victim {injury.victimAgentId} · T{injury.onsetTick}</small>
+                    <small>Source {injury.sourceOffenceId} · {injury.severity}</small>
+                    <small>{injury.surfaceId} / {injury.levelId} · {injury.position.x}, {injury.position.y}, {injury.position.z} mm</small>
+                    <small>Recovery T{injury.recoveryTick ?? 'none'} · step down T{injury.stepDownTick ?? 'none'}</small></>
+                })()}
+                {death?.id === selectedLifeEventId && <><strong>{death.id}</strong>
+                  <small>Victim {death.victimAgentId} · T{death.tick}</small>
+                  <small>Injury {death.relatedInjuryId} · Offence {death.relatedOffenceId}</small>
+                  <small>{death.surfaceId} / {death.levelId} · {death.position.x}, {death.position.y}, {death.position.z} mm</small></>}
+              </div>}
+            </>}
+          </div>}
           {tab === 'routine' && <div className="v06-research-list">
             {!habitProfile || !habit ? <p className="v06-empty">Daily habits are disabled for this experiment.</p> : <>
               <p className="v06-scope">STABLE SYNTHETIC ROUTINE · DAY {calendar?.day}</p>
@@ -374,6 +447,8 @@ function V5Panel({ session, selectedId, onSelect, selectedEncounterId, onSelectE
               key={item.id} onClick={() => {
                 setPlaying(false); session.inspectTick(item.tick)
                 if (item.episodeId) onSelectEncounter(item.episodeId)
+                if (item.position) cameraController.inspectAt([item.position.x / 1000,
+                  item.position.y / 1000, item.position.z / 1000])
               }}>
               <span>T{item.tick} · {item.label}</span><small>{item.scope} · INSPECT ↗</small>
             </button>)}
@@ -415,9 +490,11 @@ function V5Panel({ session, selectedId, onSelect, selectedEncounterId, onSelectE
           <option value="observed">OBSERVED</option><option value="truth">TRUTH</option>
           <option value="compare">COMPARE</option>
         </select></div>
-      <span>{mode === 'truth' ? `${snapshot.state.offences.length} TRUE EVENTS` :
-        mode === 'compare' ? `${snapshot.state.offences.length} TRUE EVENTS · ${session.getObserverView().reports.length} REPORTS` :
-          `${session.getObserverView().reports.length} REPORTS`}</span>
+      <span>{mode === 'truth' ?
+        `${snapshot.state.offences.length} OFFENCES · ${snapshot.state.life?.deaths.length ?? 0} DEATHS` :
+        mode === 'compare' ?
+          `${snapshot.state.offences.length} OFFENCES · ${snapshot.state.life?.deaths.length ?? 0} DEATHS · ${session.getObserverView().reports.length} OFFENCE REPORTS · ${session.getObserverView().lifeReports?.length ?? 0} SCENE REPORTS` :
+          `${session.getObserverView().reports.length} OFFENCE REPORTS · ${session.getObserverView().lifeReports?.length ?? 0} SCENE REPORTS`}</span>
     </div>
   </>
 }
@@ -443,6 +520,21 @@ export function MultiLevelApp() {
   const populationParam = Number(params.get('population') ?? DEFAULT_SIMULATION_CONFIG_V5.populationSize)
   const habitsEnabled = params.get('habits') !== 'off'
   const encounterEnabled = params.get('encounter') !== 'off'
+  const lifeEnabled = params.get('life') !== 'off'
+  const lifeDiagnostic = import.meta.env.DEV &&
+    (params.get('lifeScenario') === 'high-harm-diagnostic' ||
+      params.get('lifeScenario') === 'fatal-diagnostic')
+  const fatalDiagnostic = import.meta.env.DEV &&
+    params.get('lifeScenario') === 'fatal-diagnostic'
+  const lifeConfig = lifeDiagnostic ? { ...DEFAULT_LIFE_SCENARIO_V1,
+    seed: fatalDiagnostic ? 'shadow-city-life-fatal-diagnostic-01' :
+      'shadow-city-life-diagnostic-01',
+    assaultProbability: { minor: 1, serious: 1 },
+    injuryProbability: { minor: 1, serious: 1 },
+    severityWeights: { minor: { minor: fatalDiagnostic ? 0 : 1,
+      serious: 0, critical: fatalDiagnostic ? 1 : 0 },
+      serious: { minor: 0, serious: 0, critical: 1 } },
+    fatalProbabilityCritical: fatalDiagnostic ? 1 : 0.5 } : DEFAULT_LIFE_SCENARIO_V1
   const simulationSeed = params.get('simSeed') || DEFAULT_SIMULATION_CONFIG_V5.simulationSeed
   const habitSeed = params.get('habitSeed') || DEFAULT_HABIT_SCENARIO_V1.seed
   const offendingSeed = params.get('offendingSeed') || DEFAULT_SIMULATION_CONFIG_V5.offendingSeed
@@ -460,14 +552,25 @@ export function MultiLevelApp() {
       populationSize, simulationSeed, offendingSeed, observationSeed,
       ...(habitsEnabled ? { habit: { ...DEFAULT_HABIT_SCENARIO_V1,
         seed: habitSeed, habitWeight } } : {}),
+      ...(lifeEnabled ? { life: lifeConfig } : {}),
       ...(encounterEnabled ? { encounter: { ...DEFAULT_ENCOUNTER_SCENARIO_V1,
         social: { ...DEFAULT_ENCOUNTER_SCENARIO_V1.social,
           greetingWillingness: 0.7, conversationWillingness: 0.85,
           diagnosticTraces: true } } } : {}) })
     for (let tick = 0; tick < 100; tick += 1) next.advanceOneTick()
     return next
-  }, [encounterEnabled, habitSeed, habitWeight, habitsEnabled, observationSeed,
+  }, [encounterEnabled, habitSeed, habitWeight, habitsEnabled, lifeEnabled, lifeDiagnostic,
+    fatalDiagnostic, observationSeed,
     offendingSeed, populationSize, simulationSeed, world])
+  const lifeTimings = useMemo<LifeTimingSampleV1[]>(() => [], [session])
+  useEffect(() => {
+    if (!import.meta.env.DEV) return
+    setLifeTimingObserverV1((sample) => {
+      lifeTimings.push(sample)
+      if (lifeTimings.length > 500) lifeTimings.shift()
+    })
+    return () => setLifeTimingObserverV1(null)
+  }, [lifeTimings])
   const cameraController = useMemo(createCameraController, [])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [selectedEncounterId, setSelectedEncounterId] = useState<string | null>(null)
@@ -505,6 +608,7 @@ export function MultiLevelApp() {
         session.scheduleAccessCommand(command),
       resetSimulation: () => session.reset(),
       getSnapshot: () => session.getSnapshot(),
+      getLifeTimings: () => [...lifeTimings],
       getWorld: () => world, getObserverView: () => session.getObserverView(),
       getCameraView: () => cameraController.getSnapshot(),
       focusAtWorld: (x: number, y: number, z: number) => cameraController.focusAt([x, y, z]),
@@ -520,7 +624,7 @@ export function MultiLevelApp() {
     }
     window.__shadowCityV06 = fixture
     return () => { if (window.__shadowCityV06 === fixture) delete window.__shadowCityV06 }
-  }, [cameraController, session, world])
+  }, [cameraController, lifeTimings, session, world])
   const selectAgent = (id: string | null) => {
     setSelectedId(id)
     setSelectedEncounterId(null)
@@ -606,6 +710,7 @@ declare global {
   interface Window {
     __shadowCityV06?: { advanceToTick(target: number): number[];
       inspectTick(tick: number): unknown; getSnapshot(): unknown;
+      getLifeTimings(): unknown;
       scheduleAccessCommand(command: Parameters<SimulationSessionV5['scheduleAccessCommand']>[0]): void;
       resetSimulation(): void;
       getWorld(): unknown; getObserverView(): unknown; getCameraView(): unknown;

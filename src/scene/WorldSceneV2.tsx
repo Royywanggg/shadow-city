@@ -6,7 +6,7 @@ import type { WorldBox, WorldModelV2, WorldPointMm } from '../world/model'
 import { metres } from '../world/model'
 import { createNavigationIndexV2, orientedEdgePath } from '../world/navigation/routeV2'
 import type { CitizenStateV5, SimulationStateV5 } from '../simulation/v5Types'
-import { reportIdForOffence } from '../simulation/offending/opportunityV5'
+import { observerViewV5, reportIdForOffence } from '../simulation/offending/opportunityV5'
 import { CityStaticScene, type LightingDiagnostic, type LookDevMode,
   type RenderingQuality } from './CityScene'
 import { RenderDiagnostics } from './RenderDiagnostics'
@@ -217,12 +217,21 @@ export function WorldSelectedRoute({ world, citizen }: { world: WorldModelV2; ci
 
 export function WorldOffenceLayer({ state, mode, observationSeed }: { state: SimulationStateV5;
   mode: 'truth' | 'observed' | 'compare'; observationSeed: string }) {
-  if (mode === 'observed') return <>{state.reports.map((report) => <mesh key={report.id}
+  const observer = observerViewV5(state)
+  const lifeReports = observer.lifeReports ?? []
+  const reportedLifeMarkers = lifeReports.map((report) => <mesh key={report.id}
+    position={[report.reportedPosition.x / 1000,
+      report.reportedPosition.y / 1000 + 0.32,
+      report.reportedPosition.z / 1000]}>
+    <sphereGeometry args={[0.4, 8, 8]} />
+    <meshBasicMaterial color="#9bd2d7" />
+  </mesh>)
+  if (mode === 'observed') return <>{observer.reports.map((report) => <mesh key={report.id}
     position={[report.reportedPosition.x / 1000, report.reportedPosition.y / 1000 + 0.28,
       report.reportedPosition.z / 1000]}>
     <sphereGeometry args={[0.38, 8, 8]} />
     <meshBasicMaterial color="#e0c183" />
-  </mesh>)}</>
+  </mesh>)}{reportedLifeMarkers}</>
   const observed = new Set(state.reports.map((report) => report.id))
   const reportedOffences = new Set((state.social?.reportLinks ?? [])
     .filter((link) => observed.has(link.reportId)).map((link) => link.offenceId))
@@ -233,7 +242,12 @@ export function WorldOffenceLayer({ state, mode, observationSeed }: { state: Sim
     <meshBasicMaterial color={mode === 'compare' &&
       (reportedOffences.has(offence.id) ||
         observed.has(reportIdForOffence(offence, observationSeed))) ? '#f7ce85' : '#eb8393'} />
-  </mesh>)}</>
+  </mesh>)}{state.life?.deaths.map((death) => <mesh key={death.id}
+    position={[death.position.x / 1000, death.position.y / 1000 + 0.18,
+      death.position.z / 1000]} rotation={[-Math.PI / 2, 0, 0]}>
+    <ringGeometry args={[0.55, 0.72, 20]} />
+    <meshBasicMaterial color="#b5d7df" depthTest={false} />
+  </mesh>)}{mode === 'compare' && reportedLifeMarkers}</>
 }
 
 declare global {

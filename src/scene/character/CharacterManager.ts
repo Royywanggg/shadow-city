@@ -18,6 +18,10 @@ export interface CharacterRenderItem {
   readonly previousMovementMode?: 'walk' | 'jog'
   readonly transitionProgress?: number
   readonly animationRate?: number
+  readonly lifeStatus?: 'alive' | 'deceased'
+  readonly functionalStatus?: 'unimpaired' | 'impaired' | 'incapacitated' | null
+  /** Tick-based pose progress, never browser wall-clock time. */
+  readonly collapseProgress?: number
   readonly pose: AgentRenderPose
   readonly pixelHeight: number
 }
@@ -228,6 +232,25 @@ function colorize(instance: CharacterInstance, appearance: CitizenAppearance): v
 
 function animate(instance: CharacterInstance, item: CharacterRenderItem, logicalTime: number, preview: CharacterPreviewClip | null): void {
   if (!instance.mixer) return
+  if (item.lifeStatus === 'deceased' || item.functionalStatus === 'incapacitated') {
+    if (instance.previewActionName) {
+      instance.mixer.clipAction(instance.clips.get(instance.previewActionName)!).stop()
+      instance.previewActionName = null
+    }
+    const collapseClip = instance.clips.get('SitDown')
+    for (const name of ['Idle', 'Walk', 'Run'] as const) {
+      const clip = instance.clips.get(name)
+      if (clip) instance.mixer.clipAction(clip)
+        .setEffectiveWeight(Number(name === 'Idle' && !collapseClip))
+    }
+    if (collapseClip) instance.mixer.clipAction(collapseClip).play().setEffectiveWeight(1)
+    instance.mixer.setTime(collapseClip ? Math.min(collapseClip.duration - 0.01,
+      collapseClip.duration * (item.collapseProgress ?? 1)) : 0.3)
+    return
+  }
+  if (instance.clips.has('SitDown') && preview !== 'SitDown') {
+    instance.mixer.clipAction(instance.clips.get('SitDown')!).stop()
+  }
   const weights = animationWeights(item.activity, item.previousActivity, item.transitionProgress,
     preview === 'Idle' || preview === 'Walk' || preview === 'Run' ? preview : null,
     item.movementMode, item.previousMovementMode)
@@ -322,7 +345,9 @@ export class CharacterManager {
       }
       instance.root.visible = true
       instance.root.position.set(item.pose.x, item.pose.y, item.pose.z)
-      instance.root.rotation.y = item.pose.yaw
+      instance.root.rotation.set(0, item.pose.yaw,
+        -1.45 * (item.collapseProgress ?? 0))
+      if (item.collapseProgress) instance.root.position.y += 0.06 * item.collapseProgress
       instance.root.userData.agentId = item.id
       for (const mesh of instance.meshes) mesh.userData.agentId = item.id
       colorize(instance, item.appearance)

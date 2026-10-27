@@ -111,11 +111,16 @@ export function WorldAgentLayerV5({ session, selectedId, onSelect, playing, getP
     const alpha = prior && playing ? getPlaybackAlpha() : 1
     const previousById = new Map(prior?.citizens.map((citizen) => [citizen.id, citizen]) ?? [])
     const items: CharacterRenderItem[] = []
+    const lifeById = new Map(current.life?.people.map((person) => [person.agentId, person]) ?? [])
+    const activeInjuryById = new Map(current.life?.injuries.filter((injury) =>
+      injury.status === 'active').map((injury) => [injury.victimAgentId, injury]) ?? [])
     const screenCandidates: { id: string; x: number; y: number }[] = []
     const canvasBounds = gl.domElement.getBoundingClientRect()
     for (const citizen of current.citizens) {
       const previous = previousById.get(citizen.id)
-      const visible = citizen.activity !== 'atHome' || citizen.id === selectedId
+      const life = lifeById.get(citizen.id)
+      const visible = citizen.activity !== 'atHome' || citizen.id === selectedId ||
+        life?.lifeStatus === 'deceased'
       if (!visible) continue
       const surface = surfaces.get(citizen.surfaceId)
       if (level !== 'all' && surface?.levelId !== level && surface?.levelId !== 'L0-L1' &&
@@ -127,10 +132,19 @@ export function WorldAgentLayerV5({ session, selectedId, onSelect, playing, getP
       const bottom = vector.set(x, y, z).project(camera).y
       const top = vector.set(x, y + 1.8, z).project(camera).y
       const pixelHeight = Math.abs(top - bottom) * size.height / 2
+      const onsetTick = life?.lifeStatus === 'deceased' ? life.deathTick :
+        life?.functionalStatus === 'incapacitated' ?
+          activeInjuryById.get(citizen.id)?.onsetTick : undefined
+      const collapseProgress = onsetTick === undefined ? 0 :
+        Math.max(0, Math.min(1, current.tick - onsetTick + alpha))
       items.push({ id: citizen.id, appearance, activity: citizen.activity,
+        lifeStatus: life?.lifeStatus, functionalStatus: life?.functionalStatus,
+        collapseProgress,
         movementMode: citizen.movementMode, previousActivity: previous?.activity,
         previousMovementMode: previous?.movementMode, transitionProgress: alpha,
-        animationRate: profiles.get(citizen.id)!.travellerCosts.speedMmPerSecond / 1300,
+        animationRate: profiles.get(citizen.id)!.travellerCosts.speedMmPerSecond / 1300 *
+          (life?.lifeStatus === 'alive' && life.functionalStatus === 'impaired' ?
+            session.getConfig().life!.impairedSpeedFactor : 1),
         pose: { x, y, z, yaw: previous ? interpolateHeading(previous.headingRadians,
           citizen.headingRadians, alpha) : citizen.headingRadians, visible: true }, pixelHeight })
       const screen = vector.set(x, y + 0.9, z).project(camera)
@@ -148,7 +162,7 @@ export function WorldAgentLayerV5({ session, selectedId, onSelect, playing, getP
       if (glow) {
         object.position.set(item.pose.x, item.pose.y + 0.045, item.pose.z)
         object.rotation.set(-Math.PI / 2, 0, 0)
-        object.scale.setScalar(1)
+        object.scale.setScalar(item.lifeStatus === 'deceased' ? 0.55 : 1)
         object.updateMatrix()
         glow.setMatrixAt(glowCount, object.matrix)
         glowCount += 1
@@ -158,8 +172,9 @@ export function WorldAgentLayerV5({ session, selectedId, onSelect, playing, getP
       const mesh = meshRefs.current.get(preset)
       if (!mesh) continue
       const slot = countByPreset.get(preset) ?? 0
-      object.position.set(item.pose.x, item.pose.y + 0.9, item.pose.z)
+      object.position.set(item.pose.x, item.pose.y + (item.collapseProgress ? 0.3 : 0.9), item.pose.z)
       object.quaternion.copy(camera.quaternion)
+      if (item.collapseProgress) object.rotateZ(-1.4 * item.collapseProgress)
       object.scale.setScalar(1)
       object.updateMatrix()
       mesh.setMatrixAt(slot, object.matrix)
@@ -199,6 +214,8 @@ export function WorldAgentLayerV5({ session, selectedId, onSelect, playing, getP
   })
 
   const selected = snapshot.state.citizens.find((item) => item.id === selectedId)
+  const selectedDeceased = snapshot.state.life?.people.some((person) =>
+    person.agentId === selectedId && person.lifeStatus === 'deceased') ?? false
   const pointerDown = (event: { clientX: number; clientY: number }) => {
     pointerStart.current = { x: event.clientX, y: event.clientY }
   }
@@ -223,7 +240,12 @@ export function WorldAgentLayerV5({ session, selectedId, onSelect, playing, getP
     {selected && <mesh position={[selected.position.x / 1000, selected.position.y / 1000 + 0.05,
       selected.position.z / 1000]} rotation={[-Math.PI / 2, 0, 0]}>
       <ringGeometry args={[0.95, 1.14, 24]} />
-      <meshBasicMaterial color="#f2d08a" side={DoubleSide} />
+      <meshBasicMaterial color="#f2d08a" side={DoubleSide} depthTest={false} />
+    </mesh>}
+    {selected && selectedDeceased && <mesh position={[selected.position.x / 1000,
+      selected.position.y / 1000 + 1.55, selected.position.z / 1000]}>
+      <sphereGeometry args={[0.18, 12, 8]} />
+      <meshBasicMaterial color="#a8d7db" depthTest={false} />
     </mesh>}
   </>
 }

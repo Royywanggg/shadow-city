@@ -13,10 +13,14 @@ interface PortraitPlayback {
 }
 
 function Portrait({ manager, agentId, appearance, activity, movementMode, tick, playing,
-  getPlaybackAlpha, animationRate, preview, previewTime }:
+  getPlaybackAlpha, animationRate, preview, previewTime, lifeStatus,
+  functionalStatus, onsetTick }:
   { manager: CharacterManager; agentId: string; appearance: CitizenAppearance;
     activity: string; movementMode: 'walk' | 'jog'; tick: number; playing: boolean;
     getPlaybackAlpha: () => number; animationRate: number;
+    lifeStatus?: 'alive' | 'deceased';
+    functionalStatus?: 'unimpaired' | 'impaired' | 'incapacitated' | null;
+    onsetTick?: number;
     preview: CharacterPreviewClip | null; previewTime: number | null }) {
   const { camera, invalidate } = useThree()
   const playback = useRef<PortraitPlayback>({ agentId, tick, priorTick: null })
@@ -26,10 +30,10 @@ function Portrait({ manager, agentId, appearance, activity, movementMode, tick, 
   useEffect(() => () => { if (import.meta.env.DEV) delete window.__shadowCityV5Portrait }, [])
   useEffect(() => {
     camera.position.set(1.45, 1.55, 3.05)
-    camera.lookAt(0, 0.9, 0)
+    camera.lookAt(0, lifeStatus === 'deceased' || functionalStatus === 'incapacitated' ? 0.45 : 0.9, 0)
     camera.updateProjectionMatrix()
     invalidate()
-  }, [camera, invalidate])
+  }, [camera, invalidate, lifeStatus, functionalStatus])
   useLayoutEffect(() => {
     const prior = playback.current
     const continuous = playing && prior.agentId === agentId && tick === prior.tick + 1
@@ -50,6 +54,9 @@ function Portrait({ manager, agentId, appearance, activity, movementMode, tick, 
       tick: motion.tick, time, alpha, frameCount: ++frameCount.current, activity,
     }
     manager.update([{ id: 'portrait', appearance, activity, movementMode,
+      lifeStatus, functionalStatus,
+      collapseProgress: onsetTick === undefined ? 0 : Math.max(0, Math.min(1,
+        tick - onsetTick + alpha)),
       previousActivity: motion.priorActivity, previousMovementMode: motion.priorMovementMode,
       transitionProgress: alpha, animationRate,
       pose: { x: 0, y: 0, z: 0, yaw: 0, visible: true }, pixelHeight: 150 }],
@@ -63,10 +70,13 @@ function Portrait({ manager, agentId, appearance, activity, movementMode, tick, 
 }
 
 export function CharacterPortraitV5({ agentId, appearance, activity, movementMode, tick,
-  playing, getPlaybackAlpha, animationRate }:
+  playing, getPlaybackAlpha, animationRate, lifeStatus, functionalStatus, onsetTick }:
   { agentId: string; appearance: CitizenAppearance; activity: string;
     movementMode: 'walk' | 'jog'; tick: number; playing: boolean;
-    getPlaybackAlpha: () => number; animationRate: number }) {
+    getPlaybackAlpha: () => number; animationRate: number;
+    lifeStatus?: 'alive' | 'deceased';
+    functionalStatus?: 'unimpaired' | 'impaired' | 'incapacitated' | null;
+    onsetTick?: number }) {
   const [manager, setManager] = useState<CharacterManager | null>(null)
   const [preview, setPreview] = useState<CharacterPreviewClip | null>(null)
   const [previewTime, setPreviewTime] = useState<number | null>(null)
@@ -94,6 +104,7 @@ export function CharacterPortraitV5({ agentId, appearance, activity, movementMod
       <Portrait manager={manager} agentId={agentId} appearance={appearance} activity={activity}
         movementMode={movementMode} tick={tick} playing={playing}
         getPlaybackAlpha={getPlaybackAlpha} animationRate={animationRate}
+        lifeStatus={lifeStatus} functionalStatus={functionalStatus} onsetTick={onsetTick}
         preview={preview} previewTime={previewTime} />
     </Canvas>}
   </div>
