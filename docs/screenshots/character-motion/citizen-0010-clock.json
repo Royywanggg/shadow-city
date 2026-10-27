@@ -1,0 +1,12 @@
+{
+  "agentId": "citizen-0010",
+  "sampleCount": 258,
+  "startTick": 100,
+  "endTick": 117,
+  "negativeJumps": [],
+  "largestAdvance": 0.07950000000298019,
+  "speedSampleCount": 155,
+  "speedNegativeJumps": [],
+  "presetReviewCount": 10,
+  "errors": []
+}
