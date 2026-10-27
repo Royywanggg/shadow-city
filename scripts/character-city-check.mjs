@@ -2,14 +2,14 @@ import { chromium } from 'playwright'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 
-const directory = resolve('docs/screenshots/animation-poc')
+const directory = resolve('docs/screenshots/character-city')
 await mkdir(directory, { recursive: true })
 const browser = await chromium.launch({ headless: true,
   executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
   args: ['--enable-webgl'] })
 const result = {}
 try {
-  for (const proof of [true, false]) {
+  for (const mode of ['upgraded', 'legacy']) {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 })
     await page.addInitScript(() => {
       window.__shadowDrawCounters = { calls: 0, triangles: 0 }
@@ -32,12 +32,13 @@ try {
     const url = new URL(process.env.SHADOW_CITY_URL ?? 'http://127.0.0.1:5177/')
     url.searchParams.set('test', '1')
     url.searchParams.set('population', '200')
-    if (proof) url.searchParams.set('animationProof', '1')
+    if (mode === 'legacy') url.searchParams.set('characterAssets', 'legacy')
     await page.goto(url.toString(), { waitUntil: 'networkidle' })
-    await page.waitForFunction(() => window.__shadowCityV06Agents?.tick === 100,
+    await page.waitForFunction(() => window.__shadowCityV06Agents?.tick === 100 &&
+      window.__shadowCityV06Agents?.assetPresetCount === 10,
       undefined, { timeout: 45000 })
-    const ids = proof ? await page.evaluate(() => window.__shadowCityV06Agents.animationProofIds) :
-      result.after.proofIds
+    const ids = await page.evaluate(() => window.__shadowCityV06Agents.reviewAgentIds)
+    if (ids.length !== 10) throw new Error(`Expected ten review residents; got ${ids.length}`)
     let selectedTick = 100
     let selectedId = null
     for (const tick of [100, 150, 200, 250, 300, 350, 400, 450, 500]) {
@@ -62,10 +63,10 @@ try {
     await page.mouse.move(900, 500)
     await page.mouse.wheel(0, -1700)
     await page.waitForTimeout(600)
-    const label = proof ? 'after' : 'before'
+    const label = mode === 'upgraded' ? 'after' : 'before'
     const portrait = page.locator('.v06-portrait')
     await portrait.screenshot({ path: resolve(directory, `${label}-sidebar-portrait-1440x900.png`) })
-    if (proof) await page.screenshot({ path: resolve(directory, 'after-sidebar-1440x900.png') })
+    if (mode === 'upgraded') await page.screenshot({ path: resolve(directory, 'after-sidebar-1440x900.png') })
     await portrait.evaluate((element) => {
       element.style.position = 'fixed'
       element.style.left = '740px'
@@ -77,7 +78,7 @@ try {
     for (const id of ids) {
       await page.locator(`[data-agent-id="${id}"]`).click()
       await page.waitForTimeout(300)
-      if (proof) await page.evaluate(() => {
+      if (mode === 'upgraded') await page.evaluate(() => {
         window.__shadowCityV5CharacterPreview?.setClip('Walk')
         window.__shadowCityV5CharacterPreview?.setTime(.25)
       })
@@ -85,7 +86,7 @@ try {
       await portrait.screenshot({ path: resolve(directory, `${label}-${id}-portrait-walk.png`) })
     }
     await page.locator(`[data-agent-id="${selectedId}"]`).click()
-    if (proof) for (const [clip, time] of [['Idle', .2], ['Walk', .2], ['Walk', .55],
+    if (mode === 'upgraded') for (const [clip, time] of [['Idle', .2], ['Walk', .2], ['Walk', .55],
       ['Run', .2], ['SitDown', .5], ['SitIdle', .3], ['StandUp', .4]]) {
       await page.evaluate(([name, value]) => {
         window.__shadowCityV5CharacterPreview?.setClip(name)
@@ -94,7 +95,7 @@ try {
       await page.waitForTimeout(150)
       await portrait.screenshot({ path: resolve(directory, `after-${selectedId}-${clip}-${time}.png`) })
     }
-    if (proof) await page.evaluate(() => {
+    if (mode === 'upgraded') await page.evaluate(() => {
       window.__shadowCityV5CharacterPreview?.setClip(null)
       window.__shadowCityV5CharacterPreview?.setTime(null)
     })
@@ -112,7 +113,8 @@ try {
       return context?.getParameter(extension?.UNMASKED_RENDERER_WEBGL ?? context.RENDERER) ?? null
     })
     const assetLoads = await page.evaluate(() => performance.getEntriesByType('resource')
-      .filter((entry) => entry.name.includes('/quaternius-ual-poc/'))
+      .filter((entry) => entry.name.includes('/quaternius-ual-v1/') ||
+        entry.name.includes('/quaternius-v01/') && entry.name.endsWith('.glb'))
       .map((entry) => ({ name: entry.name.split('/').at(-1), durationMs: entry.duration,
         transferBytes: entry.transferSize })))
     await page.getByRole('button', { name: 'PLAY', exact: true }).click()
@@ -180,8 +182,9 @@ try {
       `${label}-world-ground-tick450-overhead-1440x900.png`) })
     const gaps = metrics.slice(1).map((sample, index) => sample.time - metrics[index].time)
     const percentile = (values, p) => [...values].sort((a, b) => a - b)[Math.ceil(values.length * p) - 1]
-    result[label] = { proofIds: ids, selectedId, selectedTick, renderer, assetLoads,
-      proofAssetLoadMs: await page.evaluate(() => window.__shadowCityV06Agents?.proofAssetLoadMs),
+    result[label] = { reviewIds: ids, selectedId, selectedTick, renderer, assetLoads,
+      characterAssetMode: await page.evaluate(() => window.__shadowCityV06Agents?.characterAssetMode),
+      characterAssetLoadMs: await page.evaluate(() => window.__shadowCityV06Agents?.characterAssetLoadMs),
       frameCount: metrics.length, averageFps: 1000 * (metrics.length - 1) /
         (metrics.at(-1).time - metrics[0].time), frameP95Ms: percentile(gaps, .95),
       animationUpdateP95Ms: percentile(metrics.map((sample) => sample.animationMs), .95),
@@ -198,11 +201,12 @@ try {
       replayCitizenMatches: selectedAtStart === replayCitizen,
       cameraPreservedFingerprint: fingerprintBeforeCamera === fingerprintAfterCamera,
       speedStartTick, speedEndTick, errors }
-    if (proof) {
+    if (mode === 'upgraded') {
       const narrow = await browser.newPage({ viewport: { width: 390, height: 844 },
         deviceScaleFactor: 1 })
       await narrow.goto(url.toString(), { waitUntil: 'networkidle' })
-      await narrow.waitForFunction(() => window.__shadowCityV06Agents?.tick === 100)
+      await narrow.waitForFunction(() => window.__shadowCityV06Agents?.tick === 100 &&
+        window.__shadowCityV06Agents?.assetPresetCount === 10)
       await narrow.locator('[data-agent-id="citizen-0010"]').click()
       await narrow.waitForTimeout(300)
       await narrow.locator('.v06-portrait').screenshot({ path: resolve(directory,
@@ -217,10 +221,11 @@ try {
 }
 await writeFile(resolve(directory, 'metrics.json'), JSON.stringify(result, null, 2))
 console.log(JSON.stringify(result, null, 2))
-for (const variant of [result.before, result.after]) {
+for (const [mode, variant] of [['legacy', result.before], ['upgraded', result.after]]) {
   if (variant.errors.length || !variant.portraitMovesWithinTick || !variant.pausedPortraitStable ||
     !variant.replayCitizenMatches || !variant.cameraPreservedFingerprint ||
-    variant.speedEndTick <= variant.speedStartTick) {
+    variant.speedEndTick <= variant.speedStartTick || variant.characterAssetMode !== mode ||
+    variant.assetLoads.length !== 10) {
     throw new Error('Character portrait browser verification failed; inspect metrics.json')
   }
 }
