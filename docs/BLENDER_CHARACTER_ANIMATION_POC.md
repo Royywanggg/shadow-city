@@ -36,17 +36,11 @@ In development builds, `window.__shadowCityV5CharacterPreview` on a selected pro
 
 Key comparisons: [original suit walk](screenshots/animation-poc/before-citizen-0010-portrait-walk.png), [retargeted suit walk](screenshots/animation-poc/after-citizen-0010-portrait-walk.png), [walk phase](screenshots/animation-poc/after-citizen-0010-Walk-0.55.png), [sitting pose preview](screenshots/animation-poc/after-citizen-0010-SitIdle-0.3.png), and [in-world overhead](screenshots/animation-poc/after-world-ground-tick450-overhead-1440x900.png). The [original in-world overhead](screenshots/animation-poc/before-world-ground-tick450-overhead-1440x900.png) uses the same location and camera. All four sampled presets have individual before/after portrait captures.
 
-| Chrome 1440×900, 200 residents | Original | Four-person proof |
-| --- | ---: | ---: |
-| Average FPS during 3 s sample | 54.3 | 54.5 |
-| p95 CPU frame interval | 52.4 ms | 47.6 ms |
-| p95 character manager update | 0.6 ms | 1.4 ms |
-| Average submitted WebGL draw calls/frame | 175.1 | 175.0 |
-| Average submitted triangles/frame | 229,115 | 229,062 |
-| Close rigs / active instances | 10 / 34 | 10 / 34 |
-| Texture object count, p95 | 61 | 73 |
+The left Population Inspector portrait was then enlarged from 138 px to a responsive 184–220 px height and reframed around the full character. [Desktop sidebar](screenshots/animation-poc/after-sidebar-1440x900.png) and [narrow sidebar](screenshots/animation-poc/after-sidebar-390x844.png) screenshots show the head and feet inside the actual panel. The portrait now samples displayed Tick interpolation every rendered frame while playback is active; browser instrumentation confirmed its clip time advances within a Tick and stays fixed while paused. Its position still comes from the selected resident's simulation state, and the portrait itself stays at a local display origin.
 
-The four supplemental GLBs took 385.1 ms total to load, parse, and prepare on this local run; each localhost transfer was 12.0–15.4 ms. See [metrics.json](screenshots/animation-poc/metrics.json) for raw results. This is a single-machine proof with run-to-run variation, not a stable cross-device performance claim. Both variants had no page errors. Pause held Tick 114, replay restored the selected resident's exact state at Tick 100, camera bearing/pitch preserved the simulation fingerprint, and 2× playback advanced about five Ticks during the measured interval.
+In the final 3-second Chrome run, the proof variant averaged 52.7 FPS with a 53.7 ms p95 CPU frame interval; the original variant averaged 29.2 FPS with an 80.5 ms p95 interval. Earlier runs varied substantially, so this is **not evidence of a performance gain**. Both variants submitted about 187 WebGL draw calls and 236,000 triangles per frame, with 10 close rigs and 34 active character instances. The proof character-manager update cost had a 1.0 ms p95. Four supplemental GLBs took 1,155.8 ms total to fetch, parse, and prepare in this run. The continuously animated portrait adds a second actively rendered canvas while playing. See [metrics.json](screenshots/animation-poc/metrics.json) for the raw figures; GPU frame time and texture bytes were unavailable.
+
+Both variants had no browser errors. The portrait clock advanced within a Tick and froze after Pause. Replay restored the selected resident's exact state at Tick 100, camera bearing/pitch preserved the simulation fingerprint, and 2× playback advanced several Ticks during the measured interval.
 
 The test checks Pause, Resume, 2× speed, replay of the selected citizen, and camera bearing/pitch without changing the simulation fingerprint. The browser records `requestAnimationFrame` gaps and WebGL draw calls/triangles by wrapping draw APIs before app load. These are CPU-observed frame intervals and submitted geometry counts, **not** GPU frame time or GPU memory. `gl.info.memory.textures` is a texture object count, not texture bytes. Four additional GLBs add about 4.2 MB of transfer; the proof is opt-in and does not scale full skeletons to all residents.
 

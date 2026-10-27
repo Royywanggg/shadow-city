@@ -28,6 +28,7 @@ try {
     })
     const errors = []
     page.on('pageerror', (error) => errors.push(error.message))
+    page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()) })
     const url = new URL(process.env.SHADOW_CITY_URL ?? 'http://127.0.0.1:5177/')
     url.searchParams.set('test', '1')
     url.searchParams.set('population', '200')
@@ -63,6 +64,8 @@ try {
     await page.waitForTimeout(600)
     const label = proof ? 'after' : 'before'
     const portrait = page.locator('.v06-portrait')
+    await portrait.screenshot({ path: resolve(directory, `${label}-sidebar-portrait-1440x900.png`) })
+    if (proof) await page.screenshot({ path: resolve(directory, 'after-sidebar-1440x900.png') })
     await portrait.evaluate((element) => {
       element.style.position = 'fixed'
       element.style.left = '740px'
@@ -120,17 +123,27 @@ try {
         await new Promise((resolve) => requestAnimationFrame(resolve))
         const data = window.__shadowCityV06Agents
         const draw = window.__shadowDrawCounters
+        const portraitState = window.__shadowCityV5Portrait
         samples.push({ time: performance.now(), animationMs: data?.animationUpdateMs,
           drawCalls: draw?.calls, triangles: draw?.triangles, textures: data?.textures,
-          closeCount: data?.closeCount, activeInstances: data?.activeInstances })
+          closeCount: data?.closeCount, activeInstances: data?.activeInstances,
+          portraitTick: portraitState?.tick, portraitTime: portraitState?.time,
+          portraitFrames: portraitState?.frameCount })
       }
       return samples
     })
+    const portraitMovesWithinTick = metrics.some((sample, index) => index > 0 &&
+      sample.portraitTick === metrics[index - 1].portraitTick &&
+      sample.portraitTime > metrics[index - 1].portraitTime + .0001)
     await page.waitForTimeout(450)
     await page.getByRole('button', { name: 'PAUSE', exact: true }).click()
     const pausedTick = await page.evaluate(() => window.__shadowCityV06.getSnapshot().tick)
     await page.waitForTimeout(500)
     const stillTick = await page.evaluate(() => window.__shadowCityV06.getSnapshot().tick)
+    const pausedFirstTime = await page.evaluate(() => window.__shadowCityV5Portrait?.time)
+    await page.waitForTimeout(180)
+    const pausedSecondTime = await page.evaluate(() => window.__shadowCityV5Portrait?.time)
+    const pausedPortraitStable = pausedFirstTime === pausedSecondTime
     await page.evaluate((tick) => window.__shadowCityV06.inspectTick(tick), selectedTick)
     await page.waitForFunction((tick) => window.__shadowCityV06Agents?.tick === tick, selectedTick)
     const replayCitizen = await page.evaluate((id) => JSON.stringify(window.__shadowCityV06
@@ -178,10 +191,25 @@ try {
         (metrics.length - 1),
       closeCountP95: percentile(metrics.map((sample) => sample.closeCount), .95),
       activeInstancesP95: percentile(metrics.map((sample) => sample.activeInstances), .95),
+      portraitFramesPerSecond: (metrics.at(-1).portraitFrames - metrics[0].portraitFrames) /
+        ((metrics.at(-1).time - metrics[0].time) / 1000),
       texturesP95: percentile(metrics.map((sample) => sample.textures), .95),
-      pausedTick, stillTick, replayCitizenMatches: selectedAtStart === replayCitizen,
+      pausedTick, stillTick, portraitMovesWithinTick, pausedPortraitStable,
+      replayCitizenMatches: selectedAtStart === replayCitizen,
       cameraPreservedFingerprint: fingerprintBeforeCamera === fingerprintAfterCamera,
       speedStartTick, speedEndTick, errors }
+    if (proof) {
+      const narrow = await browser.newPage({ viewport: { width: 390, height: 844 },
+        deviceScaleFactor: 1 })
+      await narrow.goto(url.toString(), { waitUntil: 'networkidle' })
+      await narrow.waitForFunction(() => window.__shadowCityV06Agents?.tick === 100)
+      await narrow.locator('[data-agent-id="citizen-0010"]').click()
+      await narrow.waitForTimeout(300)
+      await narrow.locator('.v06-portrait').screenshot({ path: resolve(directory,
+        'after-sidebar-portrait-390x844.png') })
+      await narrow.screenshot({ path: resolve(directory, 'after-sidebar-390x844.png') })
+      await narrow.close()
+    }
     await page.close()
   }
 } finally {
@@ -189,3 +217,10 @@ try {
 }
 await writeFile(resolve(directory, 'metrics.json'), JSON.stringify(result, null, 2))
 console.log(JSON.stringify(result, null, 2))
+for (const variant of [result.before, result.after]) {
+  if (variant.errors.length || !variant.portraitMovesWithinTick || !variant.pausedPortraitStable ||
+    !variant.replayCitizenMatches || !variant.cameraPreservedFingerprint ||
+    variant.speedEndTick <= variant.speedStartTick) {
+    throw new Error('Character portrait browser verification failed; inspect metrics.json')
+  }
+}
