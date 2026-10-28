@@ -228,6 +228,14 @@ See `SCENE_ARCHITECTURE.md` and `SCENE_VERIFICATION.md`. The work does not add p
 
 `place-v1` is an opt-in, fingerprinted `SimulationStateV5` extension. The integrated app enables it; old experiments and legacy replay retain their original code path. This release does not introduce a new generator, economic system, service staff, shoplifting, police or citywide indoor rollout.
 
+## v0.6.6 — Typed interaction, crime and causal simulation
+
+**Goal:** Give emergent person-targeted offences explicit opportunities, stochastic attempts, concrete consequences and explainable histories under one new-scenario clock.
+
+**Implemented:** A fingerprinted six-second integrated scenario; seeded portable items and possession transfer; person-targeted theft and physical assault; type-specific cumulative hazard; bounded recent negative episode summaries; victim self-check knowledge; existing witness/report/life/scene integration; God View causal inspection; paired-seed experiment tooling. Legacy generic offences remain on their explicit older path. See `SIMULATION_CLOCK.md`, `CRIME_OPPORTUNITY_AND_HAZARD.md`, `TYPED_CRIME_ACTIONS.md`, `CAUSAL_EVENT_LEDGER.md`, `KNOWLEDGE_AND_REPORTING.md` and `CRIME_SIMULATION_VERIFICATION.md`.
+
+**Open gates:** The 200-resident Tick p95 and Tick-500 replay still exceed 5 ms / 2 s. A durable searchable episode archive and isolated long-run memory measurement remain future work. Synthetic hazard parameters are not externally calibrated; paired outputs are exploratory and cannot justify real-city policing claims.
+
 ## v0.7 — Policing strategy design and implementation
 
 **Goal:** Compare explicit police decision strategies under transparent model assumptions.

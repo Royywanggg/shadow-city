@@ -1,0 +1,9 @@
+# Knowledge and reporting boundaries
+
+Ground truth contains the typed action, actual actor, victim, item, possession and outcomes. A resident does not receive this object. Existing witness perception produces owner-local observations, memories and knowledge only when a legal spatial/perceptual check succeeds. An assault victim can perceive the event under the existing victim-perception probability; an observed face does not automatically become a verified identity. Conversations and hearsay still use their existing completion and provenance rules.
+
+For theft, the victim's own awareness follows a seeded self-check delay. Until that due Tick, the theft creates no victim memory or risk feedback. At the check, an owner-local `missingProperty` awareness record creates a subjective victim observation at the victim's *current* position. It does not include the thief's ID or the hidden offence details. The existing witness-report scheduler may then create a delayed report with an unknown suspect. Other bystanders may independently perceive the original act and report what they actually perceived. The ObserverPort projects only delivered report fields; it does not read the item ledger, opportunity episodes, actor IDs or pending discoveries.
+
+The existing habit feedback consumes subjective memories and perceived place risk. New self-check memories become available to it on the following Tick, never before discovery. No immediate destination change is inferred merely from a hidden theft. Direct assault, harm, recovery, scene discovery and hearsay keep the existing information pathways.
+
+This is a deliberately small awareness model. It has no full item-search behaviour, explicit police interviews, verified suspect identification or calibrated attention model. Reports of missing property use the discovery Tick as the reported occurrence Tick because the victim cannot know the hidden theft time from a self-check alone.

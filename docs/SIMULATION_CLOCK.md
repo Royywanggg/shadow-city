@@ -1,0 +1,13 @@
+# Simulation clock
+
+The integrated typed-crime scenario uses `worldClockAtTick(startHour, tick)` as its canonical time source. Tick zero is the configured starting hour; one Tick advances exactly **6 simulated seconds**. `worldSeconds = startHour × 3600 + tick × 6`, `dayIndex = floor(worldSeconds / 86400)`, and `timeOfDaySeconds = worldSeconds mod 86400`. One complete day takes 14,400 Ticks. Display playback speed changes wall-clock delivery only.
+
+Movement and spatial contact advance in six one-second samples per Tick. Encounter exposure and typed crime hazard integrate those samples. Habit schedules, opening hours, and time bands use the same six-second calendar in the new scenario. Needs are updated every five Ticks, preserving their earlier approximate 30-second update cadence without advancing the clock five times. Habit activity durations are expressed as Ticks derived from desired simulated minutes. Injury recovery, scene report delays, offender cooldowns, and replay commands remain specified as Tick counts; multiply by six to interpret simulated seconds.
+
+Legacy v5 experiments without `typedCrime` retain their explicit `habit-v1` 30-seconds-per-Tick calendar. Their fingerprints differ from the new scenario, and they are not silently reinterpreted. This is a compatibility path, not the unified clock. The new configuration rejects `typedCrime` if its habit calendar is not six seconds or if encounter-aware mode is absent. The existing default browser scenario opts in to the new model.
+
+The synthetic calendar starts at the configured hour, not midnight. Day zero can begin at 08:00, and crossing midnight increments `dayIndex` normally. The previous 500-Tick case represented 250 habit-calendar minutes but only 50 physical minutes. It now represents 50 minutes for both. Crime or visit events need not occur at their former Tick numbers.
+
+`calendarSecondsPerTick` remains in `habit-v1` for historical replay compatibility. A later schema migration can replace this legacy field with a typed time unit; meanwhile the new mode enforces equality with the canonical clock. Tests cover 24 hours, midnight, cumulative exposure and replay.
+
+The integrated scene's day–night renderer reads `worldClockAtTick(config.startHour, viewedState.tick)` and calculates lighting with the pure `getLightingState(worldSeconds)` function. The renderer never writes its preview time, sun direction or shadow mode into `SimulationStateV5`. Pause leaves the viewed Tick unchanged, replay selects the historical Tick, and 1×/2×/4× only change scheduling. Development visual-time preview is an explicit rendering override and returns to the viewed world clock when disabled. See `DAY_NIGHT_VERIFICATION.md` for browser evidence and remaining performance limits.
