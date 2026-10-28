@@ -212,6 +212,22 @@ See `LIFE_STATE_ARCHITECTURE.md` for mechanisms and assumptions and `LIFE_STATE_
 
 See `SCENE_ARCHITECTURE.md` and `SCENE_VERIFICATION.md`. The work does not add police investigations, forensic evidence, emergency response or new crime mechanics.
 
+## v0.6.5 — Functional Central Galleria vertical slice
+
+**Goal:** Make one existing building an active environment for need-driven visits, legal indoor activity, capacity, encounters and emergent opportunities. Keep the original integrated city and existing v5 engine. Stop at Central Galleria; citywide functional interiors require a separate review.
+
+| Phase | Exit criterion | Status |
+| --- | --- | --- |
+| A — Audit | Identify inherited navigation, places, habits, encounters, truth and replay; preserve a clean starting worktree. | Documented in `PLACE_AGENT_ARCHITECTURE.md`. |
+| B — Place model | Versioned static building/floor references and dynamic, replayable opening, occupancy, reservations, active intentions and capacity invariants. | Implemented and unit tested. |
+| C — Mall access | Both floors, ground and bridge portals, interior retail/café slots and legal return routes. | Existing world reused; focused route tests and browser cutaway evidence. Detailed rooms remain schematic. |
+| D — Activity | Compatible need selects a reachable, open place; arrival starts a timed activity; completion, closure and severe harm interrupt correctly. | Implemented with deterministic natural-visit and fixture tests. |
+| E — Contact and opportunity | Indoor contact retains surface/floor/place; proximity does not require conversation or crime; offender decision remains shared across spaces. | Existing encounter/offender engine reused; natural L1 café case and cross-floor regressions. No inventory or shoplifting model. |
+| F — God View | Place Inspector shows real building, place, visitors, activities and event links; researcher truth stays separate from observer reports. | Browser reviewed at 1440 × 900; interior art and some compact-layout work remain open. |
+| G — Verification | Paired open/closed/access scenarios, Tick 500 replay, full regression, Chrome screenshots and measured performance with explicit limitations. | See `PLACE_AGENT_VERIFICATION.md` and `PLACE_AGENT_TRACEABILITY.md`. The reference 5 ms Tick and 2 s replay gates remain open. |
+
+`place-v1` is an opt-in, fingerprinted `SimulationStateV5` extension. The integrated app enables it; old experiments and legacy replay retain their original code path. This release does not introduce a new generator, economic system, service staff, shoplifting, police or citywide indoor rollout.
+
 ## v0.7 — Policing strategy design and implementation
 
 **Goal:** Compare explicit police decision strategies under transparent model assumptions.
