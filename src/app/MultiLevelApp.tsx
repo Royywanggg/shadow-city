@@ -9,6 +9,7 @@ import { WorldAgentLayerV5 } from '../scene/WorldAgentLayerV5'
 import { EncounterLayerV1 } from '../scene/EncounterLayerV1'
 import { EventReconstructionLayer, SceneSelectionMarkers } from '../scene/EventReconstructionLayer'
 import { EventExplorer } from './EventExplorer'
+import { PlaceExplorer } from './PlaceExplorer'
 import { buildEventIndexV1, type ExplorerEventV1 } from '../simulation/events/eventIndex'
 import { DEFAULT_SCENE_SCENARIO_V1 } from '../simulation/scenes/types'
 import { CharacterPortraitV5 } from '../scene/character/CharacterPortraitV5'
@@ -565,6 +566,8 @@ export function MultiLevelApp() {
   const habitSeed = params.get('habitSeed') || DEFAULT_HABIT_SCENARIO_V1.seed
   const offendingSeed = params.get('offendingSeed') || DEFAULT_SIMULATION_CONFIG_V5.offendingSeed
   const observationSeed = params.get('observationSeed') || DEFAULT_SIMULATION_CONFIG_V5.observationSeed
+  const socialSeed = params.get('socialSeed') || DEFAULT_ENCOUNTER_SCENARIO_V1.social.seed
+  const lifeSeed = params.get('lifeSeed')
   const habitWeightInput = params.has('habitWeight') ?
     Number(params.get('habitWeight')) : DEFAULT_HABIT_SCENARIO_V1.habitWeight
   const habitWeight = Number.isFinite(habitWeightInput) && habitWeightInput >= 0 &&
@@ -578,17 +581,20 @@ export function MultiLevelApp() {
       populationSize, simulationSeed, offendingSeed, observationSeed,
       ...(habitsEnabled ? { habit: { ...DEFAULT_HABIT_SCENARIO_V1,
         seed: habitSeed, habitWeight } } : {}),
-      ...(lifeEnabled ? { life: lifeConfig } : {}),
+      ...(lifeEnabled ? { life: lifeSeed && !lifeDiagnostic ?
+        { ...lifeConfig, seed: lifeSeed } : lifeConfig } : {}),
       ...(sceneEnabled ? { scene: DEFAULT_SCENE_SCENARIO_V1 } : {}),
+      ...(!prototype ? { placeInteraction: { version: 'place-v1' as const } } : {}),
       ...(encounterEnabled ? { encounter: { ...DEFAULT_ENCOUNTER_SCENARIO_V1,
         social: { ...DEFAULT_ENCOUNTER_SCENARIO_V1.social,
+          seed: socialSeed,
           greetingWillingness: 0.7, conversationWillingness: 0.85,
           diagnosticTraces: true } } } : {}) })
     for (let tick = 0; tick < 100; tick += 1) next.advanceOneTick()
     return next
   }, [encounterEnabled, habitSeed, habitWeight, habitsEnabled, lifeEnabled, sceneEnabled, lifeDiagnostic,
-    fatalDiagnostic, recoveryDiagnostic, observationSeed,
-    offendingSeed, populationSize, simulationSeed, world])
+    fatalDiagnostic, recoveryDiagnostic, observationSeed, socialSeed, lifeSeed,
+    offendingSeed, populationSize, simulationSeed, world, prototype])
   const lifeTimings = useMemo<LifeTimingSampleV1[]>(() => [], [session])
   useEffect(() => {
     if (!import.meta.env.DEV) return
@@ -603,6 +609,8 @@ export function MultiLevelApp() {
   const [selectedEncounterId, setSelectedEncounterId] = useState<string | null>(null)
   const [selectedEvent, setSelectedEvent] = useState<ExplorerEventV1 | null>(null)
   const [eventExplorerOpen, setEventExplorerOpen] = useState(false)
+  const [placeExplorerOpen, setPlaceExplorerOpen] = useState(false)
+  const [selectedPlaceId, setSelectedPlaceId] = useState('central-galleria')
   const [level, setLevel] = useState<'all' | 'L0' | 'L1'>('all')
   const [pickedSurfaceId, setPickedSurfaceId] = useState<string | null>(null)
   const [cutaway, setCutaway] = useState(false)
@@ -657,7 +665,18 @@ export function MultiLevelApp() {
   const selectAgent = (id: string | null) => {
     setSelectedId(id)
     setSelectedEncounterId(null)
-    if (id) setSidebarOpen(true)
+    if (id) { setSidebarOpen(true); setPlaceExplorerOpen(false) }
+  }
+  const focusPlace = (placeId: string) => {
+    const place = world.places.find((item) => item.id === placeId)
+    const node = world.navNodes.find((item) => item.id === place?.slotNodeIds[0])
+    if (!place || !node) return
+    setPlaying(false)
+    cameraController.inspectAt([node.position.x / 1000, node.position.y / 1000,
+      node.position.z / 1000])
+    const floor = world.surfaces.find((item) => item.id === node.surfaceId)?.levelId
+    if (floor === 'L0' || floor === 'L1') setLevel(floor)
+    setCutaway(true)
   }
   const focusEvent = (event: ExplorerEventV1) => {
     setPlaying(false)
@@ -723,9 +742,15 @@ export function MultiLevelApp() {
       <button className="v06-event-toggle" onClick={() => {
         if (!eventExplorerOpen && window.innerWidth < 850) setSidebarOpen(false)
         setEventExplorerOpen(!eventExplorerOpen)
+        setPlaceExplorerOpen(false)
       }}>
         {eventExplorerOpen ? 'HIDE EVENTS' : 'EVENT EXPLORER'}
       </button>
+      {!prototype && <button className="v06-place-toggle" onClick={() => {
+        if (!placeExplorerOpen) setSidebarOpen(false)
+        setPlaceExplorerOpen(!placeExplorerOpen)
+        setEventExplorerOpen(false)
+      }}>{placeExplorerOpen ? 'HIDE PLACE' : 'PLACE INSPECTOR'}</button>}
       <Canvas orthographic camera={{ position: [245, 195, 245], near: 0.1, far: 1200, zoom: 1 }}
         dpr={renderQuality === 'low' ? 1 : [1, 1.5]} shadows="percentage"
         gl={{ antialias: true, powerPreference: 'high-performance', outputColorSpace: SRGBColorSpace,
@@ -738,6 +763,13 @@ export function MultiLevelApp() {
           debugNavigation={debug} onPickSurface={(surfaceId) => {
             setPickedSurfaceId(surfaceId)
             const surface = world.surfaces.find((item) => item.id === surfaceId)
+            const place = world.places.find((item) => item.id === surface?.placeId)
+            if (place?.buildingId === 'central-galleria') {
+              setSelectedPlaceId(place.id)
+              setPlaceExplorerOpen(true)
+              setEventExplorerOpen(false)
+              setSidebarOpen(false)
+            }
             if (surface?.indoor && (surface.levelId === 'L0' || surface.levelId === 'L1')) {
               setLevel(surface.levelId)
             }
@@ -765,6 +797,17 @@ export function MultiLevelApp() {
         }}
         onSelectEncounter={selectEncounter} setPlaying={setPlaying}
         onClose={() => setEventExplorerOpen(false)} />}
+      {placeExplorerOpen && <PlaceExplorer session={session} selectedPlaceId={selectedPlaceId}
+        onSelectPlace={setSelectedPlaceId} onSelectAgent={selectAgent}
+        onFocus={focusPlace} onSelectEvent={(id) => {
+          const found = buildEventIndexV1(session.getSnapshot().state, world).find((item) =>
+            item.sourceId === id || item.sceneId === id)
+          if (!found) return
+          setSelectedEvent(found)
+          setPlaceExplorerOpen(false)
+          setEventExplorerOpen(true)
+          focusEvent(found)
+        }} onClose={() => setPlaceExplorerOpen(false)} />}
       {pickedSurfaceId && <div className="v06-surface-chip" aria-label="Picked surface">
         SURFACE {pickedSurfaceId}
       </div>}
