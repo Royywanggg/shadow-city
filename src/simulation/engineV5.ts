@@ -17,6 +17,7 @@ import { createHabitProfilesV1 } from './habits/profiles'
 import { createInitialHabitsStateV1, HabitTickV1 } from './habits/state'
 import { validateLifeConfigV1 } from './life/outcome'
 import { createInitialLifeStateV1 } from './life/types'
+import { createInitialSceneStateV1 } from './scenes/types'
 import { finalizeLifeTickV1, progressLifeRecoveryV1 } from './life/state'
 import { chooseHabitDestinationV1, habitPlaceIsOpenV1, reportHabitReplanTimingV1,
   type HabitChoiceV1 } from './habits/decision'
@@ -83,6 +84,13 @@ export function createEnvironmentV5(world: WorldModelV2, config: SimulationConfi
   }
   if (config.habit) validateHabitConfig(config.habit)
   if (config.life) validateLifeConfigV1(config.life)
+  if (config.scene && (!config.life || config.scene.version !== 'scene-v1' ||
+    !Number.isSafeInteger(config.scene.cellSizeMm) || config.scene.cellSizeMm < 1_000 ||
+    !Number.isFinite(config.scene.hearsayProbabilityPerConversation) ||
+    config.scene.hearsayProbabilityPerConversation < 0 ||
+    config.scene.hearsayProbabilityPerConversation > 1)) {
+    throw new Error('Invalid scene-v1 configuration')
+  }
   const ids = new Set<string>()
   for (const command of commands) {
     if (ids.has(command.id) || !Number.isSafeInteger(command.effectiveTick) ||
@@ -124,7 +132,8 @@ export function createInitialStateV5(environment: SimulationEnvironmentV5,
     ...(environment.config.habit ? { habits: createInitialHabitsStateV1(
       environment.habitProfiles!, environment.profiles, environment.config,
       environment.config.habit) } : {}),
-    ...(environment.config.life ? { life: createInitialLifeStateV1(citizens.map((item) => item.id)) } : {}) }
+    ...(environment.config.life ? { life: createInitialLifeStateV1(citizens.map((item) => item.id)) } : {}),
+    ...(environment.config.scene ? { scene: createInitialSceneStateV1() } : {}) }
 }
 
 function chooseDestination(citizen: CitizenStateV5, profile: CitizenProfileV5,

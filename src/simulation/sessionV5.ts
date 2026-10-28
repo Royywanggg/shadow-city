@@ -47,6 +47,39 @@ export class SimulationSessionV5 {
   getProfiles() { return this.environment.profiles }
   getHabitProfiles() { return this.environment.habitProfiles ?? [] }
   getConfig() { return this.config }
+  getLiveState(): SimulationStateV5 { return this.live }
+
+  /** Reconstruct a bounded historical window without changing the inspected or live Tick. */
+  reconstructWindow(centerTick: number, agentIds: readonly string[],
+    radiusTicks = 12): ReadonlyMap<string, readonly Readonly<{
+      tick: number; position: SimulationStateV5['citizens'][number]['position'];
+      surfaceId: string
+    }>[]> {
+    if (!Number.isSafeInteger(centerTick) || centerTick < 0 ||
+      centerTick > this.live.tick || !Number.isSafeInteger(radiusTicks) ||
+      radiusTicks < 0 || radiusTicks > 30) {
+      throw new Error('Invalid reconstruction window')
+    }
+    const start = Math.max(0, centerTick - radiusTicks)
+    const end = Math.min(this.live.tick, centerTick + radiusTicks)
+    const checkpoint = Math.floor(start / 100) * 100
+    let state = this.checkpoints.get(checkpoint)!
+    const wanted = new Set(agentIds)
+    const traces = new Map<string, { tick: number;
+      position: SimulationStateV5['citizens'][number]['position'];
+      surfaceId: string }[]>()
+    for (const id of agentIds) traces.set(id, [])
+    while (state.tick < start) state = advanceStateV5(state, this.environment, this.index)
+    while (state.tick <= end) {
+      for (const citizen of state.citizens) {
+        if (wanted.has(citizen.id)) traces.get(citizen.id)!.push({
+          tick: state.tick, position: citizen.position, surfaceId: citizen.surfaceId })
+      }
+      if (state.tick === end) break
+      state = advanceStateV5(state, this.environment, this.index)
+    }
+    return traces
+  }
 
   private publish(): void {
     this.snapshot = { state: this.viewed, liveTick: this.live.tick,

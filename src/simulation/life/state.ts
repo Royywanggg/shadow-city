@@ -6,6 +6,7 @@ import { interruptHabitForLifeV1 } from '../habits/state'
 import { hashSeed } from '../rng'
 import type { CitizenStateV5, SimulationEnvironmentV5, SimulationStateV5 } from '../v5Types'
 import { evaluateHarmOutcomeV1 } from './outcome'
+import { advanceSceneStateV1 } from '../scenes/state'
 import type { DeathEventV1, DeathKnowledgeV1, DeathSceneV1,
   FunctionalStatusV1, InjuryRecordV1, LifeObservationV1, LifePersonV1,
   LifeRecoveryEventV1, LifeSceneReportV1,
@@ -281,7 +282,7 @@ export function applyLifeOutcomesV1(state: SimulationStateV5,
         deathEventId: death.id, agentId: citizen.id, position: citizen.position,
         surfaceId: citizen.surfaceId, levelId, placeId: citizen.placeId,
         createdTick: state.tick, state: 'present', policy: config.scenePolicy }
-      scenes.push(scene)
+      if (!environment.config.scene) scenes.push(scene)
       people.set(citizen.id, { agentId: citizen.id, lifeStatus: 'deceased',
         functionalStatus: null, activeInjuryIds: [],
         deathEventId: death.id, deathTick: state.tick,
@@ -413,7 +414,8 @@ export function finalizeLifeTickV1(state: SimulationStateV5,
   const started = timingObserver ? performance.now() : 0
   const harmed = applyLifeOutcomesV1(state, environment)
   const afterOutcomes = timingObserver ? performance.now() : 0
-  const observed = discoverLifeScenesV1(harmed, environment)
+  const observed = environment.config.scene ? advanceSceneStateV1(harmed, environment) :
+    discoverLifeScenesV1(harmed, environment)
   if (timingObserver) timingObserver({ tick: state.tick,
     outcomeMs: afterOutcomes - started,
     discoveryMs: performance.now() - afterOutcomes,

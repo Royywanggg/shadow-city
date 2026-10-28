@@ -197,6 +197,21 @@ This is an opt-in, fingerprinted `EncounterScenarioV1` extension to v5; old conf
 
 See `LIFE_STATE_ARCHITECTURE.md` for mechanisms and assumptions and `LIFE_STATE_VERIFICATION.md` for the requirement matrix. This work does not change the pending v0.6 200-citizen performance gate or authorize policing features.
 
+## v0.6.4 — Persistent scenes and event reconstruction
+
+**Goal:** Preserve the visible aftermath of emergent harm as versioned spatial state and let researchers reconstruct real event histories through the existing deterministic replay system.
+
+| Phase | Boundary | Exit evidence |
+| --- | --- | --- |
+| A — Spatial provenance | Scene anchors link legal millimetre coordinates, surface, level, place and optional building or Galleria reference to a real injury or death. | Stable IDs, source invariants, cross-floor and no-duplicate tests. |
+| B — Lifecycle | Death aftermath persists; incapacitation aftermath resolves after mobility returns. Old life-only experiments retain their original path. | Before/during/after tests and legacy replay regression. |
+| C — Discovery and information | Nearby legal movement and attention can produce local discovery; completed conversation can transmit a limited hearsay claim; delayed reports use an ObserverPort allowlist. | No truth leakage, multi-level visibility, deduplication and report-availability tests. |
+| D — God View | Event Explorer reads real event and scene records, supports filters, focus, involved agents, encounter links and observer comparison. | Browser inspection of a naturally generated event at a fixed seed; no fabricated narrative. |
+| E — Reconstruction and visual review | Replay controls, bounded selected-agent trails, event markers and scene-discovery indicators. | Tick-accurate life, knowledge and scene state; Chrome 1440 × 900 screenshots and named renderer measurements. |
+| F — Full regression | Typecheck, tests, production build, browser and performance review. | Record open visual and performance gaps honestly; do not present a synthetic result as a real-city prediction. |
+
+See `SCENE_ARCHITECTURE.md` and `SCENE_VERIFICATION.md`. The work does not add police investigations, forensic evidence, emergency response or new crime mechanics.
+
 ## v0.7 — Policing strategy design and implementation
 
 **Goal:** Compare explicit police decision strategies under transparent model assumptions.

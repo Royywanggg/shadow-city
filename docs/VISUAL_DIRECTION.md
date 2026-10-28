@@ -86,6 +86,8 @@ Visual approval requires actual browser inspection. A successful compile or rend
 
 Save the seed, viewport, browser, device pixel ratio, and date with screenshot evidence. Compare images under the same capture conditions; automated pixel differences may flag regressions, but human review decides whether the visual result improved.
 
+For Round 4 event reconstruction, show selected event markers at their legal surface elevation and keep historical agent trails legible without covering architecture. Label all researcher-only event annotations as God View, including in Observed mode. Review event focus, Galleria cutaway, level isolation and panel overlap in a real browser. An event marker must not imply an unmodeled police response or a precise within-Tick death location.
+
 ## Settled visual decisions
 
 - Fictional modern city with selective European urban cues, not a replica of a real place.
@@ -98,7 +100,7 @@ The v0.1.1 pass uses nine related building archetypes: low residential forms, ap
 
 Use the supplied reference for its layered massing, rich rooftops, and selective light. Keep the wider city's road hierarchy and public square visible. At the fixed hero scale, prioritize the civic focal point and taller rear cluster over small details that only read after zooming. Window light should form occupied room or floor clusters, with warm activity more common than cyan accents. Never increase bloom to conceal weak geometry or lighting.
 
-The preserved `docs/screenshots/hero-1440x900.png` is the v0.1 baseline. Compare the separately captured v0.1.1 hero image under the same browser, seed, viewport, and device pixel ratio. A more layered skyline is progress; repeated facades, a visible square grid, and distant props that vanish at hero scale remain visual issues to call out if present.
+The local-only `docs/screenshots/hero-1440x900.png` is the v0.1 baseline on machines where that capture is retained. PNG captures are excluded from Git; see `docs/screenshots/README.md` for the evidence policy. Compare the separately captured v0.1.1 hero image under the same browser, seed, viewport, and device pixel ratio. A more layered skyline is progress; repeated facades, a visible square grid, and distant props that vanish at hero scale remain visual issues to call out if present.
 
 ## v0.1.2 review focus
 

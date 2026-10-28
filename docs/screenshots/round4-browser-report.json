@@ -1,0 +1,100 @@
+{
+  "date": "2026-10-28T14:05:28.565Z",
+  "browser": "156.0.8078.48",
+  "viewport": "1440x900",
+  "dpr": 1,
+  "url": "http://127.0.0.1:5182/?seed=shadow-city-hero-01&population=120&lifeScenario=fatal-diagnostic",
+  "initial": {
+    "tick": 100,
+    "sceneVersion": "scene-v1",
+    "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+    "webglVersion": "WebGL 2.0 (OpenGL ES 3.0 Chromium)",
+    "usedJsHeapBytes": 133481176
+  },
+  "live": {
+    "tick": 500,
+    "deaths": 5,
+    "scenes": 5,
+    "discoveries": 15,
+    "reports": 6,
+    "death": {
+      "id": "death:injury:offence:citizen-0003:citizen:citizen-0108:119@ground:citizen-0108",
+      "victimAgentId": "citizen-0108",
+      "tick": 172,
+      "position": {
+        "x": -63154,
+        "y": 250,
+        "z": 59550
+      },
+      "surfaceId": "ground",
+      "levelId": "L0",
+      "placeId": "public:block-1-5",
+      "relatedInjuryId": "injury:offence:citizen-0003:citizen:citizen-0108:119@ground:citizen-0108",
+      "relatedOffenceId": "offence:citizen-0003:citizen:citizen-0108:119@ground",
+      "causeClassification": "immediatePhysicalAssaultOutcome",
+      "provenance": "harmOutcomeV1"
+    },
+    "rendering": {
+      "drawCalls": 325,
+      "triangles": 313209,
+      "geometries": 199,
+      "textures": 38,
+      "geometryBufferBytes": 413036,
+      "instanceBufferBytes": 1416180,
+      "textureSourceBytesEstimated": 1201494,
+      "medianActiveFrameMs": 16.69999998807907,
+      "p50ActiveFrameMs": 16.69999998807907,
+      "p95ActiveFrameMs": 18.700000002980232,
+      "sampledFrames": 87,
+      "renderedFrames": 91
+    },
+    "usedJsHeapBytes": 195958808
+  },
+  "before": {
+    "tick": 164,
+    "deathAvailable": false,
+    "sceneAvailable": false
+  },
+  "during": {
+    "tick": 172,
+    "deathAvailable": true,
+    "sceneAvailable": true,
+    "sceneStatus": "present"
+  },
+  "after": {
+    "tick": 180,
+    "sceneCount": 1,
+    "isInspecting": true
+  },
+  "selectedDetailHasTruth": true,
+  "tickP50Ms": 2.3999999910593033,
+  "tickP95Ms": 4.799999997019768,
+  "frameP50Ms": 16.700000000000728,
+  "frameP95Ms": 16.799999999999272,
+  "scale200": {
+    "tick": 500,
+    "population": 200,
+    "scenes": 0,
+    "discoveries": 0,
+    "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+    "rendering": {
+      "drawCalls": 322,
+      "triangles": 313417,
+      "geometries": 196,
+      "textures": 38,
+      "geometryBufferBytes": 432620,
+      "instanceBufferBytes": 1472500,
+      "textureSourceBytesEstimated": 1201494,
+      "medianActiveFrameMs": 16.700000002980232,
+      "p50ActiveFrameMs": 16.69999998807907,
+      "p95ActiveFrameMs": 24.599999994039536,
+      "sampledFrames": 32,
+      "renderedFrames": 35
+    },
+    "usedJsHeapBytes": 192373297,
+    "tickP50Ms": 6.199999988079071,
+    "tickP95Ms": 9,
+    "replay500Ms": 3062.2000000029802
+  },
+  "errors": []
+}

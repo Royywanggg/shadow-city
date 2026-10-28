@@ -7,6 +7,10 @@ import { WorldCameraRig } from '../scene/WorldCameraRig'
 import { WorldSceneV2, WorldOffenceLayer, WorldSelectedRoute } from '../scene/WorldSceneV2'
 import { WorldAgentLayerV5 } from '../scene/WorldAgentLayerV5'
 import { EncounterLayerV1 } from '../scene/EncounterLayerV1'
+import { EventReconstructionLayer, SceneSelectionMarkers } from '../scene/EventReconstructionLayer'
+import { EventExplorer } from './EventExplorer'
+import { buildEventIndexV1, type ExplorerEventV1 } from '../simulation/events/eventIndex'
+import { DEFAULT_SCENE_SCENARIO_V1 } from '../simulation/scenes/types'
 import { CharacterPortraitV5 } from '../scene/character/CharacterPortraitV5'
 import { createCitizenIdentity } from '../simulation/population'
 import { DEFAULT_ENCOUNTER_SCENARIO_V1 } from '../simulation/encounter/config'
@@ -34,19 +38,30 @@ const ResidentRow = memo(function ResidentRow({ id, name, activity, selected,
   </button>
 })
 
-function DynamicWorldOverlays({ session, selectedId, selectedEncounterId, level, mode }: {
+function DynamicWorldOverlays({ session, selectedId, selectedEncounterId, selectedEvent,
+  eventExplorerOpen, onSelectScene, level, mode }: {
   session: SimulationSessionV5; selectedId: string | null; selectedEncounterId: string | null;
+  selectedEvent: ExplorerEventV1 | null;
+  eventExplorerOpen: boolean; onSelectScene: (sceneId: string) => void;
   level: 'all' | 'L0' | 'L1';
   mode: 'truth' | 'observed' | 'compare'
 }) {
   const snapshot = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot)
   const selected = snapshot.state.citizens.find((citizen) => citizen.id === selectedId) ?? null
+  const reconstructionEnd = selectedEvent ? Math.min(snapshot.liveTick, selectedEvent.tick + 12) : -1
+  const traces = useMemo(() => selectedEvent && selectedEvent.tick <= snapshot.liveTick ?
+    session.reconstructWindow(selectedEvent.tick, selectedEvent.agentIds) : null,
+  [session, selectedEvent, reconstructionEnd])
   return <>
     <WorldSelectedRoute world={session.getWorld()} citizen={selected} />
     <WorldOffenceLayer state={snapshot.state} mode={mode}
       observationSeed={session.getConfig().observationSeed} />
     <EncounterLayerV1 state={snapshot.state} world={session.getWorld()}
       episodeId={selectedEncounterId} level={level} />
+    <EventReconstructionLayer session={session} state={snapshot.state}
+      selected={selectedEvent} level={level} traces={traces} />
+    <SceneSelectionMarkers state={snapshot.state} level={level}
+      visible={eventExplorerOpen} onSelect={onSelectScene} />
   </>
 }
 
@@ -523,6 +538,7 @@ export function MultiLevelApp() {
   const habitsEnabled = params.get('habits') !== 'off'
   const encounterEnabled = params.get('encounter') !== 'off'
   const lifeEnabled = params.get('life') !== 'off'
+  const sceneEnabled = lifeEnabled && params.get('scene') !== 'off'
   const lifeDiagnostic = import.meta.env.DEV &&
     (params.get('lifeScenario') === 'high-harm-diagnostic' ||
       params.get('lifeScenario') === 'fatal-diagnostic' ||
@@ -563,13 +579,14 @@ export function MultiLevelApp() {
       ...(habitsEnabled ? { habit: { ...DEFAULT_HABIT_SCENARIO_V1,
         seed: habitSeed, habitWeight } } : {}),
       ...(lifeEnabled ? { life: lifeConfig } : {}),
+      ...(sceneEnabled ? { scene: DEFAULT_SCENE_SCENARIO_V1 } : {}),
       ...(encounterEnabled ? { encounter: { ...DEFAULT_ENCOUNTER_SCENARIO_V1,
         social: { ...DEFAULT_ENCOUNTER_SCENARIO_V1.social,
           greetingWillingness: 0.7, conversationWillingness: 0.85,
           diagnosticTraces: true } } } : {}) })
     for (let tick = 0; tick < 100; tick += 1) next.advanceOneTick()
     return next
-  }, [encounterEnabled, habitSeed, habitWeight, habitsEnabled, lifeEnabled, lifeDiagnostic,
+  }, [encounterEnabled, habitSeed, habitWeight, habitsEnabled, lifeEnabled, sceneEnabled, lifeDiagnostic,
     fatalDiagnostic, recoveryDiagnostic, observationSeed,
     offendingSeed, populationSize, simulationSeed, world])
   const lifeTimings = useMemo<LifeTimingSampleV1[]>(() => [], [session])
@@ -584,6 +601,8 @@ export function MultiLevelApp() {
   const cameraController = useMemo(createCameraController, [])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [selectedEncounterId, setSelectedEncounterId] = useState<string | null>(null)
+  const [selectedEvent, setSelectedEvent] = useState<ExplorerEventV1 | null>(null)
+  const [eventExplorerOpen, setEventExplorerOpen] = useState(false)
   const [level, setLevel] = useState<'all' | 'L0' | 'L1'>('all')
   const [pickedSurfaceId, setPickedSurfaceId] = useState<string | null>(null)
   const [cutaway, setCutaway] = useState(false)
@@ -640,6 +659,21 @@ export function MultiLevelApp() {
     setSelectedEncounterId(null)
     if (id) setSidebarOpen(true)
   }
+  const focusEvent = (event: ExplorerEventV1) => {
+    setPlaying(false)
+    cameraController.inspectAt([event.position.x / 1000,
+      event.position.y / 1000, event.position.z / 1000])
+    if (event.levelId === 'L0' || event.levelId === 'L1') setLevel(event.levelId)
+    if (event.structure?.kind === 'galleria') setCutaway(true)
+  }
+  const selectScene = (sceneId: string) => {
+    const event = buildEventIndexV1(session.getSnapshot().state, world).find((item) =>
+      item.sceneId === sceneId && item.kind === 'sceneCreated')
+    if (!event) return
+    setSelectedEvent(event)
+    setEventExplorerOpen(true)
+    focusEvent(event)
+  }
   const selectEncounter = (episodeId: string | null, tick?: number) => {
     setSelectedEncounterId(episodeId)
     if (episodeId) {
@@ -686,6 +720,12 @@ export function MultiLevelApp() {
       sidebarOpen={sidebarOpen}
       setSidebarOpen={setSidebarOpen} getPlaybackAlpha={getPlaybackAlpha} />
     <div className="v06-viewport">
+      <button className="v06-event-toggle" onClick={() => {
+        if (!eventExplorerOpen && window.innerWidth < 850) setSidebarOpen(false)
+        setEventExplorerOpen(!eventExplorerOpen)
+      }}>
+        {eventExplorerOpen ? 'HIDE EVENTS' : 'EVENT EXPLORER'}
+      </button>
       <Canvas orthographic camera={{ position: [245, 195, 245], near: 0.1, far: 1200, zoom: 1 }}
         dpr={renderQuality === 'low' ? 1 : [1, 1.5]} shadows="percentage"
         gl={{ antialias: true, powerPreference: 'high-performance', outputColorSpace: SRGBColorSpace,
@@ -705,9 +745,26 @@ export function MultiLevelApp() {
         <WorldAgentLayerV5 session={session} selectedId={selectedId} onSelect={selectAgent}
           playing={playing} getPlaybackAlpha={getPlaybackAlpha} level={level} />
         <DynamicWorldOverlays session={session} selectedId={selectedId}
-          selectedEncounterId={selectedEncounterId} level={level} mode={mode} />
+          selectedEncounterId={selectedEncounterId} selectedEvent={selectedEvent}
+          eventExplorerOpen={eventExplorerOpen} onSelectScene={selectScene}
+          level={level} mode={mode} />
       </Canvas>
       <div className="v06-vignette" />
+      {selectedEvent && <div className="v06-event-chip">GOD VIEW / SELECTED EVENT ·
+        T{selectedEvent.tick}</div>}
+      {eventExplorerOpen && <EventExplorer session={session} selected={selectedEvent}
+        onSelect={setSelectedEvent} onFocus={focusEvent}
+        onSelectAgent={(id) => selectAgent(id)}
+        onFollowAgent={(id) => {
+          selectAgent(id)
+          cameraController.follow(() => {
+            const citizen = session.getSnapshot().state.citizens.find((item) => item.id === id)
+            return citizen ? [citizen.position.x / 1000, citizen.position.y / 1000,
+              citizen.position.z / 1000] : null
+          })
+        }}
+        onSelectEncounter={selectEncounter} setPlaying={setPlaying}
+        onClose={() => setEventExplorerOpen(false)} />}
       {pickedSurfaceId && <div className="v06-surface-chip" aria-label="Picked surface">
         SURFACE {pickedSurfaceId}
       </div>}

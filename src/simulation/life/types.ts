@@ -111,7 +111,8 @@ export interface DeathSceneV1 {
 export interface LifeObservationV1 {
   readonly id: string
   readonly observerAgentId: string
-  readonly kind: 'witnessedHarmfulOffence' | 'discoveredDeathScene'
+  readonly kind: 'witnessedHarmfulOffence' | 'discoveredDeathScene' |
+    'discoveredIncapacitationScene'
   readonly observedTick: number
   readonly surfaceId: string
   readonly position: WorldPointMm
@@ -139,7 +140,7 @@ export interface LifeSceneReportV1 {
   readonly reportedPosition: WorldPointMm
   readonly reportedLevelId: string | null
   readonly reportedPlaceId: string | null
-  readonly reportedStatus: 'possibleDeathScene'
+  readonly reportedStatus: 'possibleDeathScene' | 'possibleIncapacitatedPerson'
   readonly source: 'sceneDiscovery'
 }
 

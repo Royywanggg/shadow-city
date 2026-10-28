@@ -4,6 +4,7 @@ import type { EncounterScenarioConfigV1 } from './encounter/config'
 import type { SocialStateV1 } from './encounter/state'
 import type { HabitProfileV1, HabitScenarioConfigV1, HabitsStateV1 } from './habits/types'
 import type { LifeScenarioConfigV1, LifeStateV1 } from './life/types'
+import type { SceneScenarioConfigV1, SceneStateV1 } from './scenes/types'
 
 export type CitizenActivityV5 = 'atHome' | 'planningTrip' | 'waitingForSpace' |
   'travelling' | 'atDestination' | 'returningHome' | 'interacting' |
@@ -158,6 +159,7 @@ export interface SimulationConfigV5 {
   readonly encounter?: EncounterScenarioConfigV1
   readonly habit?: HabitScenarioConfigV1
   readonly life?: LifeScenarioConfigV1
+  readonly scene?: SceneScenarioConfigV1
 }
 
 export interface SimulationStateV5 {
@@ -177,6 +179,7 @@ export interface SimulationStateV5 {
   readonly social?: SocialStateV1
   readonly habits?: HabitsStateV1
   readonly life?: LifeStateV1
+  readonly scene?: SceneStateV1
 }
 
 export interface SimulationEnvironmentV5 {

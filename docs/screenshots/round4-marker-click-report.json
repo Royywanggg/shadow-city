@@ -1,0 +1,34 @@
+{
+  "browser": "156.0.8078.48",
+  "viewport": "1440x900",
+  "dpr": 1,
+  "seed": "shadow-city-hero-01",
+  "deathId": "death:injury:offence:citizen-0003:citizen:citizen-0108:119@ground:citizen-0108",
+  "attempts": [
+    {
+      "x": 878,
+      "y": 437,
+      "selected": "Death · physical assault outcome"
+    },
+    {
+      "x": 875,
+      "y": 438,
+      "selected": "Death · physical assault outcome"
+    },
+    {
+      "x": 872,
+      "y": 440,
+      "selected": "Death · physical assault outcome"
+    },
+    {
+      "x": 881,
+      "y": 440,
+      "selected": "Death · physical assault outcome"
+    },
+    {
+      "x": 878,
+      "y": 443,
+      "selected": "Scene created · deathAftermath"
+    }
+  ]
+}
