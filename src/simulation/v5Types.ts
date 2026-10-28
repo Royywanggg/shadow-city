@@ -6,6 +6,7 @@ import type { HabitProfileV1, HabitScenarioConfigV1, HabitsStateV1 } from './hab
 import type { LifeScenarioConfigV1, LifeStateV1 } from './life/types'
 import type { SceneScenarioConfigV1, SceneStateV1 } from './scenes/types'
 import type { PlaceRuntimeStateV1 } from './places/runtime'
+import type { TypedCrimeConfigV1, TypedCrimeStateV1, TypedOffenceKind } from './crime/types'
 
 export type CitizenActivityV5 = 'atHome' | 'planningTrip' | 'waitingForSpace' |
   'travelling' | 'atDestination' | 'returningHome' | 'interacting' |
@@ -120,6 +121,10 @@ export interface OffenceV5 {
   readonly offenderAgentId: string
   readonly target: OpportunityTargetV5
   readonly severity: 'minor' | 'serious'
+  /** Absent for legacy generic events. Never infer a concrete action from severity. */
+  readonly offenceType?: TypedOffenceKind
+  readonly attemptId?: string
+  readonly itemId?: string
   /** Absent in pre-life experiments; severity alone never implies physical harm. */
   readonly mechanism?: 'physicalAssault' | 'nonPhysical'
   readonly position: WorldPointMm
@@ -163,6 +168,7 @@ export interface SimulationConfigV5 {
   readonly life?: LifeScenarioConfigV1
   readonly scene?: SceneScenarioConfigV1
   readonly placeInteraction?: Readonly<{ version: 'place-v1' }>
+  readonly typedCrime?: TypedCrimeConfigV1
 }
 
 export interface SimulationStateV5 {
@@ -184,6 +190,7 @@ export interface SimulationStateV5 {
   readonly life?: LifeStateV1
   readonly scene?: SceneStateV1
   readonly placeRuntime?: PlaceRuntimeStateV1
+  readonly typedCrime?: TypedCrimeStateV1
 }
 
 export interface SimulationEnvironmentV5 {

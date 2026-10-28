@@ -1,4 +1,5 @@
 import type { HabitScenarioConfigV1 } from './types'
+import { worldClockAtTick } from '../clock'
 
 export interface SimulationCalendarV1 {
   readonly day: number
@@ -20,14 +21,16 @@ export function validateHabitConfig(config: HabitScenarioConfigV1): void {
   }
 }
 
-/** Calendar time is an activity-planning scale; movement exposure remains six seconds per Tick. */
+/** Unified scenarios use the same six-second clock as movement and contact. */
 export function calendarAtTick(startHour: number, tick: number,
   calendarSecondsPerTick: number): SimulationCalendarV1 {
   if (!Number.isSafeInteger(startHour) || startHour < 0 || startHour > 23 ||
     !Number.isSafeInteger(tick) || tick < 0 ||
     !Number.isSafeInteger(calendarSecondsPerTick) || calendarSecondsPerTick <= 0 ||
     86_400 % calendarSecondsPerTick !== 0) throw new Error('Invalid simulation calendar input')
-  const absoluteSeconds = startHour * 3_600 + tick * calendarSecondsPerTick
+  const absoluteSeconds = calendarSecondsPerTick === 6 ?
+    worldClockAtTick(startHour, tick).worldSeconds :
+    startHour * 3_600 + tick * calendarSecondsPerTick
   if (!Number.isSafeInteger(absoluteSeconds)) throw new Error('Simulation calendar overflow')
   const secondOfDay = absoluteSeconds % 86_400
   return { day: Math.floor(absoluteSeconds / 86_400),

@@ -20,6 +20,7 @@ import { createInitialLifeStateV1 } from './life/types'
 import { createInitialSceneStateV1 } from './scenes/types'
 import { derivePlaceRuntimeV1, validateFunctionalPlacesV1 } from './places/runtime'
 import { finalizeLifeTickV1, progressLifeRecoveryV1 } from './life/state'
+import { createInitialTypedCrimeStateV1, validateTypedCrimeConfigV1 } from './crime/engine'
 import { chooseHabitDestinationV1, habitPlaceIsOpenV1, reportHabitReplanTimingV1,
   type HabitChoiceV1 } from './habits/decision'
 import type { AccessCommandV5, CitizenEventV5, CitizenProfileV5, CitizenStateV5,
@@ -84,6 +85,13 @@ export function createEnvironmentV5(world: WorldModelV2, config: SimulationConfi
       reportingProbability: config.reportingProbability })
   }
   if (config.habit) validateHabitConfig(config.habit)
+  if (config.typedCrime) {
+    validateTypedCrimeConfigV1(config.typedCrime)
+    if (!config.encounter || config.encounter.offenceMode !== 'encounterAware' ||
+      config.habit?.calendarSecondsPerTick !== 6) {
+      throw new Error('Typed crime requires encounter-aware mode and the unified six-second calendar')
+    }
+  }
   if (config.placeInteraction) {
     if (config.placeInteraction.version !== 'place-v1') {
       throw new Error('Invalid place interaction version')
@@ -141,6 +149,8 @@ export function createInitialStateV5(environment: SimulationEnvironmentV5,
       environment.config.habit) } : {}),
     ...(environment.config.life ? { life: createInitialLifeStateV1(citizens.map((item) => item.id)) } : {}),
     ...(environment.config.scene ? { scene: createInitialSceneStateV1() } : {}) }
+  if (environment.config.typedCrime) return withPlaceRuntime({ ...initial,
+    typedCrime: createInitialTypedCrimeStateV1(environment) }, environment)
   return withPlaceRuntime(initial, environment)
 }
 

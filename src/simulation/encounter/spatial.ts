@@ -256,22 +256,31 @@ export function querySpatialCandidates(world: WorldModelV2,
     edgeById, nodeById, boundaries } = staticIndex(world)
   const bySecond = new Map<number, EncounterTracePoint[]>()
   const previousByAgent = new Map<string, EncounterTracePoint>()
+  const validByAgent = new Map<string, boolean>()
   const speedByTrace = new Map<EncounterTracePoint, number>()
   const seenBySecond = new Map<number, Set<string>>()
   for (const trace of [...traces].sort((a, b) => a.second - b.second ||
     compareEncounterIds(a.agentId, b.agentId))) {
     if (!Number.isSafeInteger(trace.second) || trace.second < 0) throw new Error('Invalid trace second')
     const prior = previousByAgent.get(trace.agentId)
+    const unchangedPosition = prior?.surfaceId === trace.surfaceId &&
+      prior.edgeId === trace.edgeId &&
+      prior.position.x === trace.position.x &&
+      prior.position.y === trace.position.y &&
+      prior.position.z === trace.position.z
     const seen = seenBySecond.get(trace.second) ?? new Set<string>()
     if (seen.has(trace.agentId)) {
       throw new Error(`Duplicate trace ${trace.agentId} at second ${trace.second}`)
     }
     seen.add(trace.agentId); seenBySecond.set(trace.second, seen)
     speedByTrace.set(trace, prior && prior.second === trace.second - 1 ?
-      Math.sqrt(distanceSquared(prior.position, trace.position)) : 0)
+      unchangedPosition ? 0 : Math.sqrt(distanceSquared(prior.position, trace.position)) : 0)
     previousByAgent.set(trace.agentId, trace)
     if (trace.second === 0) continue
-    if (!validTrace(trace, surfaces, blockersBySurface, connectorEdges, edgeById, nodeById)) {
+    const valid = unchangedPosition && validByAgent.get(trace.agentId) === true ||
+      validTrace(trace, surfaces, blockersBySurface, connectorEdges, edgeById, nodeById)
+    validByAgent.set(trace.agentId, valid)
+    if (!valid) {
       throw new Error(`Encounter trace outside legal space: ${trace.agentId} at second ${trace.second}`)
     }
     const items = bySecond.get(trace.second) ?? []
@@ -280,6 +289,11 @@ export function querySpatialCandidates(world: WorldModelV2,
   const result: SpatialCandidateSample[] = []
   const radiusSquared = SQUARE(radiusMm)
   const cellSize = radiusMm
+  const occupiedAnySecond = new Set(traces.map((trace) => trace.surfaceId))
+  const candidateBoundaries = boundaries.filter((boundary) =>
+    occupiedAnySecond.has(boundary.firstSurfaceId) &&
+    occupiedAnySecond.has(boundary.secondSurfaceId) &&
+    !boundary.accessIds.some((id) => modes[id] === 'closed'))
   for (const [second, points] of [...bySecond].sort(([a], [b]) => a - b)) {
     const buckets = new Map<string, Map<string, EncounterTracePoint[]>>()
     const occupiedSurfaces = new Set(points.map((point) => point.surfaceId))
@@ -335,10 +349,9 @@ export function querySpatialCandidates(world: WorldModelV2,
       }
     }
     // Only a small endpoint bucket of a real portal may bridge two surfaces.
-    for (const boundary of boundaries) {
+    for (const boundary of candidateBoundaries) {
       if (!occupiedSurfaces.has(boundary.firstSurfaceId) ||
         !occupiedSurfaces.has(boundary.secondSurfaceId)) continue
-      if (boundary.accessIds.some((id) => modes[id] === 'closed')) continue
       const around = (surfaceId: string, position: WorldPointMm) => {
         const [cx, cz] = cell(position)
         const matches: EncounterTracePoint[] = []

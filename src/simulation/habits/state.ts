@@ -132,13 +132,16 @@ export class HabitTickV1 {
             citizenProfile.workPlaceId, day) }
       }
       const active = habit.intention?.status === 'active' ? habit.intention.kind : null
-      habit = { ...habit, needs: {
+      const due = this.scenario.calendarSecondsPerTick === 6 ? this.tick % 5 === 0 : true
+      if (due) habit = { ...habit, needs: {
         rest: clamp(habit.needs.rest + (citizen.activity === 'atHome' ? -2 : 1)),
         food: clamp(habit.needs.food + (active === 'eat' ? -10 : 1)),
         shopping: clamp(habit.needs.shopping + (active === 'shop' ? -8 :
-          this.tick % profile.shoppingCadenceTicks === 0 ? 1 : 0)),
+          Math.floor(this.tick / (this.scenario.calendarSecondsPerTick === 6 ? 5 : 1)) %
+            profile.shoppingCadenceTicks === 0 ? 1 : 0)),
         social: clamp(habit.needs.social + (citizen.activity === 'interacting' ? -8 :
-          this.tick % 15 === 0 ? 1 : 0)),
+          Math.floor(this.tick / (this.scenario.calendarSecondsPerTick === 6 ? 5 : 1)) %
+            15 === 0 ? 1 : 0)),
       } }
       for (const memory of memoriesByOwner.get(citizen.id) ?? []) {
         const placeId = memory.placeId!

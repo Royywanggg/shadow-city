@@ -1,6 +1,7 @@
 import { hashSeed } from './rng'
 import type { ActivityKind, SemanticPlace, WorldModelV2 } from '../world/model'
 import type { CitizenProfileV5, SimulationConfigV5 } from './v5Types'
+import { worldClockAtTick } from './clock'
 
 function unit(seed: string, purpose: string): number {
   return hashSeed(`${seed}\u0000${purpose}`) / 0x1_0000_0000
@@ -49,7 +50,7 @@ export function createCitizenProfilesV5(world: WorldModelV2,
 }
 
 export function localMinute(config: SimulationConfigV5, tick: number): number {
-  return (config.startHour * 60 + tick * config.logicalSecondsPerTick / 60) % 1440
+  return worldClockAtTick(config.startHour, tick).timeOfDaySeconds / 60
 }
 
 export function placeIsOpen(place: SemanticPlace, config: SimulationConfigV5, tick: number): boolean {

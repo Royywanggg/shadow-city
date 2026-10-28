@@ -17,6 +17,8 @@ import type { PerceivedPlaceRiskV1, SocialStateV1 } from './state'
 import type { OffenderDecisionTraceV1 } from './state'
 import type { DirectedPerceptionSample, SpatialCandidateSample } from './spatialTypes'
 import type { AgentKnowledgeV1, AgentMemoryV1 } from './socialTypes'
+import { advanceTypedCrimeV1 } from '../crime/engine'
+import type { WitnessObservation } from './crimeWitness'
 
 const unit = (key: string): number => (hashSeed(key) + 0.5) / 0x1_0000_0000
 const clamp01 = (value: number): number => Math.min(1, Math.max(0, value))
@@ -194,32 +196,37 @@ export function advanceEncounterCrimeV1(state: SimulationStateV5,
     items.push(trace); bySecond.set(trace.second, items)
   }
   const bySurfaceResource = new Map<string, typeof environment.world.resources[number][]>()
-  for (const resource of environment.world.resources) {
+  if (!environment.config.typedCrime) for (const resource of environment.world.resources) {
     const list = bySurfaceResource.get(resource.surfaceId) ?? []
     list.push(resource); bySurfaceResource.set(resource.surfaceId, list)
   }
   const profiles = profilesFor(environment)
   const surfaceById = new Map(environment.world.surfaces.map((surface) => [surface.id, surface]))
+  const typed = environment.config.typedCrime ? advanceTypedCrimeV1(state, environment,
+    crimeCandidates, profiles, (actor, nearbyIds, risk) =>
+      opportunitySnapshot(environment, actor, state.tick, nearbyIds, risk)) : null
+  const workingState = typed?.state ?? state
   const episodes = new Map(state.encounterEpisodes.map((item) =>
     [episodeKey(item.offenderAgentId, item.target, item.id.split('@').at(-1)!), item]))
-  const cooldowns = { ...state.offenderCooldowns }
+  const cooldowns = { ...workingState.offenderCooldowns }
   const resourceCooldowns = { ...state.resourceCooldowns }
-  const offences = [...state.offences]
-  const newOffences: OffenceV5[] = []
-  let opportunitySeconds = 0
-  let offenderAttempts = 0
+  const offences = [...workingState.offences]
+  const newOffences: OffenceV5[] = [...typed?.newOffences ?? []]
+  let opportunitySeconds = typed?.opportunitySeconds ?? 0
+  let offenderAttempts = typed?.offenderAttempts ?? 0
   const decisionTraces = new Map<string, OffenderDecisionTraceV1>()
   const firstPerceivedSecond = new Map<string, number>()
-  for (const item of socialPerceptions) if (item.actuallyPerceived) {
+  if (!typed) for (const item of socialPerceptions) if (item.actuallyPerceived) {
     const key = JSON.stringify([item.observerAgentId, item.targetAgentId])
     firstPerceivedSecond.set(key, Math.min(item.second,
       firstPerceivedSecond.get(key) ?? Number.POSITIVE_INFINITY))
   }
-  const socialEpisodeByPair = new Map([...state.social.encounters.completed
-    .filter((item) => item.endedTick === state.tick), ...state.social.encounters.active]
+  const socialEpisodeByPair = new Map((typed ? [] :
+    [...state.social.encounters.completed.filter((item) =>
+      item.endedTick === state.tick), ...state.social.encounters.active])
     .map((item) => [item.pairKey, item]))
-  const relationshipByDirection = new Map(state.social.relationships.map((item) =>
-    [JSON.stringify([item.ownerAgentId, item.referentAgentId]), item]))
+  const relationshipByDirection = new Map((typed ? [] : state.social.relationships)
+    .map((item) => [JSON.stringify([item.ownerAgentId, item.referentAgentId]), item]))
   const evaluateContact = (offender: MovementTracePoint, target: OpportunityTargetV5,
     nearbyIds: readonly string[]) => {
     if (offender.activity === 'atHome' || offender.activity === 'waitingForSpace') return
@@ -310,11 +317,11 @@ export function advanceEncounterCrimeV1(state: SimulationStateV5,
     episodes.set(key, episode)
   }
   const candidatesBySecond = new Map<number, SpatialCandidateSample[]>()
-  for (const candidate of crimeCandidates) {
+  if (!typed) for (const candidate of crimeCandidates) {
     const list = candidatesBySecond.get(candidate.second) ?? []
     list.push(candidate); candidatesBySecond.set(candidate.second, list)
   }
-  for (let second = 1; second <= environment.config.logicalSecondsPerTick; second += 1) {
+  for (let second = 1; !typed && second <= environment.config.logicalSecondsPerTick; second += 1) {
     const points = (bySecond.get(second) ?? []).sort((a, b) => a.agentId.localeCompare(b.agentId))
     const secondCandidates = candidatesBySecond.get(second) ?? []
     const nearby = new Map<string, Set<string>>()
@@ -346,7 +353,7 @@ export function advanceEncounterCrimeV1(state: SimulationStateV5,
   const witnessConfig = { ...scenario.witness,
     observationSeed: environment.config.observationSeed,
     reportingProbability: environment.config.reportingProbability }
-  let social = state.social
+  let social = workingState.social!
   let pending = [...social.pendingWitnessReports]
   let reports = [...state.reports]
   let potentialWitnesses = 0
@@ -369,7 +376,12 @@ export function advanceEncounterCrimeV1(state: SimulationStateV5,
         })
       const assessments = assessWitnessesForOffence(offence, candidates, perceptions,
         recognition, witnessConfig, attention, bySecond.get(offence.second) ?? [])
+        .filter((item) => offence.offenceType !== 'personTheft' ||
+          item.source !== 'victim')
       const observations = createWitnessObservations(offence, assessments, witnessConfig)
+        .map((observation) => offence.offenceType ? { ...observation,
+          id: `witness-observation:${hashSeed(`${environment.config.observationSeed}:` +
+            `${offence.id}:${observation.ownerAgentId}` ).toString(16)}` } : observation)
       const scheduled = scheduleWitnessReports(observations, witnessConfig)
       social = updateSubjectiveWitnessState(social, observations, environment, state.tick)
       social = { ...social, witnessAssessments: [...social.witnessAssessments, ...assessments],
@@ -380,6 +392,34 @@ export function advanceEncounterCrimeV1(state: SimulationStateV5,
       potentialWitnesses += assessments.filter((item) => item.potentiallyAbleToObserve).length
       actualWitnesses += observations.length
     }
+  }
+  for (const discovered of typed?.acquiredAwareness ?? []) {
+    const citizen = state.citizens.find((item) => item.id === discovered.victimAgentId)
+    if (!citizen) continue
+    const surface = surfaceById.get(citizen.surfaceId)
+    const opaqueDiscovery = hashSeed(`${environment.config.observationSeed}:` +
+      `missing-property:${discovered.itemId}:${discovered.victimAgentId}:` +
+      `${discovered.dueTick}`).toString(16)
+    const observation: WitnessObservation = {
+      id: `discovery-observation:${opaqueDiscovery}`,
+      ownerAgentId: discovered.victimAgentId, source: 'victim',
+      offenceId: discovered.offenceId, observedTick: state.tick,
+      observedSecond: environment.config.logicalSecondsPerTick,
+      perceivedPosition: citizen.position,
+      perceivedLevelId: surface?.levelId ?? null,
+      perceivedPlaceId: citizen.placeId,
+      perceivedSeverity: 'minor', subjectToken: null,
+      believedIdentity: null, recognitionKnowledgeId: null,
+      confidence: 0.9,
+    }
+    const scheduled = scheduleWitnessReports([observation], witnessConfig)
+    social = updateSubjectiveWitnessState(social, [observation], environment, state.tick)
+    social = { ...social,
+      witnessObservations: [...social.witnessObservations, observation],
+      reportLinks: [...social.reportLinks, ...scheduled.map((item) => ({
+        offenceId: item.offenceId, reportId: item.report.id }))] }
+    pending.push(...scheduled)
+    actualWitnesses += 1
   }
   pending = pending.filter((item) => {
     if (item.report.availableTick > state.tick) return true
@@ -397,7 +437,7 @@ export function advanceEncounterCrimeV1(state: SimulationStateV5,
       offenderAttempts: social.metrics.offenderAttempts + offenderAttempts,
       potentialWitnesses: social.metrics.potentialWitnesses + potentialWitnesses,
       actualWitnesses: social.metrics.actualWitnesses + actualWitnesses } }
-  return { ...state, social,
+  return { ...workingState, social,
     encounterEpisodes: [...episodes.values()].filter((item) => state.tick - item.lastContactTick < 2)
       .sort((a, b) => a.id.localeCompare(b.id)),
     offenderCooldowns: cooldowns, resourceCooldowns, offences, reports }
