@@ -1,0 +1,114 @@
+{
+  "date": "2026-10-28T18:27:11.402Z",
+  "browser": "156.0.8078.48",
+  "viewport": "1440x900",
+  "dpr": 1,
+  "citySeed": "shadow-city-hero-01",
+  "tick": 500,
+  "population": 200,
+  "placeMode": true,
+  "typedCrimeMode": true,
+  "calendarNote": "500 Ticks are 50 minutes on the unified world clock",
+  "interpretation": "Synthetic paired-seed model output, not a real-city causal estimate",
+  "results": [
+    {
+      "seed": "place-paired-01",
+      "scenario": "A-mall-open",
+      "fingerprint": "world-v2:heritage-extension-v6:b287e2c5:sim-v5:c3d1b310",
+      "tick": 500,
+      "worldClock": {
+        "tickIndex": 500,
+        "worldSeconds": 31800,
+        "elapsedSeconds": 3000,
+        "dayIndex": 0,
+        "timeOfDaySeconds": 31800,
+        "secondsPerTick": 6
+      },
+      "habitDays": [
+        0
+      ],
+      "visits": 12,
+      "visitsByPlace": {
+        "central-galleria": 8,
+        "galleria-cafe-l0": 2,
+        "galleria-cafe-l1": 2
+      },
+      "completedActivities": 5,
+      "completedShopping": 0,
+      "completedEating": 5,
+      "completedLeisure": 0,
+      "failedTrips": 0,
+      "deferredTrips": 0,
+      "meanMallOccupancy": 9.966,
+      "maxMallOccupancy": 12,
+      "indoorEncounters": 15,
+      "distinctIndoorPairs": 15,
+      "opportunitySecondsGlobal": 184256,
+      "eligibleTypedExposureSeconds": 184256,
+      "eligibleTypedExposureByType": {
+        "personTheft": 76710,
+        "physicalAssault": 107546
+      },
+      "ineligibleTypedContactSeconds": {
+        "crossSurface": 8,
+        "unavailableAgent": 30970,
+        "noPortableItem": 28028
+      },
+      "rateDenominators": {
+        "residentHours": 166.66666666666666,
+        "highPropensityResidentHours": 116.66666666666667,
+        "highPropensityDefinition": "logPropensity.minor > 0 or serious > 0",
+        "eligibleTheftHours": 21.308333333333334,
+        "eligibleAssaultHours": 29.87388888888889,
+        "attemptsByHighPropensityResidents": 6
+      },
+      "indoorEligibleTypedExposureSeconds": 8251,
+      "theftAttempts": 6,
+      "assaultAttempts": 1,
+      "completedThefts": 4,
+      "completedAssaults": 1,
+      "victimAwareness": 4,
+      "indoorOffences": 0,
+      "indoorOffencesByFloor": {},
+      "indoorReportsWithKnownPlace": 0,
+      "totalTruthOffences": 5,
+      "totalAvailableReports": 3,
+      "historyCounts": {
+        "events": 649,
+        "encounterEpisodes": 358,
+        "offences": 5,
+        "sceneEntities": 1,
+        "typedActiveEpisodes": 61,
+        "typedRecentEpisodes": 1049,
+        "typedAttempts": 7
+      },
+      "timingMs": {
+        "run": 5365.70000000298,
+        "tickP50": 4.9000000059604645,
+        "tickP95": 8.100000008940697,
+        "tickP99": 10.599999994039536,
+        "replayDurationMs": 2551.5,
+        "replayEquivalent": true,
+        "encounterQueryP95": 2,
+        "encounterLifecycleP95": 0.6000000089406967,
+        "encounterCrimeWitnessP95": 1,
+        "socialMemoryP95": 0.6000000089406967,
+        "crimeHazardP95": 0.7000000029802322,
+        "crimeActionP95": 0.09999999403953552,
+        "crimeItemUpdateP95": 0,
+        "crimeAwarenessP95": 0,
+        "crimeLedgerP95": 0.10000000894069672,
+        "lifeOutcomeP95": 0,
+        "lifeSceneP95": 0.09999999403953552,
+        "heapBefore": 142109512,
+        "heapAfter": 287221888,
+        "placeRuntimeP50": 0.20000000298023224,
+        "placeRuntimeP95": 0.30000001192092896,
+        "decisionCount": 452,
+        "decisionP95": 1.5,
+        "routeTreeP95": 1.2999999970197678,
+        "candidateScoringP95": 0.20000000298023224
+      }
+    }
+  ]
+}
