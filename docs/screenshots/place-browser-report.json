@@ -1,0 +1,139 @@
+{
+  "date": "2026-10-28T16:38:27.341Z",
+  "browser": "156.0.8078.48",
+  "url": "http://127.0.0.1:5185/?seed=shadow-city-hero-01&population=120",
+  "viewport": "1440x900",
+  "dpr": 1,
+  "mapPickedSurface": "SURFACE galleria-l1",
+  "tick": 500,
+  "totalMallVisits": 23,
+  "completedMallShopping": 3,
+  "indoorEncounters": 2,
+  "indoorOffences": 0,
+  "selected": {
+    "finish": {
+      "id": "v5:230:citizen-0090:ActivityFinished",
+      "tick": 230,
+      "agentId": "citizen-0090",
+      "type": "ActivityFinished",
+      "placeId": "galleria-retail-l0"
+    },
+    "start": {
+      "id": "v5:167:citizen-0090:ActivityStarted",
+      "tick": 167,
+      "agentId": "citizen-0090",
+      "type": "ActivityStarted",
+      "placeId": "galleria-retail-l0"
+    },
+    "trip": {
+      "id": "v5:153:citizen-0090:TripStarted",
+      "tick": 153,
+      "agentId": "citizen-0090",
+      "type": "TripStarted",
+      "placeId": "galleria-retail-l0"
+    },
+    "contact": null
+  },
+  "renderer": "ANGLE (Apple, ANGLE Metal Renderer: Apple M4, Unspecified Version)",
+  "rendering": {
+    "drawCalls": 254,
+    "triangles": 314107,
+    "geometries": 324,
+    "textures": 63,
+    "geometryBufferBytes": 1911832,
+    "instanceBufferBytes": 1429988,
+    "textureSourceBytesEstimated": 5745328,
+    "medianActiveFrameMs": 33.3999999910593,
+    "p50ActiveFrameMs": 33.3999999910593,
+    "p95ActiveFrameMs": 56.099999994039536,
+    "sampledFrames": 120,
+    "renderedFrames": 179
+  },
+  "placeRuntime": [
+    {
+      "placeId": "central-galleria",
+      "isOpen": true,
+      "occupantIds": [
+        "citizen-0023",
+        "citizen-0117"
+      ],
+      "reservedAgentIds": [
+        "citizen-0023",
+        "citizen-0117"
+      ],
+      "waitingAgentIds": [],
+      "slotAssignments": {
+        "galleria:l1:45.290505620837216:17.150000000000002": "citizen-0023",
+        "galleria:l0:34.949999999999996:0": "citizen-0117"
+      },
+      "activeActivityIds": [
+        "habit-intention:citizen-0023:459:habit-decision:citizen-0023:2",
+        "habit-intention:citizen-0117:416:habit-decision:citizen-0117:2"
+      ],
+      "availableSlots": 10
+    },
+    {
+      "placeId": "galleria-retail-l0",
+      "isOpen": true,
+      "occupantIds": [],
+      "reservedAgentIds": [],
+      "waitingAgentIds": [],
+      "slotAssignments": {},
+      "activeActivityIds": [],
+      "availableSlots": 3
+    },
+    {
+      "placeId": "galleria-cafe-l0",
+      "isOpen": true,
+      "occupantIds": [
+        "citizen-0061"
+      ],
+      "reservedAgentIds": [
+        "citizen-0061"
+      ],
+      "waitingAgentIds": [],
+      "slotAssignments": {
+        "shop:cafe:l0:slot:1": "citizen-0061"
+      },
+      "activeActivityIds": [
+        "habit-intention:citizen-0061:494:habit-decision:citizen-0061:3"
+      ],
+      "availableSlots": 2
+    },
+    {
+      "placeId": "galleria-retail-l1",
+      "isOpen": true,
+      "occupantIds": [],
+      "reservedAgentIds": [],
+      "waitingAgentIds": [],
+      "slotAssignments": {},
+      "activeActivityIds": [],
+      "availableSlots": 3
+    },
+    {
+      "placeId": "galleria-cafe-l1",
+      "isOpen": true,
+      "occupantIds": [
+        "citizen-0041"
+      ],
+      "reservedAgentIds": [
+        "citizen-0041"
+      ],
+      "waitingAgentIds": [],
+      "slotAssignments": {
+        "shop:cafe:l1:slot:1": "citizen-0041"
+      },
+      "activeActivityIds": [
+        "habit-intention:citizen-0041:452:habit-decision:citizen-0041:4"
+      ],
+      "availableSlots": 2
+    }
+  ],
+  "heapBytes": 251406050,
+  "errors": [],
+  "tickP50Ms": 8.100000008940697,
+  "tickP95Ms": 17,
+  "frameP50Ms": 33.29999999999927,
+  "frameP95Ms": 33.400000000001455,
+  "replay500Ms": 6753.79999999702
+}

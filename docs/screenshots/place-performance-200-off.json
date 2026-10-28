@@ -1,0 +1,63 @@
+{
+  "date": "2026-10-28T16:36:33.079Z",
+  "browser": "156.0.8078.48",
+  "viewport": "1440x900",
+  "dpr": 1,
+  "citySeed": "shadow-city-hero-01",
+  "tick": 500,
+  "population": 200,
+  "placeMode": false,
+  "calendarNote": "500 Ticks are 250 calendar minutes and 50 physical minutes",
+  "interpretation": "Synthetic paired-seed model output, not a real-city causal estimate",
+  "results": [
+    {
+      "seed": "place-paired-01",
+      "scenario": "A-mall-open",
+      "fingerprint": "world-v2:heritage-extension-v6:b287e2c5:sim-v5:da08a9c6",
+      "tick": 500,
+      "visits": 32,
+      "visitsByPlace": {
+        "central-galleria": 15,
+        "galleria-cafe-l0": 6,
+        "galleria-cafe-l1": 6,
+        "galleria-retail-l0": 2,
+        "galleria-retail-l1": 3
+      },
+      "completedActivities": 30,
+      "completedShopping": 5,
+      "completedEating": 16,
+      "completedLeisure": 9,
+      "failedTrips": 0,
+      "deferredTrips": 0,
+      "meanMallOccupancy": 0,
+      "maxMallOccupancy": 0,
+      "indoorEncounters": 51,
+      "distinctIndoorPairs": 50,
+      "opportunitySecondsGlobal": 102674,
+      "indoorOffences": 1,
+      "indoorOffencesByFloor": {
+        "L0": 1
+      },
+      "indoorReportsWithKnownPlace": 0,
+      "totalTruthOffences": 12,
+      "totalAvailableReports": 3,
+      "historyCounts": {
+        "events": 1173,
+        "encounterEpisodes": 790,
+        "offences": 12,
+        "sceneEntities": 0
+      },
+      "timingMs": {
+        "run": 7350.5999999940395,
+        "tickP50": 13.899999991059303,
+        "tickP95": 23.799999997019768,
+        "placeRuntimeP50": null,
+        "placeRuntimeP95": null,
+        "decisionCount": 496,
+        "decisionP95": 5.299999997019768,
+        "routeTreeP95": 4.700000002980232,
+        "candidateScoringP95": 0.7000000029802322
+      }
+    }
+  ]
+}

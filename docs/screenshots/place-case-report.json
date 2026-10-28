@@ -1,0 +1,187 @@
+{
+  "date": "2026-10-28T16:39:11.878Z",
+  "browser": "156.0.8078.48",
+  "viewport": "1440x900",
+  "dpr": 1,
+  "url": "http://127.0.0.1:5185/?seed=shadow-city-hero-01&population=120&simSeed=place-paired-03&habitSeed=place-paired-03-habits&offendingSeed=place-paired-03-offending&observationSeed=place-paired-03-observation&socialSeed=place-paired-03-social&lifeSeed=place-paired-03-life",
+  "offence": {
+    "id": "offence:citizen-0102:citizen:citizen-0044:123@galleria-shop-cafe-l1",
+    "incidentId": "incident:offence:citizen-0102:citizen:citizen-0044:123@galleria-shop-cafe-l1",
+    "tick": 257,
+    "second": 2,
+    "offenderAgentId": "citizen-0102",
+    "target": {
+      "kind": "citizen",
+      "id": "citizen-0044"
+    },
+    "severity": "minor",
+    "mechanism": "nonPhysical",
+    "position": {
+      "x": 41213,
+      "y": 5500,
+      "z": 15573
+    },
+    "surfaceId": "galleria-shop-cafe-l1",
+    "levelId": "L1",
+    "placeId": "galleria-cafe-l1",
+    "encounterId": "social-encounter:[\"citizen-0044\",\"citizen-0102\"]:733",
+    "opportunity": {
+      "id": "opportunity:citizen-0102:citizen:citizen-0044:123@galleria-shop-cafe-l1",
+      "offenderAgentId": "citizen-0102",
+      "target": {
+        "kind": "citizen",
+        "id": "citizen-0044"
+      },
+      "surfaceId": "galleria-shop-cafe-l1",
+      "levelId": "L1",
+      "placeId": "galleria-cafe-l1",
+      "position": {
+        "x": 41213,
+        "y": 5500,
+        "z": 15573
+      },
+      "exposureSeconds": 806,
+      "guardianship": 1,
+      "perceivedRisk": 0.5811283835365602,
+      "socialContext": {
+        "encounterId": "social-encounter:[\"citizen-0044\",\"citizen-0102\"]:733",
+        "contactSeconds": 806,
+        "offenderPerceivedTarget": true,
+        "directedFamiliarity": 0.009403196138001144
+      }
+    }
+  },
+  "activities": [
+    {
+      "agentId": "citizen-0102",
+      "events": [
+        {
+          "id": "v5:34:citizen-0102:TripStarted",
+          "tick": 34,
+          "agentId": "citizen-0102",
+          "type": "TripStarted",
+          "placeId": "galleria-cafe-l1"
+        },
+        {
+          "id": "v5:59:citizen-0102:DestinationReached",
+          "tick": 59,
+          "agentId": "citizen-0102",
+          "type": "DestinationReached",
+          "placeId": "galleria-cafe-l1"
+        },
+        {
+          "id": "v5:59:citizen-0102:ActivityStarted",
+          "tick": 59,
+          "agentId": "citizen-0102",
+          "type": "ActivityStarted",
+          "placeId": "galleria-cafe-l1"
+        },
+        {
+          "id": "v5:257:citizen-0102:ActivityFinished",
+          "tick": 257,
+          "agentId": "citizen-0102",
+          "type": "ActivityFinished",
+          "placeId": "galleria-cafe-l1"
+        }
+      ],
+      "decisions": [
+        {
+          "tick": 34,
+          "chosenKind": "leisure",
+          "score": 319,
+          "terms": {
+            "needs": 134,
+            "obligation": 0,
+            "learned": 28,
+            "preference": 107,
+            "social": 0,
+            "valence": 0,
+            "time": 35,
+            "variation": 30,
+            "travel": -15,
+            "crowd": 0,
+            "risk": 0,
+            "commitment": 0
+          }
+        }
+      ]
+    },
+    {
+      "agentId": "citizen-0044",
+      "events": [
+        {
+          "id": "v5:97:citizen-0044:TripStarted",
+          "tick": 97,
+          "agentId": "citizen-0044",
+          "type": "TripStarted",
+          "placeId": "galleria-cafe-l1"
+        },
+        {
+          "id": "v5:123:citizen-0044:DestinationReached",
+          "tick": 123,
+          "agentId": "citizen-0044",
+          "type": "DestinationReached",
+          "placeId": "galleria-cafe-l1"
+        },
+        {
+          "id": "v5:123:citizen-0044:ActivityStarted",
+          "tick": 123,
+          "agentId": "citizen-0044",
+          "type": "ActivityStarted",
+          "placeId": "galleria-cafe-l1"
+        }
+      ],
+      "decisions": [
+        {
+          "tick": 97,
+          "chosenKind": "leisure",
+          "score": 317,
+          "terms": {
+            "needs": 150,
+            "obligation": 0,
+            "learned": 15,
+            "preference": 133,
+            "social": 0,
+            "valence": 0,
+            "time": 35,
+            "variation": 28,
+            "travel": -14,
+            "crowd": -30,
+            "risk": 0,
+            "commitment": 0
+          }
+        }
+      ]
+    }
+  ],
+  "encounter": {
+    "id": "social-encounter:[\"citizen-0044\",\"citizen-0102\"]:733",
+    "pairKey": "[\"citizen-0044\",\"citizen-0102\"]",
+    "participantIds": [
+      "citizen-0044",
+      "citizen-0102"
+    ],
+    "startedTick": 123,
+    "startedSecond": 1,
+    "endedTick": 259,
+    "endedSecond": 3,
+    "status": "ended",
+    "contactSeconds": 807,
+    "proximityDurationTicks": 135,
+    "lastContactGlobalSecond": 1539,
+    "minDistanceMm": 365,
+    "surfaceId": "galleria-shop-cafe-l1",
+    "placeId": "galleria-cafe-l1",
+    "perceivedBy": [
+      "citizen-0044",
+      "citizen-0102"
+    ],
+    "interactionIds": []
+  },
+  "observations": [],
+  "links": [],
+  "injuries": [],
+  "deaths": [],
+  "scene": null,
+  "errors": []
+}
