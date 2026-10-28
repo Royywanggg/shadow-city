@@ -86,7 +86,7 @@ export function GalleriaArchitecturalSkin({ world, showRoof }: {
     <InstancedBoxes items={parts.floorBands} castShadow roughness={0.74} metalness={0.12} />
     <InstancedBoxes items={parts.frames} castShadow roughness={0.52} metalness={0.28} />
     <InstancedBoxes items={parts.darkGlass} color="#1a3441" roughness={0.31} metalness={0.14} />
-    <InstancedBoxes items={parts.warmGlass} color="#bc8661" emissive="#dd985f"
+    <InstancedBoxes items={parts.warmGlass} color="#bc8661" dayColor="#405b69" emissive="#dd985f"
       emissiveIntensity={0.92} roughness={0.36} />
     {showRoof && <InstancedBoxes items={parts.roofPlant} castShadow roughness={0.61}
       metalness={0.36} />}

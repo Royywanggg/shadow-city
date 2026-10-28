@@ -8,7 +8,11 @@ import { createNavigationIndexV2, orientedEdgePath } from '../world/navigation/r
 import type { CitizenStateV5, SimulationStateV5 } from '../simulation/v5Types'
 import { observerViewV5, reportIdForOffence } from '../simulation/offending/opportunityV5'
 import { CityStaticScene, type LightingDiagnostic, type LookDevMode,
-  type RenderingQuality } from './CityScene'
+  type RenderingQuality, type ShadowMode } from './CityScene'
+import { LightingContext } from './lighting/LightingContext'
+import { SkyDome } from './lighting/SkyDome'
+import type { LightingState } from './lighting/timeOfDay'
+import { ShadowUpdateController } from './lighting/ShadowUpdateController'
 import { RenderDiagnostics } from './RenderDiagnostics'
 import { WalkwayStructures } from './WalkwayStructures'
 import { GalleriaCanopy } from './GalleriaCanopy'
@@ -112,7 +116,8 @@ function InstancedWorldBoxes({ boxes, onPick, quality }: { boxes: readonly World
 
 export function WorldSceneV2({ world, level, cutaway, debugNavigation, onPickSurface,
   quality = 'high', postprocessing = true, lighting = 'night', castShadows = true,
-  ambientOcclusion = false, lookdev = 'final', bloomEnabled = false }: {
+  ambientOcclusion = false, lookdev = 'final', bloomEnabled = false,
+  timeLighting = null, shadowMode = 'optimized' }: {
   world: WorldModelV2
   level: 'all' | 'L0' | 'L1'
   cutaway: boolean
@@ -125,6 +130,8 @@ export function WorldSceneV2({ world, level, cutaway, debugNavigation, onPickSur
   ambientOcclusion?: boolean
   lookdev?: LookDevMode
   bloomEnabled?: boolean
+  timeLighting?: LightingState | null
+  shadowMode?: ShadowMode
 }) {
   const groups = useMemo(() => {
     const candidates = [...(world.baseCity ? [] : roadBoxes(world)), ...world.boxes].filter((box) => {
@@ -165,21 +172,41 @@ export function WorldSceneV2({ world, level, cutaway, debugNavigation, onPickSur
         (box.id.startsWith('bridge-') ? 'skybridge' : box.kind === 'floor' ? 'ground' : null))
     onPickSurface(surfaceId)
   }
-  return <>
+  return <LightingContext.Provider value={timeLighting}>
+    <ShadowUpdateController enabled={Boolean(timeLighting && castShadows &&
+      shadowMode === 'optimized')}
+      revision={`${timeLighting?.worldSeconds ?? 'static'}:${cutaway}:${level}:${quality}:${world.config.seed}`} />
     {world.baseCity ? <>
       <CityStaticScene city={world.baseCity} quality={quality} postprocessing={postprocessing}
         lighting={lighting} castShadows={castShadows} ambientOcclusion={ambientOcclusion}
-        lookdev={lookdev} bloomEnabled={bloomEnabled} />
+        lookdev={lookdev} bloomEnabled={bloomEnabled} timeLighting={timeLighting}
+        shadowMode={shadowMode} />
       {import.meta.env.DEV && <RenderDiagnostics />}
     </> : <>
-    <color attach="background" args={['#101c2a']} />
-    <fog attach="fog" args={['#101c2a', 240, 650]} />
-    <ambientLight intensity={1.05} color="#9db5cc" />
-    <directionalLight position={[-80, 155, 45]} intensity={2.7} color="#c7d9ea"
-      castShadow shadow-mapSize-width={2048} shadow-mapSize-height={2048}
+    <color attach="background" args={[timeLighting?.skyColor ?? '#101c2a']} />
+    <fog attach="fog" args={[timeLighting?.fogColor ?? '#101c2a', 240, 650]} />
+    {timeLighting && <SkyDome lighting={timeLighting} />}
+    <ambientLight intensity={timeLighting?.ambientIntensity ?? 1.05}
+      color={timeLighting?.ambientColor ?? '#9db5cc'} />
+    <directionalLight position={timeLighting ? [-85, 145, 65] : [-80, 155, 45]}
+      intensity={timeLighting?.moonIntensity ?? 2.7} color="#c7d9ea"
+      castShadow={castShadows && shadowMode !== 'none' && (!timeLighting ||
+        timeLighting.moonIntensity > (shadowMode === 'optimized' ? 0.15 : 0.01))}
+      shadow-mapSize-width={quality === 'high' ? 2048 : 1024}
+      shadow-mapSize-height={quality === 'high' ? 2048 : 1024}
       shadow-camera-left={-185} shadow-camera-right={185}
       shadow-camera-top={185} shadow-camera-bottom={-185} shadow-bias={-0.00015} />
-    <hemisphereLight args={['#adc5d8', '#23394a', 1.15]} />
+    {timeLighting && <directionalLight
+      position={timeLighting.sunDirection.map((component) => component * 220) as
+        [number, number, number]}
+      intensity={timeLighting.sunIntensity} color={timeLighting.sunColor}
+      castShadow={castShadows && shadowMode !== 'none' &&
+        timeLighting.sunIntensity > (shadowMode === 'optimized' ? 0.15 : 0.01)}
+      shadow-mapSize-width={quality === 'high' ? 2048 : 1024}
+      shadow-mapSize-height={quality === 'high' ? 2048 : 1024}
+      shadow-camera-left={-185} shadow-camera-right={185}
+      shadow-camera-top={185} shadow-camera-bottom={-185} shadow-bias={-0.00015} />}
+    <hemisphereLight args={['#adc5d8', '#23394a', timeLighting?.hemisphereIntensity ?? 1.15]} />
     <mesh position={[0, -0.45, 0]} receiveShadow>
       <boxGeometry args={[328, 0.9, 328]} />
       <meshStandardMaterial color="#1a2a36" roughness={0.93} />
@@ -198,7 +225,7 @@ export function WorldSceneV2({ world, level, cutaway, debugNavigation, onPickSur
       points={edge.path.map((point) => metres(point))} color={edge.kind === 'portal' ? '#e0ab75' :
         edge.kind === 'stair' ? '#ffca72' : edge.kind === 'ramp' ? '#7bd6b8' : '#80bbd3'}
       lineWidth={2} />)}
-  </>
+  </LightingContext.Provider>
 }
 
 export function WorldSelectedRoute({ world, citizen }: { world: WorldModelV2; citizen: CitizenStateV5 | null }) {

@@ -1,10 +1,14 @@
 import { Canvas } from '@react-three/fiber'
 import { ACESFilmicToneMapping, AgXToneMapping, SRGBColorSpace } from 'three'
-import { memo, useEffect, useMemo, useState, useSyncExternalStore, type CSSProperties } from 'react'
+import { memo, useEffect, useMemo, useState, useSyncExternalStore,
+  type CSSProperties, type ComponentProps } from 'react'
 import { createCameraController } from '../camera/cameraController'
 import { FixedStepScheduler, browserFrameHost, type PlaybackSpeed } from '../playback/FixedStepScheduler'
 import { WorldCameraRig } from '../scene/WorldCameraRig'
 import { WorldSceneV2, WorldOffenceLayer, WorldSelectedRoute } from '../scene/WorldSceneV2'
+import type { ShadowMode } from '../scene/CityScene'
+import { getLightingState, formatWorldTime } from '../scene/lighting/timeOfDay'
+import { worldClockAtTick } from '../simulation/clock'
 import { WorldAgentLayerV5 } from '../scene/WorldAgentLayerV5'
 import { EncounterLayerV1 } from '../scene/EncounterLayerV1'
 import { EventReconstructionLayer, SceneSelectionMarkers } from '../scene/EventReconstructionLayer'
@@ -39,6 +43,51 @@ const ResidentRow = memo(function ResidentRow({ id, name, activity, selected,
     <span><strong>{name}</strong><small>{id}</small></span><small>{activity}</small>
   </button>
 })
+
+function WorldLightingScene({ session, previewMinute, dynamicLighting, ...props }: {
+  session: SimulationSessionV5; previewMinute: number | null; dynamicLighting: boolean
+} & Omit<ComponentProps<typeof WorldSceneV2>, 'timeLighting'>) {
+  const snapshot = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot)
+  const clock = worldClockAtTick(session.getConfig().startHour, snapshot.tick)
+  const lighting = dynamicLighting ? getLightingState(previewMinute === null ?
+    clock.worldSeconds : previewMinute * 60) : null
+  if (import.meta.env.DEV) {
+    (window as Window & { __shadowCityLighting?: unknown }).__shadowCityLighting = {
+      actualWorldSeconds: clock.worldSeconds, renderedWorldSeconds: lighting?.worldSeconds ?? null,
+      preview: previewMinute !== null, phase: lighting?.phase ?? 'Static diagnostic',
+      sunDirection: lighting?.sunDirection ?? null, shadowMode: props.shadowMode,
+      quality: props.quality, state: lighting }
+  }
+  return <WorldSceneV2 {...props} timeLighting={lighting} />
+}
+
+function WorldTimePreview({ session, previewMinute, setPreviewMinute, dynamicLighting,
+  shadowMode, quality }: { session: SimulationSessionV5; previewMinute: number | null;
+  setPreviewMinute: (minute: number | null) => void; dynamicLighting: boolean;
+  shadowMode: ShadowMode; quality: string }) {
+  const snapshot = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot)
+  const clock = worldClockAtTick(session.getConfig().startHour, snapshot.tick)
+  const visualTime = previewMinute === null ? clock.worldSeconds : previewMinute * 60
+  const phase = dynamicLighting ? getLightingState(visualTime).phase : 'Static diagnostic'
+  return <div className="v06-world-time" aria-label="World and visual time">
+    <strong>WORLD {formatWorldTime(clock.worldSeconds)} · DAY {clock.dayIndex}</strong>
+    <span>{previewMinute === null ? phase : `VISUAL PREVIEW ${formatWorldTime(visualTime)} · ${phase}`}</span>
+    {import.meta.env.DEV && dynamicLighting && <select aria-label="Visual-only time preview"
+      value={previewMinute ?? 'world'} onChange={(event) => setPreviewMinute(event.target.value ===
+        'world' ? null : Number(event.target.value))}>
+      <option value="world">FOLLOW WORLD TIME</option>
+      {['02:00', '05:00', '07:00', '12:00', '16:00', '18:30', '21:00', '23:00'].map((time) => {
+        const [hour, minute] = time.split(':').map(Number)
+        return <option key={time} value={hour * 60 + minute}>{time} · VISUAL ONLY</option>
+      })}
+    </select>}
+    {import.meta.env.DEV && dynamicLighting && <input aria-label="Visual-only time scrub"
+      type="range" min="0" max="1439" step="1"
+      value={previewMinute ?? Math.floor(clock.timeOfDaySeconds / 60)}
+      onChange={(event) => setPreviewMinute(Number(event.target.value))} />}
+    <small>SHADOW {shadowMode.toUpperCase()} · {quality.toUpperCase()}</small>
+  </div>
+}
 
 function DynamicWorldOverlays({ session, selectedId, selectedEncounterId, selectedEvent,
   eventExplorerOpen, onSelectScene, level, mode }: {
@@ -528,6 +577,10 @@ export function MultiLevelApp() {
   const bloomEnabled = params.get('bloom') === 'on'
   const lighting = params.get('lighting') === 'day' ? 'day' : 'night'
   const castShadows = params.get('shadows') !== 'off'
+  const requestedShadowMode = params.get('shadowMode')
+  const shadowMode: ShadowMode = !castShadows || requestedShadowMode === 'none' ? 'none' :
+    requestedShadowMode === 'full' ? 'full' : 'optimized'
+  const dynamicLighting = !params.has('lighting') && lookdev !== 'clay'
   const ambientOcclusion = params.get('ao') === 'on'
   const toneMapping = params.get('tone') === 'aces' ? ACESFilmicToneMapping : AgXToneMapping
   const exposureParam = Number(params.get('exposure'))
@@ -619,10 +672,17 @@ export function MultiLevelApp() {
   const [cutaway, setCutaway] = useState(false)
   const [debug, setDebug] = useState(false)
   const [mode, setMode] = useState<'truth' | 'observed' | 'compare'>('observed')
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 620)
   const [sidebarWidth, setSidebarWidth] = useState(320)
   const [playing, setPlaying] = useState(false)
   const [speed, setSpeed] = useState<PlaybackSpeed>(1)
+  const [previewMinute, setPreviewMinute] = useState<number | null>(() => {
+    if (!import.meta.env.DEV) return null
+    const time = params.get('visualTime')
+    if (!time || !/^([01]\d|2[0-3]):[0-5]\d$/.test(time)) return null
+    const [hour, minute] = time.split(':').map(Number)
+    return hour * 60 + minute
+  })
   const selectedIndoor = useSyncExternalStore(session.subscribe,
     () => Boolean(world.surfaces.find((surface) => surface.id ===
       session.getSnapshot().state.citizens.find((citizen) => citizen.id === selectedId)?.surfaceId)?.indoor))
@@ -754,14 +814,20 @@ export function MultiLevelApp() {
         setPlaceExplorerOpen(!placeExplorerOpen)
         setEventExplorerOpen(false)
       }}>{placeExplorerOpen ? 'HIDE PLACE' : 'PLACE INSPECTOR'}</button>}
+      <WorldTimePreview session={session} previewMinute={previewMinute}
+        setPreviewMinute={setPreviewMinute} dynamicLighting={dynamicLighting}
+        shadowMode={shadowMode} quality={renderQuality} />
       <Canvas orthographic camera={{ position: [245, 195, 245], near: 0.1, far: 1200, zoom: 1 }}
         dpr={renderQuality === 'low' ? 1 : [1, 1.5]} shadows="percentage"
         gl={{ antialias: true, powerPreference: 'high-performance', outputColorSpace: SRGBColorSpace,
           toneMapping, toneMappingExposure: exposure }}>
         <WorldCameraRig controller={cameraController} world={world} />
-        <WorldSceneV2 world={world} level={level} cutaway={cutaway || selectedIndoor}
+        <WorldLightingScene session={session} previewMinute={previewMinute}
+          dynamicLighting={dynamicLighting}
+          world={world} level={level} cutaway={cutaway || selectedIndoor}
           quality={renderQuality} postprocessing={postprocessing} lighting={lighting}
-          castShadows={castShadows} ambientOcclusion={ambientOcclusion} lookdev={lookdev}
+          castShadows={castShadows} shadowMode={shadowMode}
+          ambientOcclusion={ambientOcclusion} lookdev={lookdev}
           bloomEnabled={bloomEnabled}
           debugNavigation={debug} onPickSurface={(surfaceId) => {
             setPickedSurfaceId(surfaceId)

@@ -32,14 +32,14 @@ function createNightEnvironment(): DataTexture {
 
 const nightEnvironment = createNightEnvironment()
 
-export function NightEnvironment() {
+export function NightEnvironment({ intensity = 0.42 }: { intensity?: number }) {
   const scene = useThree((state) => state.scene)
   const invalidate = useThree((state) => state.invalidate)
   useEffect(() => {
     const previousEnvironment = scene.environment
     const previousIntensity = scene.environmentIntensity
     scene.environment = nightEnvironment
-    scene.environmentIntensity = 0.42
+    scene.environmentIntensity = intensity
     invalidate()
     return () => {
       scene.environment = previousEnvironment
@@ -47,5 +47,9 @@ export function NightEnvironment() {
       invalidate()
     }
   }, [invalidate, scene])
+  useEffect(() => {
+    scene.environmentIntensity = intensity
+    invalidate()
+  }, [intensity, invalidate, scene])
   return null
 }

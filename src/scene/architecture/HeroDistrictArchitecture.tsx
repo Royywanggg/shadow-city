@@ -291,9 +291,9 @@ export function HeroDistrictArchitecture({ buildings }: { buildings: readonly Bu
       map={maps.roof.color} normalMap={maps.roof.normal} roughnessMap={maps.roof.roughness} />
     <InstancedBoxes items={details.roofMetal} castShadow roughness={0.56} metalness={0.7} />
     <InstancedBoxes items={details.darkGlass} color="#294655" roughness={0.27} metalness={0.1} />
-    <InstancedBoxes items={details.warmGlass} color="#e2b58b" emissive="#b86a3e"
+    <InstancedBoxes items={details.warmGlass} color="#e2b58b" dayColor="#425d6c" emissive="#b86a3e"
       emissiveIntensity={0.76} roughness={0.36} />
-    <InstancedBoxes items={details.cyanGlass} color="#95bec4" emissive="#55a4a7"
+    <InstancedBoxes items={details.cyanGlass} color="#95bec4" dayColor="#426678" emissive="#55a4a7"
       emissiveIntensity={0.48} roughness={0.35} />
     <RoofVents buildings={buildings} />
   </>

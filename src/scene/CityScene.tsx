@@ -14,10 +14,24 @@ import { Roads } from './Roads'
 import { StreetFurniture } from './StreetFurniture'
 import { LookDevLighting } from './lookdev/LookDevLighting'
 import { selectLookDevArea } from './lookdev/selectLookDevArea'
+import type { LightingState } from './lighting/timeOfDay'
+import { SkyDome } from './lighting/SkyDome'
 
 export type RenderingQuality = 'low' | 'high'
 export type LightingDiagnostic = 'night' | 'day'
 export type LookDevMode = 'baseline' | 'clay' | 'lighting' | 'geometry' | 'final'
+export type ShadowMode = 'none' | 'full' | 'optimized'
+
+function DynamicExposure({ exposure }: { exposure: number }) {
+  const { gl, invalidate } = useThree()
+  useEffect(() => {
+    const previous = gl.toneMappingExposure
+    gl.toneMappingExposure = exposure
+    invalidate()
+    return () => { gl.toneMappingExposure = previous; invalidate() }
+  }, [exposure, gl, invalidate])
+  return null
+}
 
 function ClayOverride() {
   const { scene } = useThree()
@@ -33,7 +47,7 @@ function ClayOverride() {
 
 export function CityStaticScene({ city, quality = 'high', postprocessing = true,
   lighting = 'night', castShadows = true, ambientOcclusion = false, lookdev = 'final',
-  bloomEnabled = false }: {
+  bloomEnabled = false, timeLighting = null, shadowMode = 'optimized' }: {
   city: CityModel
   quality?: RenderingQuality
   postprocessing?: boolean
@@ -42,11 +56,18 @@ export function CityStaticScene({ city, quality = 'high', postprocessing = true,
   ambientOcclusion?: boolean
   lookdev?: LookDevMode
   bloomEnabled?: boolean
+  timeLighting?: LightingState | null
+  shadowMode?: ShadowMode
 }) {
   const half = city.size / 2
   const shadowExtent = half + 10
   const clay = lookdev === 'clay'
-  const day = lighting === 'day' || clay
+  const day = !timeLighting && (lighting === 'day' || clay)
+  const windowLights = timeLighting?.streetlightIntensity ?? (day ? 0 : 1)
+  const useSunShadow = Boolean(timeLighting && castShadows && shadowMode !== 'none' &&
+    timeLighting.sunIntensity > (shadowMode === 'optimized' ? 0.15 : 0.01))
+  const useMoonShadow = castShadows && shadowMode !== 'none' && (!timeLighting ||
+    timeLighting.moonIntensity > (shadowMode === 'optimized' ? 0.15 : 0.01))
   const lookdevArea = useMemo(() => selectLookDevArea(city), [city])
   const plazaLights = useMemo(() => [...city.buildings]
     .filter((building) => building.kind === 'civic' || building.kind === 'commercial' || building.kind === 'corner')
@@ -57,19 +78,34 @@ export function CityStaticScene({ city, quality = 'high', postprocessing = true,
     }).slice(0, 3), [city])
   return (
     <>
-      <color attach="background" args={[day ? '#8ea5b5' : '#08111f']} />
-      <fogExp2 attach="fog" args={[day ? '#8ea5b5' : '#08111f', day ? 0.0018 : 0.00235]} />
-      {!day && <NightEnvironment />}
-      <ambientLight color={day ? '#b9c7d0' : '#91a9c1'} intensity={day ? 1.15 : 0.72} />
-      <hemisphereLight args={day ? ['#d5e0e6', '#697b86', 1.35] :
+      <color attach="background" args={[timeLighting?.skyColor ?? (day ? '#8ea5b5' : '#08111f')]} />
+      <fogExp2 attach="fog" args={[timeLighting?.fogColor ?? (day ? '#8ea5b5' : '#08111f'),
+        timeLighting?.fogDensity ?? (day ? 0.0018 : 0.00235)]} />
+      {timeLighting && <><SkyDome lighting={timeLighting} />
+        <DynamicExposure exposure={timeLighting.exposure} /></>}
+      {(!day || timeLighting) && <NightEnvironment intensity={timeLighting?.environmentIntensity} />}
+      <ambientLight color={timeLighting?.ambientColor ?? (day ? '#b9c7d0' : '#91a9c1')}
+        intensity={timeLighting?.ambientIntensity ?? (day ? 1.15 : 0.72)} />
+      <hemisphereLight args={timeLighting ? [timeLighting.skyColor, '#172331',
+        timeLighting.hemisphereIntensity] : day ? ['#d5e0e6', '#697b86', 1.35] :
         ['#a7bbce', '#172331', 1.02]} />
-      <directionalLight position={[65, 90, -80]} color={day ? '#cad5db' : '#819db3'}
-        intensity={day ? 0.45 : 0.32} />
+      {timeLighting ? <directionalLight
+        position={timeLighting.sunDirection.map((component) => component * 220) as
+          [number, number, number]}
+        color={timeLighting.sunColor} intensity={timeLighting.sunIntensity}
+        castShadow={useSunShadow}
+        shadow-mapSize={quality === 'high' ? [2048, 2048] : [1024, 1024]}
+        shadow-camera-left={-shadowExtent} shadow-camera-right={shadowExtent}
+        shadow-camera-top={shadowExtent} shadow-camera-bottom={-shadowExtent}
+        shadow-camera-near={0.1} shadow-camera-far={400}
+        shadow-bias={-0.00035} shadow-normalBias={0.025} shadow-radius={2} /> :
+        <directionalLight position={[65, 90, -80]} color={day ? '#cad5db' : '#819db3'}
+          intensity={day ? 0.45 : 0.32} />}
       <directionalLight
         position={[-85, 145, 65]}
-        color={day ? '#fff4e5' : '#d6e4ee'}
-        intensity={day ? 3.1 : 2.65}
-        castShadow={castShadows}
+        color={timeLighting ? '#d6e4ee' : day ? '#fff4e5' : '#d6e4ee'}
+        intensity={timeLighting?.moonIntensity ?? (day ? 3.1 : 2.65)}
+        castShadow={useMoonShadow}
         shadow-mapSize={quality === 'high' ? [2048, 2048] : [1024, 1024]}
         shadow-camera-left={-shadowExtent}
         shadow-camera-right={shadowExtent}
@@ -81,11 +117,12 @@ export function CityStaticScene({ city, quality = 'high', postprocessing = true,
         shadow-normalBias={0.025}
         shadow-radius={2}
       />
-      {!day && plazaLights.map((building) => <pointLight key={`entry-light-${building.id}`}
+      {windowLights > 0.01 && plazaLights.map((building) => <pointLight key={`entry-light-${building.id}`}
         position={[building.entrance.x, 3.1, building.entrance.z + 0.6]}
-        color="#eab37a" intensity={quality === 'high' ? 17 : 11}
+        color="#eab37a" intensity={(quality === 'high' ? 17 : 11) * windowLights}
         distance={13} decay={2} />)}
-      {!day && lookdevArea && lookdev !== 'baseline' && <LookDevLighting area={lookdevArea} />}
+      {windowLights > 0.01 && lookdevArea && lookdev !== 'baseline' &&
+        <LookDevLighting area={lookdevArea} intensity={windowLights} />}
 
       <mesh position={[0, -3.25, 0]} receiveShadow>
         <boxGeometry args={[city.size + 22, 1, city.size + 22]} />
@@ -110,7 +147,7 @@ export function CityStaticScene({ city, quality = 'high', postprocessing = true,
       <Roads city={city} />
       <Plaza city={city} />
       <Buildings city={city} lookdev={lookdev} />
-      <StreetFurniture city={city} enableLights={!clay} />
+      <StreetFurniture city={city} enableLights={!clay} lightIntensity={windowLights} />
       {clay && <ClayOverride />}
       {postprocessing && lookdev !== 'geometry' && !clay &&
       <EffectComposer multisampling={quality === 'high' ? 4 : 0}>

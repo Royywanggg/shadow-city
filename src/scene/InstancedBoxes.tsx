@@ -1,6 +1,7 @@
 import { useLayoutEffect, useMemo, useRef } from 'react'
 import { Color, InstancedBufferAttribute, Object3D, type InstancedMesh, type Texture,
   type WebGLProgramParametersWithUniforms } from 'three'
+import { useLightingState } from './lighting/LightingContext'
 
 export interface BoxInstance {
   position: [number, number, number]
@@ -30,6 +31,7 @@ export function applyInstanceTextureScale(shader: WebGLProgramParametersWithUnif
 interface InstancedBoxesProps {
   items: BoxInstance[]
   color?: string
+  dayColor?: string
   emissive?: string
   emissiveIntensity?: number
   metalness?: number
@@ -46,6 +48,7 @@ interface InstancedBoxesProps {
 export function InstancedBoxes({
   items,
   color = '#ffffff',
+  dayColor,
   emissive = '#000000',
   emissiveIntensity = 0,
   metalness = 0.1,
@@ -57,6 +60,10 @@ export function InstancedBoxes({
   castShadow = false,
   receiveShadow = false,
 }: InstancedBoxesProps) {
+  const lighting = useLightingState()
+  const materialColor = useMemo(() => dayColor && lighting ?
+    new Color(dayColor).lerp(new Color(color), lighting.nightBlend) : color,
+  [color, dayColor, lighting?.nightBlend])
   const meshRef = useRef<InstancedMesh>(null)
   const applyWorldTextureScale = useMemo(() => textureWorldScale ?
     applyInstanceTextureScale : undefined, [textureWorldScale])
@@ -94,9 +101,9 @@ export function InstancedBoxes({
     <instancedMesh ref={meshRef} args={[undefined, undefined, items.length]} castShadow={castShadow} receiveShadow={receiveShadow}>
       <boxGeometry args={[1, 1, 1]} />
       <meshStandardMaterial
-        color={color}
+        color={materialColor}
         emissive={emissive}
-        emissiveIntensity={emissiveIntensity}
+        emissiveIntensity={emissiveIntensity * (lighting?.windowEmission ?? 1)}
         metalness={metalness}
         roughness={roughness}
         map={map}

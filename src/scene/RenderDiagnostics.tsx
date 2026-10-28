@@ -53,6 +53,8 @@ declare global {
       triangles: number
       geometries: number
       textures: number
+      shaderPrograms: number
+      shadowAutoUpdate: boolean
       geometryBufferBytes: number
       instanceBufferBytes: number
       textureSourceBytesEstimated: number
@@ -98,6 +100,8 @@ export function RenderDiagnostics() {
         triangles: gl.info.render.triangles,
         geometries: gl.info.memory.geometries,
         textures: gl.info.memory.textures,
+        shaderPrograms: gl.info.programs?.length ?? 0,
+        shadowAutoUpdate: gl.shadowMap.autoUpdate,
         ...resources.current,
         medianActiveFrameMs: sorted.length ? sorted[Math.floor(sorted.length / 2)] : null,
         p50ActiveFrameMs: percentile(0.5),

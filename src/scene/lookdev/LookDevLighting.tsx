@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { InstancedBoxes, type BoxInstance } from '../InstancedBoxes'
 import type { LookDevArea } from './selectLookDevArea'
 
-export function LookDevLighting({ area }: { area: LookDevArea }) {
+export function LookDevLighting({ area, intensity = 1 }: { area: LookDevArea; intensity?: number }) {
   const fixtures = useMemo(() => {
     const civicFront = area.civic.z + area.civic.masses[0].offsetZ +
       area.civic.masses[0].depth / 2
@@ -23,9 +23,9 @@ export function LookDevLighting({ area }: { area: LookDevArea }) {
       emissiveIntensity={1.5} roughness={0.38} metalness={0.2} />
     {[-8, 8].map((offset) => <pointLight key={`civic-${offset}`}
       position={[area.civic.x + offset, 3.95, fixtures.civicFront + 1.58]}
-      color="#ffd09a" intensity={82} distance={18} decay={2} />)}
+      color="#ffd09a" intensity={82 * intensity} distance={18} decay={2} />)}
     {[-10.5, 10.5].map((offset) => <pointLight key={`shop-${offset}`}
       position={[area.commercial.x + offset, 3.7, fixtures.shopFront + 1.05]}
-      color="#ffc285" intensity={108} distance={18} decay={2} />)}
+      color="#ffc285" intensity={108 * intensity} distance={18} decay={2} />)}
   </>
 }

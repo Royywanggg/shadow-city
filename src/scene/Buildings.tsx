@@ -291,8 +291,8 @@ export function Buildings({ city, lookdev = 'final' }: { city: CityModel;
       <InstancedBoxes items={geometry.entries} roughness={0.58} metalness={0.23} />
       <InstancedBoxes items={geometry.windowFrames} roughness={0.56} metalness={0.25} />
       <InstancedBoxes items={geometry.darkWindows} color="#182c3d" roughness={0.4} metalness={0.37} />
-      <InstancedBoxes items={geometry.warmWindows} color="#ebb881" emissive="#d99051" emissiveIntensity={1.25} roughness={0.36} />
-      <InstancedBoxes items={geometry.coolWindows} color="#9cbcc2" emissive="#65aeb8" emissiveIntensity={0.95} roughness={0.36} />
+      <InstancedBoxes items={geometry.warmWindows} color="#ebb881" dayColor="#395467" emissive="#d99051" emissiveIntensity={1.25} roughness={0.36} />
+      <InstancedBoxes items={geometry.coolWindows} color="#9cbcc2" dayColor="#38566b" emissive="#65aeb8" emissiveIntensity={0.95} roughness={0.36} />
       <InstancedBoxes items={geometry.storefronts} roughness={0.32} metalness={0.45} />
       <InstancedBoxes items={geometry.warmSigns} color="#e6ab73" emissive="#dd8e4f" emissiveIntensity={1.45} />
       <InstancedBoxes items={geometry.coolAccents} color="#9ed8d3" emissive="#4bb3ad" emissiveIntensity={1.15} />

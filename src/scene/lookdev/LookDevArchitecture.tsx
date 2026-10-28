@@ -258,9 +258,9 @@ export function LookDevArchitecture({ area }: { area: LookDevArea }) {
       roughnessMap={maps.roof.roughness} textureWorldScale={5} />
     <InstancedBoxes items={parts.darkGlass} color="#354d59" roughness={0.22}
       metalness={0.14} />
-    <InstancedBoxes items={parts.warmGlass} color="#dbb18a" emissive="#a86b45"
+    <InstancedBoxes items={parts.warmGlass} color="#dbb18a" dayColor="#455f6e" emissive="#a86b45"
       emissiveIntensity={0.8} roughness={0.28} metalness={0.08} />
-    <InstancedBoxes items={parts.coolGlass} color="#84b4bc" emissive="#508d98"
+    <InstancedBoxes items={parts.coolGlass} color="#84b4bc" dayColor="#456978" emissive="#508d98"
       emissiveIntensity={0.45} roughness={0.27} metalness={0.08} />
   </>
 }
