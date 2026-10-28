@@ -21,7 +21,7 @@ try {
   await mkdir(outputDirectory, { recursive: true })
   for (const image of images) {
     const bytes = Buffer.from(image.dataUrl.split(',')[1], 'base64')
-    await writeFile(resolve(outputDirectory, `${image.presetId}.png`), bytes)
+    await writeFile(resolve(outputDirectory, `${image.presetId}.webp`), bytes)
   }
   console.log(`Baked ${images.length} character impostors to ${outputDirectory}`)
 } finally {

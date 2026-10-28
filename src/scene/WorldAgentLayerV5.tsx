@@ -82,7 +82,7 @@ export function WorldAgentLayerV5({ session, selectedId, onSelect, playing, getP
     let cancelled = false
     const loader = new TextureLoader()
     Promise.all(CHARACTER_ASSETS.map(async (asset) => {
-      const texture = await loader.loadAsync(`/characters/quaternius-v01/impostors/${asset.presetId}.png`)
+      const texture = await loader.loadAsync(`/characters/quaternius-v01/impostors/${asset.presetId}.webp`)
       texture.colorSpace = SRGBColorSpace
       return [asset.presetId, new MeshBasicMaterial({ map: texture, transparent: true,
         alphaTest: 0.08, side: DoubleSide, depthWrite: true, toneMapped: false })] as const

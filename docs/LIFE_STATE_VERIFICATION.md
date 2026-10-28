@@ -31,13 +31,13 @@ These are short samples on one machine. A preceding run measured 200-person life
 
 Actual inspected images:
 
-- [Normal hero, zero deaths](screenshots/life-default-hero-tick500-1440x900.png)
-- [Nonfatal injury Inspector](screenshots/life-diagnostic-inspector-tick500-1440x900.png)
-- [Fatal event Inspector](screenshots/life-fatal-inspector-tick500-1440x900.png)
-- [Death event focus at Tick 172](screenshots/life-fatal-death-event-close-1440x900.png)
-- [Same resident alive at Tick 171](screenshots/life-fatal-before-death-1440x900.png)
-- [200-person hero](screenshots/life-scale200-hero-tick500-1440x900.png)
-- [Incapacitated at Tick 181](screenshots/life-recovery-incapacitated-1440x900.png), [standing at Tick 182](screenshots/life-recovery-standing-1440x900.png), and [resumed at Tick 183](screenshots/life-recovery-resumed-1440x900.png)
+- Normal hero, zero deaths (`screenshots/life-default-hero-tick500-1440x900.png`, local capture)
+- Nonfatal injury Inspector (`screenshots/life-diagnostic-inspector-tick500-1440x900.png`, local capture)
+- Fatal event Inspector (`screenshots/life-fatal-inspector-tick500-1440x900.png`, local capture)
+- Death event focus at Tick 172 (`screenshots/life-fatal-death-event-close-1440x900.png`, local capture)
+- Same resident alive at Tick 171 (`screenshots/life-fatal-before-death-1440x900.png`, local capture)
+- 200-person hero (`screenshots/life-scale200-hero-tick500-1440x900.png`, local capture)
+- Incapacitated at Tick 181 (`screenshots/life-recovery-incapacitated-1440x900.png`, local capture), standing at Tick 182 (`screenshots/life-recovery-standing-1440x900.png`, local capture), and resumed at Tick 183 (`screenshots/life-recovery-resumed-1440x900.png`, local capture)
 
 The fatal development scenario generated a qualifying offence through the actual encounter/offender pipeline; five victims died by Tick 500, seven later scene reports were delivered, and one inspected death showed `alive` at Tick 171 and `deceased` at Tick 172. A separate [recovery browser result](screenshots/life-browser-recovery-results.json) follows a real injury in the same simulation: the resident is incapacitated at Tick 181, stays at exactly the same millimetre position through the `standingUp` Tick 182, then travels from Tick 183. This recovery run used 120 residents on the same Metal renderer, with Tick p95 5.2 ms, mean 59.5 FPS and frame p95 31.8 ms. The selected portrait retains the character preset and clothing, but its rotated `SitDown` pose is visually stiff. At scene scale the body is tiny; nearby trees can obscure it, and an indoor body remains hidden behind exterior walls. The selected marker identifies the authoritative location. These screenshots verify interface behavior and reveal a **remaining visual-quality gap**; they do not approve the death animation as final art.
 

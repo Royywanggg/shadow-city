@@ -140,7 +140,7 @@ export function AgentLayer({
     let cancelled = false
     const loader = new TextureLoader()
     Promise.all(CHARACTER_ASSETS.map(async ({ presetId }) => {
-      const texture = await loader.loadAsync(`/characters/quaternius-v01/impostors/${presetId}.png`)
+      const texture = await loader.loadAsync(`/characters/quaternius-v01/impostors/${presetId}.webp`)
       texture.colorSpace = SRGBColorSpace
       return { presetId, material: new MeshBasicMaterial({
         map: texture, color: '#b8c7ce', transparent: true, alphaTest: 0.08,

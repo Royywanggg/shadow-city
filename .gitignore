@@ -4,3 +4,4 @@ coverage/
 .visual/
 .DS_Store
 *.local
+*.png

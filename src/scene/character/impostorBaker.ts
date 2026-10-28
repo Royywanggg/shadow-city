@@ -40,7 +40,7 @@ export async function bakeCharacterImpostors(): Promise<readonly { presetId: str
     camera.lookAt(center)
     camera.updateProjectionMatrix()
     renderer.render(scene, camera)
-    output.push({ presetId, dataUrl: renderer.domElement.toDataURL('image/png') })
+    output.push({ presetId, dataUrl: renderer.domElement.toDataURL('image/webp', 0.95) })
     scene.remove(root)
     mixer.stopAllAction()
     mixer.uncacheRoot(rig)

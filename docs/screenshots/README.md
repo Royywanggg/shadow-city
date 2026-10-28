@@ -1,3 +1,9 @@
+# Screenshot versioning policy
+
+PNG screenshots are excluded from Git. Previously tracked captures remain in an existing working tree when removed from the Git index, but a fresh clone does not contain them. The verification records name local capture paths; versioned JSON reports and browser scripts provide reproducible measurements where available. A missing PNG in a fresh clone is not evidence of a new visual review.
+
+---
+
 # Visual review capture
 
 The `hero-1440x900.png` image is a **v0.1 review candidate**, captured from the running Three.js application rather than from the supplied reference image.
