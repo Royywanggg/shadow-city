@@ -127,6 +127,11 @@ export function chooseHabitDestinationV1(citizen: CitizenStateV5,
   const calendar = calendarAtTick(config.startHour, tick, scenario.calendarSecondsPerTick)
   const decisionId = `habit-decision:${citizen.id}:${habit.decisionOrdinal}`
   if (!citizen.currentNodeId) throw new Error('Habit decision requires a safe navigation node')
+  const currentNode = index.nodeById.get(citizen.currentNodeId)
+  const physicalSlot = config.placeInteraction && currentNode &&
+    currentNode.position.x === citizen.position.x &&
+    currentNode.position.y === citizen.position.y &&
+    currentNode.position.z === citizen.position.z ? currentNode.id : null
   const started = timingObserver ? performance.now() : 0
   const routes = findRoutesFromV2(index, citizen.currentNodeId,
     citizenProfile.travellerCosts, modes, priorEdgeCrowd)
@@ -139,9 +144,17 @@ export function chooseHabitDestinationV1(citizen: CitizenStateV5,
       feasible: false, reason, terms: {}, score: null })
     if (!open(place, config, calendar.minuteOfDay, modes)) { addExcluded('closed'); continue }
     const slots = place.kind === 'home' ? [citizenProfile.homeSlotNodeId] :
-      place.slotNodeIds.filter((id) => !occupied.has(id) || id === citizen.reservedSlotNodeId)
-    if (!slots.length) { addExcluded('capacity'); continue }
-    const slotId = slots[Math.floor(unit(`${scenario.seed}\u0000slot\u0000${citizen.id}\u0000${calendar.day}\u0000${habit.decisionOrdinal}\u0000${place.id}`) * slots.length)]
+      place.slotNodeIds.filter((id) => !occupied.has(id) ||
+        id === citizen.reservedSlotNodeId || id === physicalSlot)
+    const assignedCount = place.slotNodeIds.filter((id) => occupied.has(id) &&
+      id !== citizen.reservedSlotNodeId && id !== physicalSlot).length
+    if (!slots.length || config.placeInteraction && place.kind !== 'home' &&
+      assignedCount >= place.capacity) {
+      addExcluded('capacity'); continue
+    }
+    const slotId = config.placeInteraction && citizen.placeId === place.id && citizen.currentNodeId &&
+      slots.includes(citizen.currentNodeId) ? citizen.currentNodeId :
+      slots[Math.floor(unit(`${scenario.seed}\u0000slot\u0000${citizen.id}\u0000${calendar.day}\u0000${habit.decisionOrdinal}\u0000${place.id}`) * slots.length)]
     const routeCostMs = routes.costTo(slotId)
     if (routeCostMs === null) { addExcluded('unreachable'); continue }
     const needs = Math.round(300 * needFor(kind, habit) / 1_000)

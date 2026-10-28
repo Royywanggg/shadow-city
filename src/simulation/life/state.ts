@@ -186,6 +186,18 @@ function stopCitizen(citizen: CitizenStateV5, deceased: boolean,
     nextDecisionTick }
 }
 
+function interruptPlaceActivity(state: SimulationStateV5,
+  environment: SimulationEnvironmentV5, citizen: CitizenStateV5,
+  reason: string): SimulationStateV5 {
+  if (!environment.config.placeInteraction || !citizen.placeId ||
+    !['atDestination', 'interacting'].includes(citizen.activity)) return state
+  const id = `v5:${state.tick}:${citizen.id}:ActivityInterrupted`
+  if (state.events.some((item) => item.id === id)) return state
+  return { ...state, events: [...state.events, { id, tick: state.tick,
+    agentId: citizen.id, type: 'ActivityInterrupted', placeId: citizen.placeId,
+    reason }] }
+}
+
 function positionIsLegal(world: WorldModelV2, citizen: CitizenStateV5): string {
   const surface = world.surfaces.find((item) => item.id === citizen.surfaceId)
   if (!surface) throw new Error(`Life outcome has invalid surface for ${citizen.id}`)
@@ -289,6 +301,8 @@ export function applyLifeOutcomesV1(state: SimulationStateV5,
         resumeToSafeNode: false })
       citizens.set(citizen.id, stopCitizen(citizen, true, Number.MAX_SAFE_INTEGER))
       result = interruptSocial(result, citizen.id, state.tick)
+      result = interruptPlaceActivity(result, environment, citizen,
+        `fatal life event ${id}`)
     } else if (outcome.severity === 'minor') {
       people.set(citizen.id, { ...victim,
         functionalStatus: victim.functionalStatus === 'incapacitated' ?
@@ -301,6 +315,8 @@ export function applyLifeOutcomesV1(state: SimulationStateV5,
           citizen.route[citizen.routeIndex] !== undefined })
       citizens.set(citizen.id, stopCitizen(citizen, false, stepDownTick!))
       result = interruptSocial(result, citizen.id, state.tick)
+      result = interruptPlaceActivity(result, environment, citizen,
+        `incapacitating life event ${id}`)
     }
     if ((outcome.fatal || outcome.severity !== 'minor') && result.habits) {
       result = { ...result, habits: interruptHabitForLifeV1(result.habits,

@@ -276,6 +276,7 @@ export function generateIntegratedWorld(seed = HERO_SEED): WorldModelV2 {
       edgeIds: ['connector:galleria-escalator'], capacity: 8 },
   )
   builder.places.push({ id: mallId, name: 'Central Galleria', kind: 'mall',
+    buildingId: mallId, floorId: null,
     districtId: mallBlock.id, surfaceIds: ['galleria-l0', 'galleria-l1'],
     accessNodeIds: [l0West, l1West],
     slotNodeIds: ring.flatMap(([x, z]) => [`galleria:l0:${x}:${z}`, `galleria:l1:${x}:${z}`]),
@@ -301,6 +302,7 @@ export function generateIntegratedWorld(seed = HERO_SEED): WorldModelV2 {
       return slotId
     })
     builder.places.push({ id, name: `${level.toUpperCase()} ${kind === 'cafe' ? 'Atrium Café' : 'Arcade Shop'}`,
+      buildingId: mallId, floorId: level.toUpperCase(),
       kind, districtId: mallBlock.id, surfaceIds: [surfaceId], accessNodeIds: [entryId],
       slotNodeIds: slots, activityTags: kind === 'cafe' ? ['eat', 'leisure'] : ['shop'],
       openingHours: [{ openMinute: 480, closeMinute: 1320 }], capacity: 3,

@@ -18,6 +18,7 @@ import { createInitialHabitsStateV1, HabitTickV1 } from './habits/state'
 import { validateLifeConfigV1 } from './life/outcome'
 import { createInitialLifeStateV1 } from './life/types'
 import { createInitialSceneStateV1 } from './scenes/types'
+import { derivePlaceRuntimeV1, validateFunctionalPlacesV1 } from './places/runtime'
 import { finalizeLifeTickV1, progressLifeRecoveryV1 } from './life/state'
 import { chooseHabitDestinationV1, habitPlaceIsOpenV1, reportHabitReplanTimingV1,
   type HabitChoiceV1 } from './habits/decision'
@@ -83,6 +84,12 @@ export function createEnvironmentV5(world: WorldModelV2, config: SimulationConfi
       reportingProbability: config.reportingProbability })
   }
   if (config.habit) validateHabitConfig(config.habit)
+  if (config.placeInteraction) {
+    if (config.placeInteraction.version !== 'place-v1') {
+      throw new Error('Invalid place interaction version')
+    }
+    validateFunctionalPlacesV1(world)
+  }
   if (config.life) validateLifeConfigV1(config.life)
   if (config.scene && (!config.life || config.scene.version !== 'scene-v1' ||
     !Number.isSafeInteger(config.scene.cellSizeMm) || config.scene.cellSizeMm < 1_000 ||
@@ -124,7 +131,7 @@ export function createInitialStateV5(environment: SimulationEnvironmentV5,
       headingRadians: 0, tripOrdinal: 0, nextDecisionTick: profile.firstDepartureTick,
       visitOrdinal: 0, arrivedTick: 0 }
   })
-  return { version: 5, fingerprint: environment.fingerprint, tick: 0, citizens,
+  const initial: SimulationStateV5 = { version: 5, fingerprint: environment.fingerprint, tick: 0, citizens,
     accessModes: { ...environment.config.initialAccessModes }, events: [],
     encounterEpisodes: [], offences: [], reports: [], pendingReports: [],
     offenderCooldowns: {}, resourceCooldowns: {}, commands: [...commands],
@@ -134,6 +141,13 @@ export function createInitialStateV5(environment: SimulationEnvironmentV5,
       environment.config.habit) } : {}),
     ...(environment.config.life ? { life: createInitialLifeStateV1(citizens.map((item) => item.id)) } : {}),
     ...(environment.config.scene ? { scene: createInitialSceneStateV1() } : {}) }
+  return withPlaceRuntime(initial, environment)
+}
+
+function withPlaceRuntime(state: SimulationStateV5,
+  environment: SimulationEnvironmentV5): SimulationStateV5 {
+  return environment.config.placeInteraction ?
+    { ...state, placeRuntime: derivePlaceRuntimeV1(state, environment) } : state
 }
 
 function chooseDestination(citizen: CitizenStateV5, profile: CitizenProfileV5,
@@ -153,6 +167,8 @@ function chooseDestination(citizen: CitizenStateV5, profile: CitizenProfileV5,
   const routes = findRoutesFromV2(index, citizen.currentNodeId!, profile.travellerCosts,
     accessModes, priorEdgeCrowd, returnHome ? profile.homeSlotNodeId : undefined)
   for (const place of candidates) {
+    if (environment.config.placeInteraction && place.kind !== 'home' && place.slotNodeIds.filter((id) =>
+      occupied.has(id)).length >= place.capacity) continue
     const slots = place.kind === 'home' ? [profile.homeSlotNodeId] :
       place.slotNodeIds.filter((id) => !occupied.has(id))
     if (slots.length === 0 || !citizen.currentNodeId) continue
@@ -214,8 +230,20 @@ export function advanceStateV5(state: SimulationStateV5, environment: Simulation
     new HabitTickV1(state, environment.habitProfiles!, environment.profiles,
       environment.config) : null
   const places = new Map(environment.world.places.map((item) => [item.id, item]))
-  const occupied = new Set(state.citizens.flatMap((item) => item.reservedSlotNodeId ?
-    [item.reservedSlotNodeId] : []))
+  const activitySlots = environment.config.placeInteraction ?
+    new Set(environment.world.places.flatMap((place) => place.slotNodeIds)) : null
+  const physicalSlot = (citizen: CitizenStateV5): string | null => {
+    if (!activitySlots || !citizen.currentNodeId ||
+      !activitySlots.has(citizen.currentNodeId)) return null
+    const node = index.nodeById.get(citizen.currentNodeId)!
+    return node.position.x === citizen.position.x &&
+      node.position.y === citizen.position.y &&
+      node.position.z === citizen.position.z ? node.id : null
+  }
+  const occupied = new Set(state.citizens.flatMap((item) => [
+    ...(item.reservedSlotNodeId ? [item.reservedSlotNodeId] : []),
+    ...(physicalSlot(item) ? [physicalSlot(item)!] : []),
+  ]))
   const priorEdgeCrowd = new Map<string, number>()
   const priorPlaceCrowd = new Map<string, number>()
   const connectorAvailability = new Map(environment.world.connectors.map((connector) =>
@@ -250,6 +278,7 @@ export function advanceStateV5(state: SimulationStateV5, environment: Simulation
   const standingIds = new Set(state.life?.recoveryEvents.filter((item) =>
     item.kind === 'improved' && item.tick === tick).map((item) => item.agentId) ?? [])
   for (const prior of priority) {
+    const priorPhysicalSlot = physicalSlot(prior)
     const life = lifeById.get(prior.id)
     if (life?.lifeStatus === 'deceased' || life?.functionalStatus === 'incapacitated' ||
       standingIds.has(prior.id)) {
@@ -290,8 +319,14 @@ export function advanceStateV5(state: SimulationStateV5, environment: Simulation
           placeIsOpen(currentPlace, environment.config, tick))))
     if ((citizen.activity === 'atHome' || citizen.activity === 'atDestination' ||
       citizen.activity === 'waitingForSpace') && (tick >= citizen.nextDecisionTick || mustEvacuate)) {
-      if (citizen.reservedSlotNodeId) occupied.delete(citizen.reservedSlotNodeId)
-      if (citizen.activity === 'atDestination') events.push(event(tick, citizen, 'ActivityFinished', citizen.placeId))
+      if (citizen.reservedSlotNodeId &&
+        (!environment.config.placeInteraction ||
+          citizen.reservedSlotNodeId !== priorPhysicalSlot)) {
+        occupied.delete(citizen.reservedSlotNodeId)
+      }
+      if (citizen.activity === 'atDestination') events.push(event(tick, citizen,
+        mustEvacuate && environment.config.placeInteraction ?
+          'ActivityInterrupted' : 'ActivityFinished', citizen.placeId))
       if (habitTick && (citizen.activity === 'atHome' ||
         citizen.activity === 'atDestination')) {
         const arrivedTick = habitTick.get(citizen.id).arrivedTick ?? tick
@@ -320,13 +355,17 @@ export function advanceStateV5(state: SimulationStateV5, environment: Simulation
       if (choice) {
         if (habitChoice) habitTick!.startIntention(citizen.id,
           habitChoice.habitKind, choice.place.id, habitChoice.trace.id,
-          choice.place.id === citizen.placeId)
-        if (habitChoice && choice.place.id === citizen.placeId) {
+          choice.place.id === citizen.placeId &&
+            (!environment.config.placeInteraction || choice.slotId === citizen.currentNodeId))
+        if (habitChoice && choice.place.id === citizen.placeId &&
+          (!environment.config.placeInteraction || choice.slotId === citizen.currentNodeId)) {
           citizen = { ...citizen, activity: choice.place.kind === 'home' ?
             'atHome' : 'atDestination', activityKind: choice.activityKind,
           nextDecisionTick: tick + habitChoice.dwellTicks,
           reservedSlotNodeId: choice.place.kind === 'home' ? null : choice.slotId }
           if (citizen.reservedSlotNodeId) occupied.add(citizen.reservedSlotNodeId)
+          if (environment.config.placeInteraction) events.push(event(tick,
+            citizen, 'ActivityStarted', citizen.placeId))
         } else {
           citizen = beginTrip(citizen, choice, tick)
           if (citizen.reservedSlotNodeId) occupied.add(citizen.reservedSlotNodeId)
@@ -386,6 +425,8 @@ export function advanceStateV5(state: SimulationStateV5, environment: Simulation
           movementMode: 'walk', visitOrdinal: citizen.visitOrdinal + (isHome ? 0 : 1),
           nextDecisionTick: tick + dwell, arrivedTick: tick }
         events.push(event(tick, citizen, 'DestinationReached', place.id))
+        if (environment.config.placeInteraction) events.push(event(tick,
+          citizen, 'ActivityStarted', place.id))
         habitTick?.arrival(citizen.id)
       } else if (!citizen.destinationNodeId && citizen.routeIndex >= citizen.route.length) {
         citizen = { ...citizen, activity: 'waitingForSpace', route: [], routeIndex: 0,
@@ -397,6 +438,14 @@ export function advanceStateV5(state: SimulationStateV5, environment: Simulation
       for (let second = 1; second <= environment.config.logicalSecondsPerTick; second += 1) {
         traces.push({ ...initialTrace(citizen), second })
       }
+    }
+    if (environment.config.placeInteraction) {
+      const finalPhysicalSlot = physicalSlot(citizen)
+      if (priorPhysicalSlot && priorPhysicalSlot !== finalPhysicalSlot &&
+        priorPhysicalSlot !== citizen.reservedSlotNodeId) {
+        occupied.delete(priorPhysicalSlot)
+      }
+      if (finalPhysicalSlot) occupied.add(finalPhysicalSlot)
     }
     nextById.set(citizen.id, citizen)
   }
@@ -410,12 +459,14 @@ export function advanceStateV5(state: SimulationStateV5, environment: Simulation
       life?.functionalStatus !== 'incapacitated'
   }).map((item) => item.id))
   const activeTraces = traces.filter((item) => eligible.has(item.agentId))
-  if (!environment.config.encounter) return finalizeLifeTickV1(
-    updateOpportunityV5(next, environment, activeTraces), environment)
+  if (!environment.config.encounter) return withPlaceRuntime(finalizeLifeTickV1(
+    updateOpportunityV5(next, environment, activeTraces), environment), environment)
   const socialNext = advanceEncounterPipelineV1(next, environment,
     completeTickTraces(activeTraces, citizens.filter((item) => eligible.has(item.id)),
       environment.config.logicalSecondsPerTick),
     interruptedInteractionIds)
-  return finalizeLifeTickV1(environment.config.encounter.offenceMode === 'legacy' ?
-    updateOpportunityV5(socialNext, environment, activeTraces) : socialNext, environment)
+  return withPlaceRuntime(finalizeLifeTickV1(
+    environment.config.encounter.offenceMode === 'legacy' ?
+      updateOpportunityV5(socialNext, environment, activeTraces) : socialNext,
+    environment), environment)
 }

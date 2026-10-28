@@ -5,6 +5,7 @@ import type { SocialStateV1 } from './encounter/state'
 import type { HabitProfileV1, HabitScenarioConfigV1, HabitsStateV1 } from './habits/types'
 import type { LifeScenarioConfigV1, LifeStateV1 } from './life/types'
 import type { SceneScenarioConfigV1, SceneStateV1 } from './scenes/types'
+import type { PlaceRuntimeStateV1 } from './places/runtime'
 
 export type CitizenActivityV5 = 'atHome' | 'planningTrip' | 'waitingForSpace' |
   'travelling' | 'atDestination' | 'returningHome' | 'interacting' |
@@ -68,7 +69,8 @@ export interface CitizenEventV5 {
   readonly id: string
   readonly tick: number
   readonly agentId: string
-  readonly type: 'TripStarted' | 'DestinationReached' | 'ActivityFinished' |
+  readonly type: 'TripStarted' | 'DestinationReached' | 'ActivityStarted' |
+    'ActivityFinished' | 'ActivityInterrupted' |
     'TripDeferred' | 'TripFailed' | 'TripRerouted'
   readonly placeId: string | null
   readonly reason?: string
@@ -160,6 +162,7 @@ export interface SimulationConfigV5 {
   readonly habit?: HabitScenarioConfigV1
   readonly life?: LifeScenarioConfigV1
   readonly scene?: SceneScenarioConfigV1
+  readonly placeInteraction?: Readonly<{ version: 'place-v1' }>
 }
 
 export interface SimulationStateV5 {
@@ -180,6 +183,7 @@ export interface SimulationStateV5 {
   readonly habits?: HabitsStateV1
   readonly life?: LifeStateV1
   readonly scene?: SceneStateV1
+  readonly placeRuntime?: PlaceRuntimeStateV1
 }
 
 export interface SimulationEnvironmentV5 {

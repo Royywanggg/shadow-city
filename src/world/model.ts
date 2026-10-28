@@ -67,6 +67,9 @@ export interface SemanticPlace {
   readonly id: string
   readonly name: string
   readonly kind: PlaceKind
+  /** Optional structure identity; a place may span more than one floor. */
+  readonly buildingId?: string | null
+  readonly floorId?: string | null
   readonly districtId: string
   readonly surfaceIds: readonly string[]
   readonly accessNodeIds: readonly string[]
