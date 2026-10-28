@@ -15,6 +15,7 @@ import { DEFAULT_SCENE_SCENARIO_V1 } from '../simulation/scenes/types'
 import { CharacterPortraitV5 } from '../scene/character/CharacterPortraitV5'
 import { createCitizenIdentity } from '../simulation/population'
 import { DEFAULT_ENCOUNTER_SCENARIO_V1 } from '../simulation/encounter/config'
+import { DEFAULT_TYPED_CRIME_CONFIG_V1 } from '../simulation/crime/types'
 import { relationshipCategoryV1 } from '../simulation/encounter/relationships'
 import { createSocialProfileV1 } from '../simulation/encounter/socialProfiles'
 import { SimulationSessionV5 } from '../simulation/sessionV5'
@@ -580,10 +581,12 @@ export function MultiLevelApp() {
     const next = new SimulationSessionV5(world, { ...DEFAULT_SIMULATION_CONFIG_V5,
       populationSize, simulationSeed, offendingSeed, observationSeed,
       ...(habitsEnabled ? { habit: { ...DEFAULT_HABIT_SCENARIO_V1,
-        seed: habitSeed, habitWeight } } : {}),
+        seed: habitSeed, habitWeight, calendarSecondsPerTick: 6 } } : {}),
       ...(lifeEnabled ? { life: lifeSeed && !lifeDiagnostic ?
         { ...lifeConfig, seed: lifeSeed } : lifeConfig } : {}),
       ...(sceneEnabled ? { scene: DEFAULT_SCENE_SCENARIO_V1 } : {}),
+      ...(encounterEnabled && habitsEnabled ? {
+        typedCrime: DEFAULT_TYPED_CRIME_CONFIG_V1 } : {}),
       ...(!prototype ? { placeInteraction: { version: 'place-v1' as const } } : {}),
       ...(encounterEnabled ? { encounter: { ...DEFAULT_ENCOUNTER_SCENARIO_V1,
         social: { ...DEFAULT_ENCOUNTER_SCENARIO_V1.social,

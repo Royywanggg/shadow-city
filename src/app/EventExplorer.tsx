@@ -33,11 +33,35 @@ export function EventExplorer({ session, selected, onSelect, onFocus,
     (!fromTick || item.tick >= Number(fromTick)) &&
     (!toTick || item.tick <= Number(toTick)))
   const available = selected ? events.find((item) => item.id === selected.id) : null
+  const selectedAttempt = available ? snapshot.state.typedCrime?.attempts.find((item) =>
+    item.id === available.sourceId) : null
+  const linkedOffenceId = available?.kind === 'report' ?
+    snapshot.state.social?.reportLinks.find((item) =>
+      item.reportId === available.sourceId)?.offenceId :
+    available?.kind === 'observation' ?
+      snapshot.state.social?.witnessObservations.find((item) =>
+        item.id === available.sourceId)?.offenceId : null
   const scene = available?.sceneId ? snapshot.state.scene?.entities.find((item) =>
     item.id === available.sceneId) : null
   const offence = available ? snapshot.state.offences.find((item) =>
     item.id === available.sourceId ||
+    item.id === selectedAttempt?.offenceId || item.id === linkedOffenceId ||
     item.id === scene?.origin.offenceId) : null
+  const attempt = selectedAttempt ?? (offence?.attemptId ?
+    snapshot.state.typedCrime?.attempts.find((item) => item.id === offence.attemptId) : null)
+  const episodeId = attempt?.episodeId ?? (available?.kind === 'opportunity' ?
+    available.sourceId : offence?.encounterId)
+  const episode = episodeId ? [...snapshot.state.typedCrime?.activeEpisodes ?? [],
+    ...snapshot.state.typedCrime?.recentEpisodes ?? []].find((item) =>
+    item.id === episodeId) : null
+  const awareness = offence ? snapshot.state.typedCrime?.awareness.filter((item) =>
+    item.offenceId === offence.id) ?? [] : []
+  const victimKnowledge = offence && offence.target.kind === 'citizen' ?
+    snapshot.state.social?.knowledge.filter((item) =>
+      item.ownerAgentId === offence.target.id &&
+      (snapshot.state.social?.witnessObservations.some((observation) =>
+        observation.offenceId === offence.id &&
+        item.provenanceId === observation.id) ?? false)) ?? [] : []
   const injury = available ? snapshot.state.life?.injuries.find((item) =>
     item.id === available.sourceId ||
     item.id === (scene?.origin.injuryId ?? '')) : null
@@ -104,8 +128,9 @@ export function EventExplorer({ session, selected, onSelect, onFocus,
       <select aria-label="Filter event type" value={kind}
         onChange={(event) => setKind(event.target.value as typeof kind)}>
         <option value="all">All types</option>
-        {(['offence', 'injury', 'death', 'sceneCreated',
-          'sceneResolved', 'sceneDiscovered'] as const).map((value) =>
+        {(['opportunity', 'attempt', 'offence', 'injury', 'death',
+          'sceneCreated', 'sceneResolved', 'sceneDiscovered',
+          'observation', 'report'] as const).map((value) =>
           <option value={value} key={value}>{value}</option>)}
       </select>
       <select aria-label="Filter event place" value={place}
@@ -118,9 +143,10 @@ export function EventExplorer({ session, selected, onSelect, onFocus,
       <input aria-label="Events through Tick" type="number" min="0" placeholder="To Tick"
         value={toTick} onChange={(event) => setToTick(event.target.value)} />
     </div>
-    <div className="v06-event-list" aria-label="Recorded events">
+    <div className={'v06-event-list' + (selected ? ' selected' : '')}
+      aria-label="Recorded events">
       {filtered.length === 0 && <p className="v06-empty">No matching event by this Tick.</p>}
-      {filtered.map((item) => <button key={item.id}
+      {filtered.slice(0, 200).map((item) => <button key={item.id}
         className={selected?.id === item.id ? 'active' : ''}
         data-event-id={item.id} onClick={() => {
           setReplaying(false); onSelect(item); onFocus(item)
@@ -128,6 +154,9 @@ export function EventExplorer({ session, selected, onSelect, onFocus,
         <strong>T{item.tick} · {item.label}</strong>
         <small>{item.placeId ?? item.surfaceId} · {item.levelId}</small>
       </button>)}
+      {filtered.length > 200 && <p className="v06-empty">
+        Showing 200 of {filtered.length} records. Narrow the type, place or Tick range.
+      </p>}
     </div>
     {selected && <section className="v06-event-detail" aria-label="Selected event">
       <div className="v06-event-head"><strong>SELECTED EVENT</strong>
@@ -148,8 +177,22 @@ export function EventExplorer({ session, selected, onSelect, onFocus,
             {(available.position.z / 1000).toFixed(2)} m</dd>
         </dl>
         <h4>Ground Truth</h4>
+        {episode && <><h4>Causal Timeline</h4>
+          <p>T{episode.startTick} · {episode.offenceType} opportunity ·
+            {episode.exposureSeconds} eligible seconds · {episode.status}</p>
+          <p>Item {episode.itemId ?? 'none'} · target {episode.victimAgentId} ·
+            end {episode.endReason ?? 'ongoing'}</p>
+          <p>Last synthetic rate {episode.lastRatePerHour.toFixed(4)} per eligible hour ·
+            accumulated hazard {episode.accumulatedHazard.toFixed(6)} ·
+            threshold {episode.threshold.toFixed(6)}</p>
+          <p>Perceived risk {episode.lastPerceivedRisk.toFixed(3)} ·
+            nearby guardians {episode.guardianship}</p>
+        </>}
+        {attempt && <p>T{attempt.tick} · {attempt.id} · {attempt.outcome} ·
+          {attempt.reason}</p>}
         {offence && <p>{offence.id} · {offence.mechanism ?? 'unspecified'} ·
-          {offence.severity} · second {offence.second} within Tick</p>}
+          {offence.severity} · second {offence.second} within Tick ·
+          item {offence.itemId ?? 'none'}</p>}
         {injury && <p>{injury.id} · {injury.severity} · {injury.status}</p>}
         {death && <p>{death.id} · {death.causeClassification}</p>}
         {scene && <p>{scene.id} · {scene.kind} · {scene.status}
@@ -160,6 +203,11 @@ export function EventExplorer({ session, selected, onSelect, onFocus,
           Discovery is an aftermath observation, not direct witnessing of the original event.
         </p>}
         <h4>Observer Knowledge</h4>
+        {offence && <p>Victim knowledge records: {victimKnowledge.length}.
+          {awareness.length > 0 ? ' Missing-property self-check: ' +
+            awareness.map((item) => item.acquiredTick === null ?
+              'pending until T' + item.dueTick : 'acquired T' + item.acquiredTick).join(', ') : ''}
+        </p>}
         {offenceReports.length === 0 && sceneReports.length === 0 &&
           <p>No linked report available by this Tick.</p>}
         {offenceReports.map((report) => <p key={report.id}>

@@ -77,6 +77,7 @@
 .v06-event-filters{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin:9px 0}
 .v06-event-filters input,.v06-event-filters select{min-width:0;padding:6px;border:1px solid #385c68;background:#163344;color:#d6e8e8;font-size:9px}
 .v06-event-list{flex:1;min-height:75px;overflow:auto;border-block:1px solid #385563}
+.v06-event-list.selected{flex:0 1 auto;max-height:30%}
 .v06-event-list>button{display:grid;gap:3px;width:100%;padding:8px;text-align:left;border:0;border-bottom:1px solid #254452;background:transparent;color:#d8e7e7;cursor:pointer}
 .v06-event-list>button:hover,.v06-event-list>button.active{background:#23495a}
 .v06-event-list strong{font-size:10px;font-weight:600}

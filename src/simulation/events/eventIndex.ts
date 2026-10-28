@@ -3,7 +3,8 @@ import type { SimulationStateV5 } from '../v5Types'
 import type { SceneEntityV1 } from '../scenes/types'
 
 export type ExplorerEventKindV1 = 'offence' | 'injury' | 'death' |
-  'sceneCreated' | 'sceneResolved' | 'sceneDiscovered'
+  'sceneCreated' | 'sceneResolved' | 'sceneDiscovered' |
+  'opportunity' | 'attempt' | 'observation' | 'report'
 
 export interface ExplorerEventV1 {
   readonly id: string
@@ -44,9 +45,31 @@ export function buildEventIndexV1(state: SimulationStateV5,
   const sceneByInjury = new Map([...scenes.values()].map((item) =>
     [item.origin.injuryId, item.id]))
   const events: ExplorerEventV1[] = []
+  for (const episode of [...state.typedCrime?.recentEpisodes ?? [],
+    ...state.typedCrime?.activeEpisodes ?? []]) events.push({
+    id: 'event:opportunity:' + episode.id, kind: 'opportunity',
+    tick: episode.startTick,
+    label: 'Opportunity · ' + episode.offenceType + ' · ' + episode.status,
+    position: episode.position, surfaceId: episode.surfaceId,
+    levelId: episode.levelId, placeId: episode.placeId,
+    structure: structureFor(world, episode.placeId),
+    agentIds: [episode.actorAgentId, episode.victimAgentId],
+    sourceId: episode.id, sceneId: null, encounterId: null })
+  for (const attempt of state.typedCrime?.attempts ?? []) {
+    const surface = world.surfaces.find((item) => item.id === attempt.surfaceId)
+    events.push({ id: 'event:attempt:' + attempt.id,
+      kind: 'attempt', tick: attempt.tick,
+      label: 'Attempt · ' + attempt.type + ' · ' + attempt.outcome,
+      position: attempt.position, surfaceId: attempt.surfaceId,
+      levelId: surface?.levelId ?? 'unknown', placeId: attempt.placeId,
+      structure: structureFor(world, attempt.placeId),
+      agentIds: [attempt.actorAgentId, attempt.victimAgentId],
+      sourceId: attempt.id, sceneId: null, encounterId: null })
+  }
   for (const offence of state.offences) events.push({
     id: 'event:offence:' + offence.id, kind: 'offence', tick: offence.tick,
-    label: 'Offence · ' + (offence.mechanism ?? 'unspecified') + ' · ' + offence.severity,
+    label: 'Offence · ' + (offence.offenceType ?? 'legacy / unspecified') +
+      ' · ' + offence.severity,
     position: offence.position, surfaceId: offence.surfaceId,
     levelId: offence.levelId, placeId: offence.placeId,
     structure: structureFor(world, offence.placeId),
@@ -106,6 +129,35 @@ export function buildEventIndexV1(state: SimulationStateV5,
       agentIds: [discovery.observerAgentId], sourceId: discovery.id,
       sceneId: scene.id,
       encounterId: offences.get(scene.origin.offenceId)?.encounterId ?? null })
+  }
+  for (const observation of state.social?.witnessObservations ?? []) {
+    const offence = offences.get(observation.offenceId)
+    if (!offence) continue
+    events.push({ id: 'event:observation:' + observation.id,
+      kind: 'observation', tick: observation.observedTick,
+      label: 'Observation · ' + observation.source,
+      position: observation.perceivedPosition,
+      surfaceId: offence.surfaceId,
+      levelId: observation.perceivedLevelId ?? offence.levelId,
+      placeId: observation.perceivedPlaceId,
+      structure: structureFor(world, observation.perceivedPlaceId),
+      agentIds: [observation.ownerAgentId], sourceId: observation.id,
+      sceneId: null, encounterId: offence.encounterId })
+  }
+  const reportOffence = new Map((state.social?.reportLinks ?? []).map((item) =>
+    [item.reportId, offences.get(item.offenceId)]))
+  for (const report of state.reports) {
+    const offence = reportOffence.get(report.id)
+    if (!offence) continue
+    events.push({ id: 'event:report:' + report.id,
+      kind: 'report', tick: report.availableTick,
+      label: 'Delivered report · ' + report.reportedSeverity,
+      position: report.reportedPosition, surfaceId: offence.surfaceId,
+      levelId: report.reportedLevelId ?? offence.levelId,
+      placeId: report.reportedPlaceId,
+      structure: structureFor(world, report.reportedPlaceId),
+      agentIds: [], sourceId: report.id, sceneId: null,
+      encounterId: offence.encounterId })
   }
   return events.sort((a, b) => b.tick - a.tick || a.id.localeCompare(b.id))
 }
