@@ -25,6 +25,13 @@ export interface DevBuildingPadV1 {
   readonly elevationMm: number
   readonly entryRiseMm: number
   readonly entryKind: 'level' | 'ramp' | 'stair'
+  readonly entryStair: Readonly<{
+    /** Outer ground landing before the first tread. */
+    foot: GroundPointMm
+    stepDepthMm: number
+    /** Ordered from the street toward the building; topMm is visual world height. */
+    treads: readonly Readonly<{ center: GroundPointMm; topMm: number }>[]
+  }> | null
 }
 
 export interface DevEscarpmentPatchV1 {
@@ -109,6 +116,15 @@ function smoothstep(value: number): number {
   return t * t * (3 - 2 * t)
 }
 
+function terraceRamp(value: number): number {
+  const t = clamp01(value)
+  const edge = 0.12
+  if (t < edge) return t * t / (2 * edge * (1 - edge))
+  if (t > 1 - edge) return (1 - edge -
+    (1 - t) * (1 - t) / (2 * edge)) / (1 - edge)
+  return (t - edge / 2) / (1 - edge)
+}
+
 function channelXAt(zMm: number): number {
   if (zMm <= CHANNEL_CENTERLINE[0].z) return CHANNEL_CENTERLINE[0].x
   for (let index = 1; index < CHANNEL_CENTERLINE.length; index += 1) {
@@ -154,7 +170,7 @@ function patchHeightMm(patches: readonly DevEscarpmentPatchV1[], xMm: number,
 
 function rawHeightMm(xMm: number, zMm: number,
   patches: readonly DevEscarpmentPatchV1[]): number {
-  const northRise = 7_600 * smoothstep((-zMm - 22_000) / 128_000)
+  const northRise = 10_000 * terraceRamp((-zMm - 22_000) / 128_000)
   const channelAlong = smoothstep((zMm - 35_000) / 14_000) *
     (1 - smoothstep((zMm - 93_000) / 7_000))
   const distance = Math.abs(xMm - channelXAt(zMm))
@@ -254,12 +270,17 @@ export function createDevTerrainV1(city: CityModel, seed: string): DevTerrainV1 
     DEV_ESCARPMENT_BLOCK_IDS.some((id) => id === block.id)).map((block) => {
     const insetMm = 3_800
     const x0 = Math.round((block.x - block.width / 2) * 1000) + insetMm
-    const x1 = Math.round((block.x + block.width / 2) * 1000) - insetMm
+    // The western ridge reaches the former straight road corridor. The dev road
+    // network must route around it; the original integrated city is untouched.
+    const x1 = block.id === 'block-4--1'
+      ? Math.round((block.x + block.width / 2) * 1000)
+      : Math.round((block.x + block.width / 2) * 1000) - insetMm
     const z0 = Math.round((block.z - block.depth / 2) * 1000) + insetMm
-    const z1 = Math.round((block.z + block.depth / 2) * 1000) - insetMm
+    const z1 = Math.round((block.z + block.depth / 2) * 1000) - insetMm -
+      (block.id === 'block-4--1' ? 2_700 : 0)
     return { blockId: block.id, polygonXZ: [
       { x: x0, z: z0 }, { x: x1, z: z0 }, { x: x1, z: z1 }, { x: x0, z: z1 },
-    ], riseMm: 6_400 }
+    ], riseMm: 8_000 }
   })
   const halfMm = Math.round(city.size * 500)
   const width = Math.round(halfMm * 2 / STEP_MM) + 1
@@ -289,6 +310,8 @@ export function createDevTerrainV1(city: CityModel, seed: string): DevTerrainV1 
     for (let index = first; index <= last; index += 1) samples.push(originMm + index * STEP_MM)
     return samples
   }
+  const pedestrianNodes = new Map(city.pedestrian.nodes.map((node) => [node.id, node]))
+  const pedestrianEdges = new Map(city.pedestrian.edges.map((edge) => [edge.id, edge]))
   const buildingPads = city.buildings.map((building) => {
     const baseHeights = building.masses.filter((mass) => mass.baseY < 2).flatMap((mass) => {
       const x = building.x + mass.offsetX
@@ -303,8 +326,32 @@ export function createDevTerrainV1(city: CityModel, seed: string): DevTerrainV1 
       Math.round(building.entrance.z * 1000))
     const elevationMm = Math.max(entranceHeight, ...baseHeights) + 80
     const entryRiseMm = elevationMm - entranceHeight
+    const entryKind = entryRiseMm > 150 ? 'stair' as const : 'level' as const
+    let entryStair: DevBuildingPadV1['entryStair'] = null
+    if (entryKind === 'stair') {
+      const count = Math.max(2, Math.min(9, Math.ceil(entryRiseMm / 175)))
+      const access = pedestrianEdges.get(`ped-access-${building.id}`)
+      const lane = access ? pedestrianNodes.get(access.to) : null
+      if (!lane) throw new Error(`Missing entrance sidewalk for ${building.id}`)
+      const entranceZmm = Math.round(building.entrance.z * 1000)
+      const availableMm = Math.round(lane.z * 1000) - entranceZmm
+      const stepDepthMm = Math.min(330, Math.floor((availableMm - 250) / count))
+      if (stepDepthMm < 220) {
+        throw new Error(`Insufficient stair landing for ${building.id}`)
+      }
+      const entranceXmm = Math.round(building.entrance.x * 1000)
+      entryStair = {
+        foot: { x: entranceXmm, z: entranceZmm + count * stepDepthMm + 100 },
+        stepDepthMm,
+        treads: Array.from({ length: count }, (_, index) => ({
+          center: { x: entranceXmm,
+            z: entranceZmm + Math.round((count - index - 0.5) * stepDepthMm) },
+          topMm: elevationMm - Math.round((count - index - 1) * entryRiseMm / count),
+        })),
+      }
+    }
     return { buildingId: building.id, elevationMm, entryRiseMm,
-      entryKind: entryRiseMm > 150 ? 'stair' as const : 'level' as const }
+      entryKind, entryStair }
   })
   const initial: DevTerrainV1 = { ...sampler, blockPads, buildingPads }
   return { ...initial, roadProfiles: buildRoadProfiles(city, initial) }

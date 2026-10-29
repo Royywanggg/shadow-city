@@ -3,9 +3,12 @@ import { HERO_SEED } from '../../city/generation/generateCity'
 import { advanceStateV5, createEnvironmentV5, createInitialStateV5,
   worldFingerprintV5 } from '../../simulation/engineV5'
 import { hasClearSurfaceSegment } from '../../simulation/encounter/spatial'
-import { DEFAULT_SIMULATION_CONFIG_V5 } from '../../simulation/v5Types'
+import { DEFAULT_SIMULATION_CONFIG_V5, type CitizenStateV5 } from '../../simulation/v5Types'
+import { moveCitizenOneTick } from '../../simulation/movementV5'
 import { createNavigationIndexV2, findRouteV2 } from '../navigation/routeV2'
-import { blockPadElevationMm, heightAtMm, roadBendMm } from '../terrain/devTerrain'
+import { blockPadElevationMm, DEV_ESCARPMENT_BLOCK_IDS, DEV_OPEN_CHANNEL_BLOCK_IDS,
+  heightAtMm, roadBendMm } from '../terrain/devTerrain'
+import { RIDGE_ROAD_ID } from './devRidgeRoad'
 import { generateDevWorld } from './generateDevWorld'
 import { generateIntegratedWorld } from './generateIntegratedWorld'
 
@@ -14,15 +17,14 @@ describe('isolated Twilight terrain world', () => {
     const mainBefore = generateIntegratedWorld(HERO_SEED)
     const dev = generateDevWorld(HERO_SEED)
     const mainAfter = generateIntegratedWorld(HERO_SEED)
+    const devSource = generateIntegratedWorld(HERO_SEED, { openChannelBlockIds:
+      [...DEV_OPEN_CHANNEL_BLOCK_IDS, ...DEV_ESCARPMENT_BLOCK_IDS] })
     expect(mainAfter).toEqual(mainBefore)
-    expect(dev.baseCity?.roads).toEqual(mainBefore.baseCity?.roads)
+    expect(dev.baseCity?.roads).not.toEqual(mainBefore.baseCity?.roads)
     expect(dev.baseCity?.plaza).toEqual(mainBefore.baseCity?.plaza)
-    expect(dev.roadNodes).toEqual(mainBefore.roadNodes)
-    expect(dev.roadEdges).toEqual(mainBefore.roadEdges)
-    expect(dev.baseCity?.buildings.every((building) =>
-      mainBefore.baseCity?.buildings.some((original) => original.id === building.id))).toBe(true)
+    expect(dev.baseCity?.buildings).toEqual(devSource.baseCity?.buildings)
     expect(dev.baseCity?.buildings.length).toBeLessThan(mainBefore.baseCity!.buildings.length)
-    expect(dev.config.generatorVersion).toBe('twilight-dev-v1')
+    expect(dev.config.generatorVersion).toBe('twilight-dev-v2')
     expect(mainAfter.config.generatorVersion).toBe('heritage-extension-v6')
     expect(worldFingerprintV5(dev, DEFAULT_SIMULATION_CONFIG_V5))
       .not.toBe(worldFingerprintV5(mainAfter, DEFAULT_SIMULATION_CONFIG_V5))
@@ -32,6 +34,110 @@ describe('isolated Twilight terrain world', () => {
       ...dev.terrain!.buildingPads.slice(1)] } }
     expect(worldFingerprintV5(changedPad, DEFAULT_SIMULATION_CONFIG_V5))
       .not.toBe(worldFingerprintV5(dev, DEFAULT_SIMULATION_CONFIG_V5))
+  })
+
+  it('routes a real three-way road and both sidewalks around the escarpment', () => {
+    const world = generateDevWorld(HERO_SEED)
+    const terrain = world.terrain!
+    const city = world.baseCity!
+    const junction = city.roads.nodes.find((node) => node.id === 'dev-road:ridge-junction')!
+    const touching = city.roads.edges.filter((edge) =>
+      edge.from === junction.id || edge.to === junction.id)
+    expect(touching).toHaveLength(3)
+    expect(city.roads.edges.some((edge) => edge.id === 'edge-z-5--1')).toBe(false)
+    expect(world.roadEdges.map((edge) => edge.id)).toEqual(city.roads.edges.map((edge) => edge.id))
+    expect(world.roadNodes.map((node) => node.id)).toEqual(city.roads.nodes.map((node) => node.id))
+    expect(terrain.roadProfiles.map((profile) => profile.edgeId)).toEqual(
+      city.roads.edges.map((edge) => edge.id))
+    const road = terrain.roadProfiles.find((profile) => profile.edgeId === RIDGE_ROAD_ID)!
+    const north = city.roads.nodes.find((node) => node.id === 'node-5--1')!
+    expect(road.path[0].x).toBe(Math.round(junction.x * 1000))
+    expect(road.path.at(-1)!.x).toBe(Math.round(north.x * 1000))
+    expect(Math.max(...road.path.map((point) => point.x)) - Math.round(north.x * 1000))
+      .toBeGreaterThan(2_000)
+    const roadGrade = Math.max(...road.path.slice(1).map((point, index) => {
+      const previous = road.path[index]
+      return Math.abs(point.y - previous.y) /
+        Math.hypot(point.x - previous.x, point.z - previous.z)
+    }))
+    expect(roadGrade).toBeLessThan(0.1)
+    const index = createNavigationIndexV2(world)
+    const sidewalks = world.navEdges.filter((edge) =>
+      edge.id === 'dev-ped:ridge-east' || edge.id === 'dev-ped:ridge-west')
+    expect(sidewalks).toHaveLength(2)
+    for (const sidewalk of sidewalks) {
+      expect(findRouteV2(index, sidewalk.fromNodeId, sidewalk.toNodeId).status).toBe('ok')
+      for (let step = 1; step < sidewalk.path.length; step += 1) {
+        expect(hasClearSurfaceSegment(world, 'ground', sidewalk.path[step - 1],
+          sidewalk.path[step])).toBe(true)
+      }
+      const maxGrade = Math.max(...sidewalk.path.slice(1).map((point, step) => {
+        const previous = sidewalk.path[step]
+        return Math.abs(point.y - previous.y) /
+          Math.hypot(point.x - previous.x, point.z - previous.z)
+      }))
+      expect(maxGrade).toBeLessThan(0.12)
+    }
+    const northConnections = world.navEdges.filter((edge) =>
+      edge.id === 'dev-ped:ridge-northwest-link' ||
+      edge.id === 'dev-ped:ridge-north-crossing')
+    expect(northConnections).toHaveLength(2)
+    for (const connection of northConnections) {
+      for (let step = 1; step < connection.path.length; step += 1) {
+        expect(hasClearSurfaceSegment(world, 'ground', connection.path[step - 1],
+          connection.path[step])).toBe(true)
+      }
+    }
+    const route = findRouteV2(index, 'ped-entrance-building-block-4-0-0-0',
+      'ped-block-3--1-3-0')
+    expect(route.status).toBe('ok')
+    if (route.status === 'ok') {
+      expect(route.steps.map((step) => step.edgeId)).toContain('dev-ped:ridge-west')
+      expect(route.steps.map((step) => step.edgeId))
+        .toContain('dev-ped:ridge-northwest-link')
+      const environment = createEnvironmentV5(world, { ...DEFAULT_SIMULATION_CONFIG_V5,
+        populationSize: 24 })
+      const initial = createInitialStateV5(environment)
+      const start = index.nodeById.get('ped-entrance-building-block-4-0-0-0')!
+      const end = index.nodeById.get('ped-block-3--1-3-0')!
+      let citizen: CitizenStateV5 = { ...initial.citizens[0], position: start.position,
+        surfaceId: start.surfaceId, placeId: null, currentNodeId: start.id,
+        destinationNodeId: end.id, activity: 'travelling' as const,
+        route: route.steps, routeIndex: 0, distanceOnEdgeMm: 0 }
+      const touched = new Set<string>()
+      const elevations: number[] = [citizen.position.y]
+      for (let tick = 0; tick < 80 && citizen.routeIndex < citizen.route.length; tick += 1) {
+        const movement = moveCitizenOneTick(citizen, environment.profiles[0], index,
+          new Map(), 6)
+        citizen = movement.citizen
+        for (const point of movement.trace) {
+          if (point.edgeId) touched.add(point.edgeId)
+          elevations.push(point.position.y)
+        }
+        expect(movement.blocked).toBeNull()
+      }
+      expect(citizen.position).toEqual(end.position)
+      expect(citizen.routeIndex).toBe(route.steps.length)
+      expect(touched.has('dev-ped:ridge-west')).toBe(true)
+      expect(Math.max(...elevations) - Math.min(...elevations)).toBeGreaterThan(1_000)
+    }
+  })
+
+  it('adapts the same diversion to other seeded road spacing', () => {
+    for (const seed of ['twilight-alt-01', 'twilight-alt-02']) {
+      const world = generateDevWorld(seed)
+      const road = world.terrain!.roadProfiles.find((profile) =>
+        profile.edgeId === RIDGE_ROAD_ID)!
+      const north = world.roadNodes.find((node) => node.id === 'node-5--1')!
+      expect(road.path.at(-1)!.x).toBe(north.position.x)
+      for (const sidewalk of world.navEdges.filter((edge) =>
+        edge.id.startsWith('dev-ped:ridge-'))) {
+        for (let step = 1; step < sidewalk.path.length; step += 1) {
+          expect(hasClearSurfaceSegment(world, 'ground', sidewalk.path[step - 1],
+            sidewalk.path[step])).toBe(true)
+        }
+      }
+    }
   })
 
   it('serializes a reproducible high terrace, protected core and lower channel', () => {
@@ -122,6 +228,49 @@ describe('isolated Twilight terrain world', () => {
     const north = world.navNodes.find((node) => node.surfaceId === 'ground' &&
       node.position.z < -110_000)!
     expect(hasClearSurfaceSegment(world, 'ground', north.position, north.position)).toBe(true)
+  })
+
+  it('aligns stair portals with serialized treads and leaves a clear sidewalk landing', () => {
+    const world = generateDevWorld(HERO_SEED)
+    const terrain = world.terrain!
+    const nodeById = new Map(world.navNodes.map((node) => [node.id, node]))
+    const edgeById = new Map(world.navEdges.map((edge) => [edge.id, edge]))
+    const index = createNavigationIndexV2(world)
+    const stairs = terrain.buildingPads.filter((pad) => pad.entryStair)
+    expect(stairs.length).toBeGreaterThan(20)
+    for (const pad of stairs) {
+      const building = world.baseCity!.buildings.find((item) => item.id === pad.buildingId)!
+      const stair = pad.entryStair!
+      const foot = nodeById.get(`ped-entrance-${building.id}`)!
+      const access = edgeById.get(`ped-access-${building.id}`)!
+      const lane = nodeById.get(access.toNodeId)!
+      const portal = edgeById.get(`portal:${building.id}`)!
+      const thresholdZ = Math.round(building.entrance.z * 1000)
+      expect(stair.stepDepthMm).toBeGreaterThanOrEqual(220)
+      expect(stair.stepDepthMm).toBeLessThanOrEqual(330)
+      expect(stair.treads.length).toBeGreaterThanOrEqual(2)
+      expect(stair.treads.length).toBeLessThanOrEqual(9)
+      expect(stair.foot.z).toBeGreaterThan(thresholdZ)
+      expect(stair.foot.z + 150).toBeLessThanOrEqual(lane.position.z)
+      expect(foot.position).toEqual({ ...stair.foot,
+        y: 250 + heightAtMm(terrain, stair.foot.x, stair.foot.z) })
+      expect(hasClearSurfaceSegment(world, 'ground', foot.position, foot.position)).toBe(true)
+      expect(access.path[0]).toEqual(foot.position)
+      expect(access.path.at(-1)).toEqual(lane.position)
+      expect(portal.kind).toBe('stair')
+      expect(portal.surfaceId).toBeNull()
+      expect(portal.path[0]).toEqual(foot.position)
+      expect(portal.path.slice(1, 1 + stair.treads.length)).toEqual(
+        stair.treads.map((tread) => ({ ...tread.center, y: 250 + tread.topMm })))
+      expect(portal.path.at(-2)).toEqual({ x: Math.round(building.entrance.x * 1000),
+        y: 250 + pad.elevationMm, z: thresholdZ })
+      expect(portal.path.at(-1)).toEqual(nodeById.get(portal.toNodeId)!.position)
+      expect(stair.treads.at(-1)!.topMm).toBe(pad.elevationMm)
+      expect(stair.treads.every((tread, step) => step === 0 ||
+        tread.topMm > stair.treads[step - 1].topMm &&
+        tread.topMm - stair.treads[step - 1].topMm <= 175)).toBe(true)
+      expect(findRouteV2(index, lane.id, portal.toNodeId).status).toBe('ok')
+    }
   })
 
   it('routes pedestrians across both bridges at deck height and closes the unbridged channel rings', () => {

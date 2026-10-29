@@ -4,6 +4,7 @@ import { createDevTerrainV1, DEV_OPEN_CHANNEL_BLOCK_IDS, heightAtMm,
   DEV_ESCARPMENT_BLOCK_IDS, buildingPadElevationMm,
   roadBendMm, type DevRoadProfileV1, type DevTerrainV1 } from '../terrain/devTerrain'
 import { generateIntegratedWorld } from './generateIntegratedWorld'
+import { deriveDevRidgeRoad, ridgePedestrianLinks, RIDGE_ROAD_ID } from './devRidgeRoad'
 
 const GROUND_Y_MM = 250
 const BRIDGE_SIDEWALK_OFFSET_MM = 180
@@ -115,14 +116,20 @@ function bridgePedestrianLinks(profile: DevRoadProfileV1,
 export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
   const integrated = generateIntegratedWorld(seed,
     { openChannelBlockIds: [...DEV_OPEN_CHANNEL_BLOCK_IDS, ...DEV_ESCARPMENT_BLOCK_IDS] })
-  const city = integrated.baseCity!
-  const terrain = createDevTerrainV1(city, seed)
+  const sourceCity = integrated.baseCity!
+  const sourceTerrain = createDevTerrainV1(sourceCity, seed)
+  const { city, terrain } = deriveDevRidgeRoad(sourceCity, sourceTerrain)
   const buildingPad = new Map(city.buildings.map((building) => [building.id,
     buildingPadElevationMm(terrain, building.id)]))
   const buildingEntry = new Map(terrain.buildingPads.map((pad) => [pad.buildingId, pad]))
+  const stairFoot = new Map(terrain.buildingPads.filter((pad) => pad.entryStair)
+    .map((pad) => [`ped-entrance-${pad.buildingId}`, pad.entryStair!.foot]))
   const surfaceShift = (surfaceId: string): number => surfaceId.startsWith('interior:')
     ? buildingPad.get(surfaceId.slice('interior:'.length)) ?? 0 : 0
   const navNodes = integrated.navNodes.map((node) => {
+    const foot = stairFoot.get(node.id)
+    if (foot) return { ...node, position: { x: foot.x, z: foot.z,
+      y: GROUND_Y_MM + heightAtMm(terrain, foot.x, foot.z) } }
     const shift = node.surfaceId === 'ground'
       ? heightAtMm(terrain, node.position.x, node.position.z)
       : surfaceShift(node.surfaceId)
@@ -150,6 +157,17 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
     const oldTo = originalNodeById.get(edge.toNodeId)!
     const from = nodeById.get(edge.fromNodeId)!
     const to = nodeById.get(edge.toNodeId)!
+    const portalBuildingId = edge.id.startsWith('portal:')
+      ? edge.id.slice('portal:'.length) : null
+    const portalPad = portalBuildingId ? buildingEntry.get(portalBuildingId) : null
+    if (portalPad?.entryStair) {
+      const treads = portalPad.entryStair.treads.map((tread) => ({
+        x: tread.center.x, y: GROUND_Y_MM + tread.topMm, z: tread.center.z }))
+      const threshold = { x: oldFrom.position.x,
+        y: GROUND_Y_MM + portalPad.elevationMm, z: oldFrom.position.z }
+      const path = [from.position, ...treads, threshold, to.position]
+      return [{ ...edge, kind: 'stair' as const, path, lengthMm: lengthMm(path) }]
+    }
     const ground = from.surfaceId === 'ground' && to.surfaceId === 'ground'
     const curved = ground && Math.abs(to.position.x - from.position.x) > 8_000 &&
       Math.abs(to.position.z - from.position.z) < 100
@@ -174,9 +192,12 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
       path[path.length - 1] = to.position
       return [{ ...edge, path, lengthMm: lengthMm(path) }]
     }
-    const path = ground ? edge.path.flatMap((point, index) => {
-      if (index === edge.path.length - 1) return []
-      const next = edge.path[index + 1]
+    const sourcePath = ground ? edge.path.map((point, index) =>
+      index === 0 ? from.position : index === edge.path.length - 1 ? to.position : point)
+      : edge.path
+    const path = ground ? sourcePath.flatMap((point, index) => {
+      if (index === sourcePath.length - 1) return []
+      const next = sourcePath[index + 1]
       const count = Math.max(1, Math.ceil(Math.hypot(next.x - point.x,
         next.z - point.z) / 1_000))
       return Array.from({ length: count }, (_, step) => {
@@ -193,17 +214,19 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
       const toShift = to.position.y - oldTo.position.y
       return { ...point, y: point.y + Math.round(fromShift + (toShift - fromShift) * t) }
     })
-    const portalBuildingId = edge.id.startsWith('portal:')
-      ? edge.id.slice('portal:'.length) : null
-    const portalPad = portalBuildingId ? buildingEntry.get(portalBuildingId) : null
     return [{ ...edge, path, lengthMm: lengthMm(path),
       kind: portalPad?.entryKind === 'stair' ? 'stair' as const : edge.kind }]
   })
   const bridgeLinks = bridgeProfiles.map((profile) =>
     bridgePedestrianLinks(profile, navNodes, terrain))
   navEdges.push(...bridgeLinks.flatMap((link) => link.edges))
+  const ridgeRoad = city.roads.edges.find((edge) => edge.id === RIDGE_ROAD_ID)!
+  const ridgeLinks = ridgePedestrianLinks(terrain, navNodes,
+    Math.round(ridgeRoad.width * 1000))
+  navEdges.push(...ridgeLinks.edges)
   const usedNodeIds = new Set(navEdges.flatMap((edge) => [edge.fromNodeId, edge.toNodeId]))
-  const reachableNavNodes = [...navNodes, ...bridgeLinks.flatMap((link) => link.nodes)]
+  const reachableNavNodes = [...navNodes, ...bridgeLinks.flatMap((link) => link.nodes),
+    ...ridgeLinks.nodes]
     .filter((node) => usedNodeIds.has(node.id))
   const surfaces = integrated.surfaces.map((surface) => surface.id === 'ground'
     ? { ...surface, elevationMode: 'terrain' as const,
@@ -246,7 +269,12 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
   })
   return {
     ...integrated,
-    config: { ...integrated.config, generatorVersion: 'twilight-dev-v1' },
+    config: { ...integrated.config, generatorVersion: 'twilight-dev-v2' },
+    baseCity: city,
+    roadNodes: city.roads.nodes.map((node) => ({ id: node.id,
+      position: { x: Math.round(node.x * 1000), z: Math.round(node.z * 1000) } })),
+    roadEdges: city.roads.edges.map((edge) => ({ id: edge.id, from: edge.from,
+      to: edge.to, widthMm: Math.round(edge.width * 1000) })),
     terrain, surfaces, navNodes: reachableNavNodes, navEdges, resources,
   }
 }
