@@ -1,7 +1,65 @@
-import type { CityModel } from '../city/model'
+import { useEffect, useMemo } from 'react'
+import { ExtrudeGeometry, Shape } from 'three'
+import type { CityBlock, CityModel } from '../city/model'
 import { InstancedBoxes, type BoxInstance } from './InstancedBoxes'
 import { surfaceTextures } from './SurfaceTextures'
 import type { DevTerrainV1 } from '../world/terrain/devTerrain'
+
+function PolygonParkSurface({ block }: { block: CityBlock }) {
+  const geometry = useMemo(() => {
+    const footprint = block.footprintXZ!
+    const shape = new Shape()
+    shape.moveTo(footprint[0].x, -footprint[0].z)
+    for (const point of footprint.slice(1)) shape.lineTo(point.x, -point.z)
+    shape.closePath()
+    const mesh = new ExtrudeGeometry(shape, { depth: 0.08, bevelEnabled: false })
+    mesh.rotateX(-Math.PI / 2)
+    return mesh
+  }, [block.footprintXZ])
+  useEffect(() => () => geometry.dispose(), [geometry])
+  return <mesh geometry={geometry} position={[0, 0.24, 0]} receiveShadow>
+    <meshStandardMaterial color="#36524d" roughness={1} />
+  </mesh>
+}
+
+function insidePark(x: number, z: number, footprint: NonNullable<CityBlock['footprintXZ']>): boolean {
+  let inside = false
+  for (let index = 0, previous = footprint.length - 1; index < footprint.length;
+    previous = index, index += 1) {
+    const a = footprint[index]
+    const b = footprint[previous]
+    if ((a.z > z) !== (b.z > z) &&
+      x < (b.x - a.x) * (z - a.z) / (b.z - a.z) + a.x) inside = !inside
+  }
+  return inside
+}
+
+function polygonParkDetails(block: CityBlock): { paths: BoxInstance[]; trees: number[] } {
+  const footprint = block.footprintXZ!
+  const pathHalfWidth = Math.min(1.15, block.width * 0.085)
+  const startZ = block.z - block.depth * 0.45
+  const endZ = block.z + block.depth * 0.45
+  const steps = Math.ceil((endZ - startZ) / 0.5)
+  const paths: BoxInstance[] = []
+  let runStart: number | null = null
+  const valid = (z: number) => [-1, 1].every((side) =>
+    insidePark(block.x + side * pathHalfWidth, z, footprint))
+  for (let index = 0; index <= steps; index += 1) {
+    const z = startZ + (endZ - startZ) * index / steps
+    const segmentValid = index < steps && valid(z) &&
+      valid(startZ + (endZ - startZ) * (index + 1) / steps)
+    if (segmentValid && runStart === null) runStart = z
+    if (!segmentValid && runStart !== null) {
+      paths.push({ position: [block.x, 0.335, (runStart + z) / 2],
+        scale: [pathHalfWidth * 2, 0.035, z - runStart] })
+      runStart = null
+    }
+  }
+  const trees = [-0.29, 0.29].map((side) => block.x + side * block.width)
+    .filter((treeX) => [-1.7, 1.7].every((dx) => [-1.7, 1.7].every((dz) =>
+      insidePark(treeX + dx, block.z + dz, footprint))))
+  return { paths, trees }
+}
 
 export function Plaza({ city, terrain }: { city: CityModel; terrain?: DevTerrainV1 }) {
   const paving = surfaceTextures().paving
@@ -31,19 +89,24 @@ export function Plaza({ city, terrain }: { city: CityModel; terrain?: DevTerrain
   return (
     <group>
       {city.blocks.filter((block) => block.isPark &&
-        !terrain?.openChannelBlockIds.includes(block.id)).map((block) => (
-        <group key={block.id} position={[0,
+        !terrain?.openChannelBlockIds.includes(block.id)).map((block) => {
+        const polygonDetails = block.footprintXZ ? polygonParkDetails(block) : null
+        return <group key={block.id} position={[0,
           (terrain?.blockPads.find((pad) => pad.blockId === block.id)?.elevationMm ?? 0) / 1000, 0]}>
-          <mesh position={[block.x, 0.28, block.z]} receiveShadow>
-            <boxGeometry args={[block.width * 0.92, 0.08, block.depth * 0.92]} />
-            <meshStandardMaterial color="#36524d" roughness={1} />
-          </mesh>
-          <mesh position={[block.x, 0.335, block.z]} receiveShadow>
-            <boxGeometry args={[block.width * 0.17, 0.035, block.depth * 0.91]} />
-            <meshStandardMaterial color="#8b9691" roughness={0.96} />
-          </mesh>
-          {[-1, 1].map((side) => (
-            <group key={side} position={[block.x + side * block.width * 0.29, 0.37, block.z]}>
+          {block.footprintXZ ? <PolygonParkSurface block={block} /> :
+            <mesh position={[block.x, 0.28, block.z]} receiveShadow>
+              <boxGeometry args={[block.width * 0.92, 0.08, block.depth * 0.92]} />
+              <meshStandardMaterial color="#36524d" roughness={1} />
+            </mesh>}
+          {polygonDetails ? <InstancedBoxes items={polygonDetails.paths}
+            color="#8b9691" roughness={0.96} receiveShadow /> :
+            <mesh position={[block.x, 0.335, block.z]} receiveShadow>
+              <boxGeometry args={[block.width * 0.17, 0.035, block.depth * 0.91]} />
+              <meshStandardMaterial color="#8b9691" roughness={0.96} />
+            </mesh>}
+          {(polygonDetails?.trees ?? [-1, 1].map((side) =>
+            block.x + side * block.width * 0.29)).map((treeX) => (
+            <group key={treeX} position={[treeX, 0.37, block.z]}>
               <mesh position={[0, 0.7, 0]} castShadow>
                 <cylinderGeometry args={[0.11, 0.16, 1.4, 6]} />
                 <meshStandardMaterial color="#3d4842" roughness={1} />
@@ -55,7 +118,7 @@ export function Plaza({ city, terrain }: { city: CityModel; terrain?: DevTerrain
             </group>
           ))}
         </group>
-      ))}
+      })}
       <InstancedBoxes items={[{ position: [x, 0.255, z],
         scale: [width * 0.88, 0.04, depth * 0.88] }]}
         color="#718392" roughness={1} receiveShadow
