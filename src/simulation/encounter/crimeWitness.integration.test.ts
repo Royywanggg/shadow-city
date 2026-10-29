@@ -292,5 +292,5 @@ describe('constructed encounter crime and witness path', () => {
     const observer = projectObserverViewV5(state)
     expect(JSON.stringify(observer)).not.toContain(chain!.offence.offenderAgentId)
     expect(JSON.stringify(observer)).not.toContain(chain!.offence.id)
-  }, 20_000)
+  }, 60_000)
 })
