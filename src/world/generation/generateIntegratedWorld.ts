@@ -119,7 +119,9 @@ export function generateIntegratedWorld(seed = HERO_SEED,
     point(node.x, 0.25, node.z), 'ground')
   for (const pedestrianEdge of retainedCity.pedestrian.edges) edge(builder, pedestrianEdge.id,
     pedestrianEdge.from, pedestrianEdge.to,
-    pedestrianEdge.kind === 'crossing' ? 'crossing' : 'walk')
+    pedestrianEdge.kind === 'crossing' ? 'crossing' : 'walk',
+    pedestrianEdge.pathXZ ? { path: pedestrianEdge.pathXZ.map((p) =>
+      point(p.x, 0.25, p.z)) } : {})
 
   const blockedGround: (readonly GroundPointMm[])[] = []
   for (const building of retainedCity.buildings) {

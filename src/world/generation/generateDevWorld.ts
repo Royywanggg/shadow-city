@@ -7,6 +7,8 @@ import { generateIntegratedWorld } from './generateIntegratedWorld'
 import { deriveDevRidgeRoad, ridgePedestrianLinks, RIDGE_ROAD_ID } from './devRidgeRoad'
 import { expandOriginalCity } from './expandOriginalCity'
 import { createDevOrganicLayout } from './devOrganicLayout'
+import { deriveDevRoadCorridor } from './devRoadCorridor'
+import { placeDevCorridorParcels } from './devParcelPlacement'
 
 const GROUND_Y_MM = 250
 const BRIDGE_SIDEWALK_OFFSET_MM = 180
@@ -117,7 +119,9 @@ function bridgePedestrianLinks(profile: DevRoadProfileV1,
 /** Isolated terrain experiment derived from the integrated city, never mutating main. */
 export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
   const expandedCity = expandOriginalCity(generateCity(seed))
-  const baseCity = createDevOrganicLayout(expandedCity)
+  const organicCity = createDevOrganicLayout(expandedCity)
+  const curvedCity = deriveDevRoadCorridor(organicCity)
+  const baseCity = placeDevCorridorParcels(curvedCity)
   const integrated = generateIntegratedWorld(seed, {
     baseCity,
     openChannelBlockIds: [...DEV_OPEN_CHANNEL_BLOCK_IDS, ...DEV_ESCARPMENT_BLOCK_IDS],
@@ -275,7 +279,7 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
   })
   return {
     ...integrated,
-    config: { ...integrated.config, generatorVersion: 'twilight-dev-v3' },
+    config: { ...integrated.config, generatorVersion: 'twilight-dev-v4' },
     baseCity: city,
     roadNodes: city.roads.nodes.map((node) => ({ id: node.id,
       position: { x: Math.round(node.x * 1000), z: Math.round(node.z * 1000) } })),
