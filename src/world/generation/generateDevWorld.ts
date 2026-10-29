@@ -1,10 +1,12 @@
-import { HERO_SEED } from '../../city/generation/generateCity'
+import { generateCity, HERO_SEED } from '../../city/generation/generateCity'
 import type { GroundPointMm, NavEdgeV2, NavNodeV2, WorldModelV2 } from '../model'
 import { createDevTerrainV1, DEV_OPEN_CHANNEL_BLOCK_IDS, heightAtMm,
   DEV_ESCARPMENT_BLOCK_IDS, buildingPadElevationMm,
   roadBendMm, type DevRoadProfileV1, type DevTerrainV1 } from '../terrain/devTerrain'
 import { generateIntegratedWorld } from './generateIntegratedWorld'
 import { deriveDevRidgeRoad, ridgePedestrianLinks, RIDGE_ROAD_ID } from './devRidgeRoad'
+import { expandOriginalCity } from './expandOriginalCity'
+import { createDevOrganicLayout } from './devOrganicLayout'
 
 const GROUND_Y_MM = 250
 const BRIDGE_SIDEWALK_OFFSET_MM = 180
@@ -114,8 +116,12 @@ function bridgePedestrianLinks(profile: DevRoadProfileV1,
 
 /** Isolated terrain experiment derived from the integrated city, never mutating main. */
 export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
-  const integrated = generateIntegratedWorld(seed,
-    { openChannelBlockIds: [...DEV_OPEN_CHANNEL_BLOCK_IDS, ...DEV_ESCARPMENT_BLOCK_IDS] })
+  const expandedCity = expandOriginalCity(generateCity(seed))
+  const baseCity = createDevOrganicLayout(expandedCity)
+  const integrated = generateIntegratedWorld(seed, {
+    baseCity,
+    openChannelBlockIds: [...DEV_OPEN_CHANNEL_BLOCK_IDS, ...DEV_ESCARPMENT_BLOCK_IDS],
+  })
   const sourceCity = integrated.baseCity!
   const sourceTerrain = createDevTerrainV1(sourceCity, seed)
   const { city, terrain } = deriveDevRidgeRoad(sourceCity, sourceTerrain)
@@ -269,7 +275,7 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
   })
   return {
     ...integrated,
-    config: { ...integrated.config, generatorVersion: 'twilight-dev-v2' },
+    config: { ...integrated.config, generatorVersion: 'twilight-dev-v3' },
     baseCity: city,
     roadNodes: city.roads.nodes.map((node) => ({ id: node.id,
       position: { x: Math.round(node.x * 1000), z: Math.round(node.z * 1000) } })),

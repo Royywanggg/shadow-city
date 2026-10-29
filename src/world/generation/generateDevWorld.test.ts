@@ -22,9 +22,22 @@ describe('isolated Twilight terrain world', () => {
     expect(mainAfter).toEqual(mainBefore)
     expect(dev.baseCity?.roads).not.toEqual(mainBefore.baseCity?.roads)
     expect(dev.baseCity?.plaza).toEqual(mainBefore.baseCity?.plaza)
-    expect(dev.baseCity?.buildings).toEqual(devSource.baseCity?.buildings)
+    const originalBuildings = new Map(devSource.baseCity!.buildings.map((building) =>
+      [building.id, building]))
+    expect(dev.baseCity?.buildings.map((building) => building.id)).toEqual(
+      devSource.baseCity?.buildings.map((building) => building.id))
+    for (const building of dev.baseCity!.buildings) {
+      const original = originalBuildings.get(building.id)!
+      expect(building.masses).toEqual(original.masses)
+      expect(building.windows).toEqual(original.windows)
+      expect(building.kind).toBe(original.kind)
+      expect(building.entrance.x - building.x).toBeCloseTo(
+        original.entrance.x - original.x, 6)
+      expect(building.entrance.z - building.z).toBeCloseTo(
+        original.entrance.z - original.z, 6)
+    }
     expect(dev.baseCity?.buildings.length).toBeLessThan(mainBefore.baseCity!.buildings.length)
-    expect(dev.config.generatorVersion).toBe('twilight-dev-v2')
+    expect(dev.config.generatorVersion).toBe('twilight-dev-v3')
     expect(mainAfter.config.generatorVersion).toBe('heritage-extension-v6')
     expect(worldFingerprintV5(dev, DEFAULT_SIMULATION_CONFIG_V5))
       .not.toBe(worldFingerprintV5(mainAfter, DEFAULT_SIMULATION_CONFIG_V5))
@@ -329,9 +342,12 @@ describe('isolated Twilight terrain world', () => {
       const road = roadById.get(profile.edgeId)!
       const start = profile.path[0]
       const end = profile.path.at(-1)!
-      expect(start.z).toBe(end.z)
-      expect(Math.abs(profile.path[Math.floor(profile.path.length / 2)].z - start.z))
-        .toBeGreaterThan(500)
+      const mid = profile.path[Math.floor(profile.path.length / 2)]
+      const dx = end.x - start.x
+      const dz = end.z - start.z
+      const deviation = Math.abs((mid.x - start.x) * dz -
+        (mid.z - start.z) * dx) / Math.hypot(dx, dz)
+      expect(deviation).toBeGreaterThan(500)
       for (const point of profile.path) {
         const clearance = Math.min(...footprints.map((footprint) => Math.hypot(
           Math.max(0, Math.abs(point.x - footprint.x) - footprint.halfWidth),
