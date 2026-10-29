@@ -1,5 +1,6 @@
 import type { CityModel } from '../../city/model'
 import type { GroundPointMm, WorldPointMm } from '../model'
+import { createDevValleyChannel } from '../generation/devValleyPlan'
 
 export interface DevTerrainGridV1 {
   readonly originXmm: number
@@ -84,14 +85,6 @@ export const DEV_ESCARPMENT_BLOCK_IDS = [
 
 const STEP_MM = 2_000
 const ROAD_TOP_MM = 70
-const CHANNEL_CENTERLINE: readonly GroundPointMm[] = [
-  { x: -88_000, z: 33_000 },
-  { x: -88_000, z: 51_000 },
-  { x: -87_000, z: 76_000 },
-  { x: -88_000, z: 81_000 },
-  { x: -110_000, z: 87_000 },
-  { x: -150_000, z: 93_000 },
-]
 const CHANNEL_HALF_WIDTH_MM = 3_000
 const CHANNEL_BANK_WIDTH_MM = 6_000
 const CHANNEL_DEPTH_MM = 8_000
@@ -131,17 +124,18 @@ function terraceRamp(value: number): number {
   return (t - edge / 2) / (1 - edge)
 }
 
-function channelXAt(zMm: number): number {
-  if (zMm <= CHANNEL_CENTERLINE[0].z) return CHANNEL_CENTERLINE[0].x
-  for (let index = 1; index < CHANNEL_CENTERLINE.length; index += 1) {
-    const previous = CHANNEL_CENTERLINE[index - 1]
-    const next = CHANNEL_CENTERLINE[index]
+function channelXAt(points: readonly GroundPointMm[], zMm: number): number {
+  if (zMm <= points[0].z) return points[0].x
+  for (let index = 1; index < points.length; index += 1) {
+    const previous = points[index - 1]
+    const next = points[index]
     if (zMm <= next.z) {
-      const t = smoothstep((zMm - previous.z) / (next.z - previous.z))
+      const rawT = (zMm - previous.z) / (next.z - previous.z)
+      const t = points.length > 10 && next.z <= 81_000 ? rawT : smoothstep(rawT)
       return previous.x + (next.x - previous.x) * t
     }
   }
-  return CHANNEL_CENTERLINE.at(-1)!.x
+  return points.at(-1)!.x
 }
 
 export function channelCenterXAtMm(terrain: DevTerrainV1, zMm: number): number {
@@ -151,7 +145,8 @@ export function channelCenterXAtMm(terrain: DevTerrainV1, zMm: number): number {
     const previous = points[index - 1]
     const next = points[index]
     if (zMm <= next.z) {
-      const t = smoothstep((zMm - previous.z) / (next.z - previous.z))
+      const rawT = (zMm - previous.z) / (next.z - previous.z)
+      const t = points.length > 10 && next.z <= 81_000 ? rawT : smoothstep(rawT)
       return Math.round(previous.x + (next.x - previous.x) * t)
     }
   }
@@ -197,12 +192,12 @@ function patchHeightMm(patches: readonly DevEscarpmentPatchV1[], xMm: number,
 }
 
 function rawHeightMm(xMm: number, zMm: number,
-  patches: readonly DevEscarpmentPatchV1[]): number {
+  patches: readonly DevEscarpmentPatchV1[], channel: readonly GroundPointMm[]): number {
   const northRise = 10_000 * terraceRamp((-zMm - 22_000) / 128_000)
-  const channelAlong = smoothstep((zMm - CHANNEL_CENTERLINE[0].z) /
-    (CHANNEL_FULL_DEPTH_Z_MM - CHANNEL_CENTERLINE[0].z)) *
+  const channelAlong = smoothstep((zMm - channel[0].z) /
+    (CHANNEL_FULL_DEPTH_Z_MM - channel[0].z)) *
     (1 - smoothstep((zMm - 93_000) / 7_000))
-  const distance = Math.abs(xMm - channelXAt(zMm))
+  const distance = Math.abs(xMm - channelXAt(channel, zMm))
   const channelAcross = 1 - smoothstep((distance - CHANNEL_HALF_WIDTH_MM) /
     CHANNEL_BANK_WIDTH_MM)
   return Math.round(northRise - CHANNEL_DEPTH_MM * channelAlong * channelAcross +
@@ -304,6 +299,7 @@ function buildRoadProfiles(city: CityModel, terrain: DevTerrainV1): DevRoadProfi
 }
 
 export function createDevTerrainV1(city: CityModel, seed: string): DevTerrainV1 {
+  const channelLine = createDevValleyChannel(city)
   const openChannelBlockIds = [...DEV_OPEN_CHANNEL_BLOCK_IDS]
   const open = new Set<string>([...openChannelBlockIds, ...DEV_ESCARPMENT_BLOCK_IDS])
   const patches = city.blocks.filter((block) =>
@@ -337,11 +333,11 @@ export function createDevTerrainV1(city: CityModel, seed: string): DevTerrainV1 
     stepMm: STEP_MM, width, depth,
     heightsMm: Array.from({ length: width * depth }, (_, index) =>
       rawHeightMm(-halfMm + index % width * STEP_MM,
-        -halfMm + Math.floor(index / width) * STEP_MM, patches)) }
+        -halfMm + Math.floor(index / width) * STEP_MM, patches, channelLine)) }
   const sampler: DevTerrainV1 = { version: 'twilight-terrain-v1', seed, grid,
     blockPads: [], buildingPads: [], roadProfiles: [], openChannelBlockIds,
     nonWalkableEscarpment: { patches },
-    channel: { centerline: CHANNEL_CENTERLINE, fullDepthZmm: CHANNEL_FULL_DEPTH_Z_MM,
+    channel: { centerline: channelLine, fullDepthZmm: CHANNEL_FULL_DEPTH_Z_MM,
       halfWidthMm: CHANNEL_HALF_WIDTH_MM,
       bankWidthMm: CHANNEL_BANK_WIDTH_MM, depthMm: CHANNEL_DEPTH_MM } }
   const blockPads = city.blocks.filter((block) => !open.has(block.id)).map((block) => {
@@ -382,19 +378,26 @@ export function createDevTerrainV1(city: CityModel, seed: string): DevTerrainV1 
       const access = pedestrianEdges.get(`ped-access-${building.id}`)
       const lane = access ? pedestrianNodes.get(access.to) : null
       if (!lane) throw new Error(`Missing entrance sidewalk for ${building.id}`)
+      const entranceXmm = Math.round(building.entrance.x * 1000)
       const entranceZmm = Math.round(building.entrance.z * 1000)
-      const availableMm = Math.round(lane.z * 1000) - entranceZmm
+      const outward = building.entrance.face === 'north' ? { x: 0, z: -1 } :
+        building.entrance.face === 'east' ? { x: 1, z: 0 } :
+          building.entrance.face === 'west' ? { x: -1, z: 0 } : { x: 0, z: 1 }
+      const availableMm = Math.round((lane.x * 1000 - entranceXmm) * outward.x +
+        (lane.z * 1000 - entranceZmm) * outward.z)
       const stepDepthMm = Math.min(330, Math.floor((availableMm - 250) / count))
       if (stepDepthMm < 220) {
         throw new Error(`Insufficient stair landing for ${building.id}`)
       }
-      const entranceXmm = Math.round(building.entrance.x * 1000)
+      const pointAt = (distanceMm: number): GroundPointMm => ({
+        x: entranceXmm + outward.x * distanceMm,
+        z: entranceZmm + outward.z * distanceMm,
+      })
       entryStair = {
-        foot: { x: entranceXmm, z: entranceZmm + count * stepDepthMm + 100 },
+        foot: pointAt(count * stepDepthMm + 100),
         stepDepthMm,
         treads: Array.from({ length: count }, (_, index) => ({
-          center: { x: entranceXmm,
-            z: entranceZmm + Math.round((count - index - 0.5) * stepDepthMm) },
+          center: pointAt(Math.round((count - index - 0.5) * stepDepthMm)),
           topMm: elevationMm - Math.round((count - index - 1) * entryRiseMm / count),
         })),
       }

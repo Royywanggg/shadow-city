@@ -23,7 +23,7 @@ function centreline(from: RoadNode, to: RoadNode): readonly CityPointXZ[] {
   })
 }
 
-function reprojectFeature(feature: StreetFeature, from: RoadNode, to: RoadNode,
+export function reprojectRoadFeature(feature: StreetFeature, from: RoadNode, to: RoadNode,
   path: readonly CityPointXZ[]): StreetFeature {
   const oldDx = to.x - from.x
   const oldDz = to.z - from.z
@@ -100,11 +100,11 @@ export function deriveDevRoadCorridor(city: CityModel): CityModel {
     const streetFeatures = current.streetFeatures.map((feature) => {
       if (feature.id.startsWith(`lamp-${corridor.northEdgeId}-`) ||
         feature.id === `bus-stop-${corridor.northEdgeId}`) {
-        return reprojectFeature(feature, first, middle, northPath)
+        return reprojectRoadFeature(feature, first, middle, northPath)
       }
       if (feature.id.startsWith(`lamp-${corridor.southEdgeId}-`) ||
         feature.id === `bus-stop-${corridor.southEdgeId}`) {
-        return reprojectFeature(feature, middle, last, southPath)
+        return reprojectRoadFeature(feature, middle, last, southPath)
       }
       return feature
     })

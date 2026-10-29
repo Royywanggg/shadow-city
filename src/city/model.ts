@@ -86,7 +86,7 @@ export interface BuildingEntrance {
   /** World-space doorstep, just outside the ground-floor frontage. */
   x: number
   z: number
-  face: 'south'
+  face: 'north' | 'east' | 'south' | 'west'
 }
 
 export interface BuildingMass {

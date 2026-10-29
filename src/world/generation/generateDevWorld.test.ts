@@ -48,7 +48,7 @@ describe('isolated Twilight terrain world', () => {
       }
     }
     expect(dev.baseCity?.buildings.length).toBeLessThan(mainBefore.baseCity!.buildings.length)
-    expect(dev.config.generatorVersion).toBe('twilight-dev-v5')
+    expect(dev.config.generatorVersion).toBe('twilight-dev-v6')
     expect(mainAfter.config.generatorVersion).toBe('heritage-extension-v6')
     expect(worldFingerprintV5(dev, DEFAULT_SIMULATION_CONFIG_V5))
       .not.toBe(worldFingerprintV5(mainAfter, DEFAULT_SIMULATION_CONFIG_V5))

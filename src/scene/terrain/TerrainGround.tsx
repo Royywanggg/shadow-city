@@ -111,10 +111,14 @@ function sampleChannel(terrain: DevTerrainV1): { x: number; z: number }[] {
   const points = control.flatMap((from, index) => {
     const to = control[index + 1]
     if (!to) return [from]
-    const count = Math.max(8, Math.ceil(Math.hypot(to.x - from.x, to.z - from.z) / 1_800))
+    // Dense valley controls already sample the shared road/channel curve. An
+    // eased subdivision of every short segment would flatten every tangent.
+    const denseValley = control.length > 10 && to.z <= 81_000
+    const count = denseValley ? 1 : Math.max(8,
+      Math.ceil(Math.hypot(to.x - from.x, to.z - from.z) / 1_800))
     return Array.from({ length: count }, (_, step) => {
       const t = step / count
-      const eased = t * t * (3 - 2 * t)
+      const eased = denseValley ? t : t * t * (3 - 2 * t)
       return { x: Math.round(from.x + (to.x - from.x) * eased),
         z: Math.round(from.z + (to.z - from.z) * t) }
     })
@@ -131,6 +135,17 @@ function sampleChannel(terrain: DevTerrainV1): { x: number; z: number }[] {
     z: Math.round(previous.z + (next.z - previous.z) * fraction) }]
 }
 
+function channelCrossSection(point: { z: number }, dx: number,
+  dz: number, denseValley: boolean): readonly [number, number] {
+  const length = Math.hypot(dx, dz) || 1
+  const turn = denseValley ? Math.max(0, Math.min(1,
+    (point.z - 81_000) / 6_000)) : 1
+  const x = -1 + (-dz / length + 1) * turn
+  const z = dx / length * turn
+  const normalLength = Math.hypot(x, z) || 1
+  return [x / normalLength, z / normalLength]
+}
+
 function makeChannel(terrain: DevTerrainV1): BufferGeometry {
   // The head of the terrain channel falls eight metres before reaching its
   // full-depth bed. Exposing that entire slope as water creates a waterfall
@@ -145,16 +160,18 @@ function makeChannel(terrain: DevTerrainV1): BufferGeometry {
   const stream = new Color('#468a96')
   const mouth = new Color('#10262e')
   const tone = new Color()
+  const denseValley = terrain.channel.centerline.length > 10
   for (let index = 0; index < points.length; index += 1) {
     const point = points[index]
     const before = points[Math.max(0, index - 1)]
     const after = points[Math.min(points.length - 1, index + 1)]
     const dx = after.x - before.x
     const dz = after.z - before.z
-    const length = Math.hypot(dx, dz) || 1
-    const nx = -dz / length * width
-    const nz = dx / length * width
-    const variation = 1 + 0.08 * Math.sin(index * 0.82)
+    const [crossX, crossZ] = channelCrossSection(point, dx, dz, denseValley)
+    const nx = crossX * width
+    const nz = crossZ * width
+    const variation = 1 + (denseValley && point.z <= 81_000 ? 0.015 : 0.08) *
+      Math.sin(index * 0.82)
     const y = -terrain.channel.depthMm / 1000 + 0.38
     positions.push(Math.max(minX, point.x / 1000 + nx * variation), y,
       point.z / 1000 + nz * variation,
@@ -189,6 +206,7 @@ function makeRockBanks(terrain: DevTerrainV1): BufferGeometry {
     terrain.channel.halfWidthMm + terrain.channel.bankWidthMm * 1.04]
   const tones = [new Color('#344f55'), new Color('#4d6260'),
     new Color('#64736b'), new Color('#496251')]
+  const denseValley = terrain.channel.centerline.length > 10
   for (const side of [-1, 1]) {
     const start = positions.length / 3
     for (let index = 0; index < points.length; index += 1) {
@@ -197,11 +215,10 @@ function makeRockBanks(terrain: DevTerrainV1): BufferGeometry {
       const after = points[Math.min(points.length - 1, index + 1)]
       const dx = after.x - before.x
       const dz = after.z - before.z
-      const length = Math.hypot(dx, dz) || 1
-      const nx = -dz / length
-      const nz = dx / length
+      const [nx, nz] = channelCrossSection(point, dx, dz, denseValley)
       distances.forEach((distance, band) => {
-        const variation = 1 + 0.025 * Math.sin(index * 0.71 + side * 2 + band)
+        const variation = 1 + (denseValley && point.z <= 81_000 ? 0.004 : 0.025) *
+          Math.sin(index * 0.71 + side * 2 + band)
         const x = Math.max(minX, (point.x + nx * side * distance * variation) / 1000)
         const z = (point.z + nz * side * distance * variation) / 1000
         const y = heightAtMm(terrain, Math.round(x * 1000),
@@ -242,15 +259,14 @@ function TerrainBankRocks({ terrain }: { terrain: DevTerrainV1 }) {
   const rocks = useMemo(() => {
     const result: Rock[] = []
     const points = terrain.channel.centerline
+    const denseValley = points.length > 10
     for (let index = 0; index < points.length - 1; index += 1) {
       const from = points[index]
       const to = points[index + 1]
       const segments = Math.max(3, Math.ceil(Math.hypot(to.x - from.x, to.z - from.z) / 2_600))
       const dx = to.x - from.x
       const dz = to.z - from.z
-      const length = Math.hypot(dx, dz) || 1
-      const nx = -dz / length
-      const nz = dx / length
+      const [nx, nz] = channelCrossSection(from, dx, dz, denseValley)
       for (let step = 0; step < segments; step += 1) {
         const t = (step + 0.5) / segments
         const x = from.x + dx * t
@@ -351,9 +367,9 @@ export function TerrainGround({ terrain, city }: { terrain: DevTerrainV1;
       <meshStandardMaterial vertexColors roughness={0.3} metalness={0.12}
         emissive="#132d34" emissiveIntensity={0.12} side={2} />
     </mesh>
-    <mesh geometry={banks} castShadow receiveShadow>
+    {terrain.channel.centerline.length <= 10 && <mesh geometry={banks} castShadow receiveShadow>
       <meshStandardMaterial vertexColors roughness={0.98} flatShading side={2} />
-    </mesh>
+    </mesh>}
     <TerrainBankRocks terrain={terrain} />
     <TerrainValleyTrees terrain={terrain} city={city} />
     <TerrainEscarpment terrain={terrain} />

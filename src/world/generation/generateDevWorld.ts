@@ -9,6 +9,7 @@ import { expandOriginalCity } from './expandOriginalCity'
 import { createDevOrganicLayout } from './devOrganicLayout'
 import { deriveDevRoadCorridor } from './devRoadCorridor'
 import { placeDevCorridorParcels } from './devParcelPlacement'
+import { applyDevValleyPlan } from './devValleyPlan'
 
 const GROUND_Y_MM = 250
 const BRIDGE_SIDEWALK_OFFSET_MM = 180
@@ -120,7 +121,7 @@ function bridgePedestrianLinks(profile: DevRoadProfileV1,
 export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
   const expandedCity = expandOriginalCity(generateCity(seed))
   const organicCity = createDevOrganicLayout(expandedCity)
-  const curvedCity = deriveDevRoadCorridor(organicCity)
+  const curvedCity = applyDevValleyPlan(deriveDevRoadCorridor(organicCity))
   const baseCity = placeDevCorridorParcels(curvedCity)
   const integrated = generateIntegratedWorld(seed, {
     baseCity,
@@ -279,7 +280,7 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
   })
   return {
     ...integrated,
-    config: { ...integrated.config, generatorVersion: 'twilight-dev-v5' },
+    config: { ...integrated.config, generatorVersion: 'twilight-dev-v6' },
     baseCity: city,
     roadNodes: city.roads.nodes.map((node) => ({ id: node.id,
       position: { x: Math.round(node.x * 1000), z: Math.round(node.z * 1000) } })),
