@@ -1,5 +1,6 @@
 import type {
   Building,
+  BuildingEntrance,
   CityModel,
   PedestrianAnchor,
   PedestrianEdge,
@@ -122,6 +123,30 @@ function southernRayHit(origin: CityPointXZ, polygon: readonly CityPointXZ[]):
   return candidates[0]
 }
 
+function frontageRayHit(origin: CityPointXZ, face: BuildingEntrance['face'],
+  polygon: readonly CityPointXZ[]):
+  { edgeIndex: number; t: number; point: CityPointXZ } {
+  if (face === 'south') return southernRayHit(origin, polygon)
+  const direction = face === 'north' ? { x: 0, z: -1 } :
+    face === 'east' ? { x: 1, z: 0 } : { x: -1, z: 0 }
+  const cross = (a: CityPointXZ, b: CityPointXZ) => a.x * b.z - a.z * b.x
+  const candidates = polygon.flatMap((a, edgeIndex) => {
+    const b = polygon[(edgeIndex + 1) % polygon.length]
+    const span = { x: b.x - a.x, z: b.z - a.z }
+    const divisor = cross(direction, span)
+    if (Math.abs(divisor) <= EPSILON) return []
+    const delta = { x: a.x - origin.x, z: a.z - origin.z }
+    const distance = cross(delta, span) / divisor
+    const t = cross(delta, direction) / divisor
+    if (distance <= EPSILON || t < -EPSILON || t > 1 + EPSILON) return []
+    return [{ edgeIndex, t: Math.max(0, Math.min(1, t)), distance,
+      point: { x: origin.x + direction.x * distance,
+        z: origin.z + direction.z * distance } }]
+  }).sort((a, b) => a.distance - b.distance || a.edgeIndex - b.edgeIndex)
+  if (!candidates[0]) throw new Error(`Building entrance has no ${face} polygon sidewalk`)
+  return candidates[0]
+}
+
 function sortedDistinct(values: readonly number[]): number[] {
   const sorted = [...values].sort((a, b) => a - b)
   return sorted.filter((value, index) => index === 0 || value - sorted[index - 1] > EPSILON)
@@ -213,8 +238,8 @@ export function derivePedestrianNetwork(city: SpatialCity,
     edgeIds.add(id)
   }
 
-  function safePolygonRing(block: SpatialCity['blocks'][number]): CityPointXZ[] {
-    const footprint = block.footprintXZ!
+  function safePolygonRing(block: SpatialCity['blocks'][number],
+    footprint: readonly CityPointXZ[]): CityPointXZ[] {
     const boundaries = boundaryRoadIds(block).map((id) => {
       const road = roadEdgeById.get(id)
       if (!road) throw new Error(`Missing polygon boundary road ${id}`)
@@ -247,8 +272,19 @@ export function derivePedestrianNetwork(city: SpatialCity,
   }
 
   for (const block of city.blocks) {
-    if (block.footprintXZ) {
-      const ring = safePolygonRing(block)
+    const frontageBlockBuildings = city.buildings.filter((building) =>
+      city.parcels.some((parcel) => parcel.id === building.parcelId &&
+        parcel.blockId === block.id))
+    const hasSideFrontage = frontageBlockBuildings.some((building) =>
+      building.entrance.face !== 'south')
+    const footprint = block.footprintXZ ?? (hasSideFrontage ? [
+      { x: block.x - block.width / 2, z: block.z - block.depth / 2 },
+      { x: block.x + block.width / 2, z: block.z - block.depth / 2 },
+      { x: block.x + block.width / 2, z: block.z + block.depth / 2 },
+      { x: block.x - block.width / 2, z: block.z + block.depth / 2 },
+    ] : undefined)
+    if (footprint) {
+      const ring = safePolygonRing(block, footprint)
       const ringIds = ring.map((point, index) => {
         const id = `ped-${block.id}-polygon-${index}`
         addNode({ id, ...point, surfaceY: SIDEWALK_Y, kind: 'sidewalk' })
@@ -265,7 +301,8 @@ export function derivePedestrianNetwork(city: SpatialCity,
         const id = `ped-entrance-${building.id}`
         addNode({ id, x: building.entrance.x, z: building.entrance.z,
           surfaceY: SIDEWALK_Y, kind: 'entrance' })
-        const hit = southernRayHit(building.entrance, ring)
+        const hit = frontageRayHit(building.entrance,
+          building.entrance.face, ring)
         let sidewalkId = hit.t <= EPSILON ? ringIds[hit.edgeIndex] :
           hit.t >= 1 - EPSILON ? ringIds[(hit.edgeIndex + 1) % ringIds.length] : null
         if (!sidewalkId) {
@@ -298,18 +335,18 @@ export function derivePedestrianNetwork(city: SpatialCity,
         }
       })
       if (block.isPlaza || block.isPark) {
-        const minX = Math.min(...block.footprintXZ.map((point) => point.x))
-        const maxX = Math.max(...block.footprintXZ.map((point) => point.x))
-        const minZ = Math.min(...block.footprintXZ.map((point) => point.z))
-        const maxZ = Math.max(...block.footprintXZ.map((point) => point.z))
+        const minX = Math.min(...footprint.map((point) => point.x))
+        const maxX = Math.max(...footprint.map((point) => point.x))
+        const minZ = Math.min(...footprint.map((point) => point.z))
+        const maxZ = Math.max(...footprint.map((point) => point.z))
         const step = Math.max(1, Math.min(2.5, Math.min(maxX - minX,
           maxZ - minZ) / 6))
         const candidates: { point: CityPointXZ; ringIndex: number }[] = []
         for (let z = minZ + step / 2; z < maxZ; z += step) {
           for (let x = minX + step / 2; x < maxX; x += step) {
             const point = { x, z }
-            if (!insidePolygon(point, block.footprintXZ) ||
-              distanceToPath(point, [...block.footprintXZ, block.footprintXZ[0]]) < 1.1 ||
+            if (!insidePolygon(point, footprint) ||
+              distanceToPath(point, [...footprint, footprint[0]]) < 1.1 ||
               block.isPlaza && Math.hypot(x - city.plaza.x,
                 z - city.plaza.z) < 5 ||
               city.streetFeatures?.some((feature) =>

@@ -60,6 +60,48 @@ function distanceToRoad(x: number, z: number,
 }
 
 describe('derived pedestrian network', () => {
+  for (const face of ['north', 'east', 'south', 'west'] as const) {
+    for (const polygonFootprint of [false, true]) {
+      it(`routes a ${face} frontage to a legal ${polygonFootprint ? 'explicit' : 'implicit'} block edge`, () => {
+        const source = generateCity(HERO_SEED)
+        const original = source.buildings[0]
+        const parcel = source.parcels.find((item) => item.id === original.parcelId)!
+        const block = source.blocks.find((item) => item.id === parcel.blockId)!
+        const front = original.masses.find((mass) => mass.baseY < 2)!
+        const x = original.x + front.offsetX
+        const z = original.z + front.offsetZ
+        const entrance = face === 'north' ? { x, z: z - front.depth / 2 - 0.36, face } :
+          face === 'east' ? { x: x + front.width / 2 + 0.36, z, face } :
+            face === 'west' ? { x: x - front.width / 2 - 0.36, z, face } :
+              { x, z: z + front.depth / 2 + 0.36, face }
+        const building = { ...original, entrance }
+        const footprintXZ = [
+          { x: block.x - block.width / 2, z: block.z - block.depth / 2 },
+          { x: block.x + block.width / 2, z: block.z - block.depth / 2 },
+          { x: block.x + block.width / 2, z: block.z + block.depth / 2 },
+          { x: block.x - block.width / 2, z: block.z + block.depth / 2 },
+        ]
+        const testBlock = polygonFootprint ? { ...block, footprintXZ } : block
+        const graph = derivePedestrianNetwork({ ...source,
+          blocks: [testBlock], parcels: [parcel], buildings: [building] })
+        const nodes = new Map(graph.nodes.map((node) => [node.id, node]))
+        const access = graph.edges.find((edge) =>
+          edge.id === `ped-access-${building.id}`)!
+        const doorway = nodes.get(access.from)!
+        const sidewalk = nodes.get(access.to)!
+        expect(doorway).toMatchObject({ x: entrance.x, z: entrance.z,
+          kind: 'entrance' })
+        expect(sidewalk.kind).toBe('sidewalk')
+        if (face === 'north') expect(sidewalk.z).toBeLessThan(doorway.z)
+        if (face === 'south') expect(sidewalk.z).toBeGreaterThan(doorway.z)
+        if (face === 'east') expect(sidewalk.x).toBeGreaterThan(doorway.x)
+        if (face === 'west') expect(sidewalk.x).toBeLessThan(doorway.x)
+        expect(passesThroughGroundMass(doorway, sidewalk, [building])).toBe(false)
+        expect(reachableNodeIds(graph.nodes, graph.edges).size).toBe(graph.nodes.length)
+      })
+    }
+  }
+
   it('connects a polygon park across explicit non-grid road boundaries', () => {
     const source = generateCity(HERO_SEED)
     const parkId = 'block-2-4'

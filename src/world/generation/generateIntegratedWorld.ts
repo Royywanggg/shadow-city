@@ -141,9 +141,16 @@ export function generateIntegratedWorld(seed = HERO_SEED,
       rect(cx - base.width * 0.45, cx + base.width * 0.45,
         cz - base.depth * 0.45, cz + base.depth * 0.45), 250, true))
     const entryId = `${surfaceId}:entry`
-    const entryX = Math.max(cx - base.width * 0.36,
+    const lateralX = Math.max(cx - base.width * 0.36,
       Math.min(cx + base.width * 0.36, building.entrance.x))
-    builder.node(entryId, point(entryX, 0.25, cz + base.depth * 0.35), surfaceId)
+    const lateralZ = Math.max(cz - base.depth * 0.36,
+      Math.min(cz + base.depth * 0.36, building.entrance.z))
+    const face = building.entrance.face
+    const entryX = face === 'east' ? cx + base.width * 0.35 :
+      face === 'west' ? cx - base.width * 0.35 : lateralX
+    const entryZ = face === 'north' ? cz - base.depth * 0.35 :
+      face === 'south' ? cz + base.depth * 0.35 : lateralZ
+    builder.node(entryId, point(entryX, 0.25, entryZ), surfaceId)
     edge(builder, `portal:${building.id}`, `ped-entrance-${building.id}`, entryId,
       'portal', { surfaceId: null })
     const slots = Array.from({ length: 16 }, (_, index) => {

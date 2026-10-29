@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { generateCity, HERO_SEED } from '../../city/generation/generateCity'
+import { derivePedestrianNetwork } from '../../city/pedestrian/derivePedestrianNetwork'
 import { createEnvironmentV5, createInitialStateV5 } from '../../simulation/engineV5'
 import { DEFAULT_SIMULATION_CONFIG_V5 } from '../../simulation/v5Types'
 import { createNavigationIndexV2, findRouteV2 } from '../navigation/routeV2'
@@ -9,6 +10,48 @@ import { generateIntegratedWorld } from './generateIntegratedWorld'
 import { expandOriginalCity } from './expandOriginalCity'
 
 describe('original-city v0.6 integration', () => {
+  it('places every oriented building portal just inside its matching wall', () => {
+    const source = expandOriginalCity(generateCity(HERO_SEED))
+    const selected = source.buildings[0]
+    const base = selected.masses.find((mass) => mass.baseY < 2)!
+    const cx = selected.x + base.offsetX
+    const cz = selected.z + base.offsetZ
+    const mm = (value: number) => Math.round(value * 1000)
+    for (const face of ['north', 'east', 'south', 'west'] as const) {
+      const entrance = face === 'north' ?
+        { x: cx, z: cz - base.depth / 2 - 0.36, face } :
+        face === 'east' ? { x: cx + base.width / 2 + 0.36, z: cz, face } :
+          face === 'west' ? { x: cx - base.width / 2 - 0.36, z: cz, face } :
+            { x: cx, z: cz + base.depth / 2 + 0.36, face }
+      const buildings = source.buildings.map((building) => building.id === selected.id
+        ? { ...building, entrance } : building)
+      const city = { ...source, buildings }
+      const pedestrian = derivePedestrianNetwork(city)
+      const world = generateIntegratedWorld(HERO_SEED,
+        { baseCity: { ...city, pedestrian } })
+      const entry = world.navNodes.find((node) =>
+        node.id === `interior:${selected.id}:entry`)!
+      const doorway = world.navNodes.find((node) =>
+        node.id === `ped-entrance-${selected.id}`)!
+      const portal = world.navEdges.find((edge) =>
+        edge.id === `portal:${selected.id}`)!
+      expect(entry.surfaceId).toBe(`interior:${selected.id}`)
+      expect(portal.path).toEqual([doorway.position, entry.position])
+      expect(entry.position).toEqual({
+        x: mm(cx + (face === 'east' ? base.width * 0.35 :
+          face === 'west' ? -base.width * 0.35 : 0)),
+        y: 250,
+        z: mm(cz + (face === 'south' ? base.depth * 0.35 :
+          face === 'north' ? -base.depth * 0.35 : 0)),
+      })
+      if (face === 'north' || face === 'south') {
+        expect(doorway.position.x).toBe(entry.position.x)
+      } else {
+        expect(doorway.position.z).toBe(entry.position.z)
+      }
+    }
+  })
+
   it('accepts an already-expanded city without mutating it or the default world', () => {
     const defaultBefore = generateIntegratedWorld(HERO_SEED)
     const baseCity = expandOriginalCity(generateCity(HERO_SEED))

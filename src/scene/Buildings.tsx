@@ -176,6 +176,37 @@ function addWindows(building: Building, geometry: BuildingGeometry, hero: boolea
 
 function addStreetFront(building: Building, geometry: BuildingGeometry) {
   const front = building.masses[0]
+  if (building.entrance.face !== 'south') {
+    const face = building.entrance.face
+    const normal = face === 'north' ? { x: 0, z: -1 } :
+      face === 'east' ? { x: 1, z: 0 } : { x: -1, z: 0 }
+    const doorway = [building.entrance.x - normal.x * 0.24,
+      building.entrance.z - normal.z * 0.24] as const
+    const horizontal = face === 'north'
+    const doorWidth = building.kind === 'civic' ? 3.2 :
+      building.kind === 'industrial' ? 3.8 : 1.65
+    geometry.entries.push(box([doorway[0], 1.9, doorway[1]],
+      horizontal ? [doorWidth, 2.45, 0.15] : [0.15, 2.45, doorWidth],
+      '#243b4a'))
+    geometry.ledges.push(box([
+      doorway[0] + normal.x * 0.32, 3.22,
+      doorway[1] + normal.z * 0.32],
+    horizontal ? [doorWidth + 0.6, 0.18, 0.85] :
+      [0.85, 0.18, doorWidth + 0.6], '#8b9ca5'))
+    if (building.kind === 'commercial' || building.kind === 'corner' ||
+      building.kind === 'tower') {
+      const storefrontSpan = horizontal ? front.width : front.depth
+      const cx = building.x + front.offsetX +
+        (face === 'east' ? front.width / 2 + 0.11 :
+          face === 'west' ? -front.width / 2 - 0.11 : 0)
+      const cz = building.z + front.offsetZ +
+        (face === 'north' ? -front.depth / 2 - 0.11 : 0)
+      geometry.storefronts.push(box([cx, 3.0, cz], horizontal
+        ? [storefrontSpan * 0.72, 3.25, 0.12]
+        : [0.12, 3.25, storefrontSpan * 0.72], '#274c5a'))
+    }
+    return
+  }
   const fx = building.x + front.offsetX
   const fz = building.z + front.offsetZ + front.depth / 2
   const doorwayX = building.entrance.x
@@ -302,7 +333,9 @@ export function Buildings({ city, lookdev = 'final', terrain }: { city: CityMode
             const height = Math.max(0.07, top - ground)
             result.entrySteps.push(box([tread.center.x / 1000,
               ground + height / 2, tread.center.z / 1000],
-              [1.9, height, pad.entryStair.stepDepthMm / 1000], '#899397'))
+              building.entrance.face === 'east' || building.entrance.face === 'west'
+                ? [pad.entryStair.stepDepthMm / 1000, height, 1.9]
+                : [1.9, height, pad.entryStair.stepDepthMm / 1000], '#899397'))
           }
         }
       }
