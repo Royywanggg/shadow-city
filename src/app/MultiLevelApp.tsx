@@ -32,8 +32,6 @@ import { calendarAtTick } from '../simulation/habits/calendar'
 import { DEFAULT_WORLD_CONFIG_V2 } from '../world/model'
 import { generateWorldV2 } from '../world/generation/generateWorldV2'
 import { generateIntegratedWorld, INTEGRATED_WORLD_CONFIG_V2 } from '../world/generation/generateIntegratedWorld'
-import { generateOrganicWorld, ORGANIC_WORLD_CONFIG_V2 } from '../world/generation/generateOrganicWorld'
-import type { OrganicDebugMode } from '../scene/OrganicWorldGeometry'
 import { CameraControls } from './CameraControls'
 import './v06.css'
 
@@ -96,7 +94,7 @@ function DynamicWorldOverlays({ session, selectedId, selectedEncounterId, select
   session: SimulationSessionV5; selectedId: string | null; selectedEncounterId: string | null;
   selectedEvent: ExplorerEventV1 | null;
   eventExplorerOpen: boolean; onSelectScene: (sceneId: string) => void;
-  level: 'all' | 'L0' | 'L1' | 'L2';
+  level: 'all' | 'L0' | 'L1';
   mode: 'truth' | 'observed' | 'compare'
 }) {
   const snapshot = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot)
@@ -120,17 +118,14 @@ function DynamicWorldOverlays({ session, selectedId, selectedEncounterId, select
 
 function V5Panel({ session, selectedId, onSelect, selectedEncounterId, onSelectEncounter,
   cameraController, level, setLevel,
-  cutaway, setCutaway, debug, setDebug, organicDebugMode, setOrganicDebugMode,
-  mode, setMode, playing, setPlaying,
+  cutaway, setCutaway, debug, setDebug, mode, setMode, playing, setPlaying,
   speed, setSpeed, step, resetSimulation, sidebarOpen, setSidebarOpen, getPlaybackAlpha }: {
   session: SimulationSessionV5; selectedId: string | null; onSelect: (id: string | null) => void;
   selectedEncounterId: string | null;
   onSelectEncounter: (episodeId: string | null, tick?: number) => void;
   cameraController: ReturnType<typeof createCameraController>;
-  level: 'all' | 'L0' | 'L1' | 'L2'; setLevel: (level: 'all' | 'L0' | 'L1' | 'L2') => void;
+  level: 'all' | 'L0' | 'L1'; setLevel: (level: 'all' | 'L0' | 'L1') => void;
   cutaway: boolean; setCutaway: (value: boolean) => void; debug: boolean; setDebug: (value: boolean) => void;
-  organicDebugMode: OrganicDebugMode;
-  setOrganicDebugMode: (value: OrganicDebugMode) => void;
   mode: 'truth' | 'observed' | 'compare'; setMode: (value: 'truth' | 'observed' | 'compare') => void;
   playing: boolean; setPlaying: (value: boolean) => void; speed: PlaybackSpeed;
   setSpeed: (value: PlaybackSpeed) => void; step: () => void;
@@ -538,22 +533,11 @@ function V5Panel({ session, selectedId, onSelect, selectedEncounterId, onSelectE
       <label>LEVEL <select aria-label="Visible level" value={level}
         onChange={(event) => setLevel(event.target.value as typeof level)}>
         <option value="all">ALL</option><option value="L0">GROUND L0</option><option value="L1">UPPER L1</option>
-        {session.getWorld().surfaces.some((surface) => surface.levelId === 'L2') &&
-          <option value="L2">UPPER L2</option>}
       </select></label>
       <button onClick={() => setCutaway(!cutaway)}>{cutaway ? 'SHOW ROOF' : 'HIDE ROOF'}</button>
       <button onClick={() => setDebug(!debug)}>{debug ? 'HIDE NAV' : 'SHOW NAV'}</button>
-      {import.meta.env.DEV && session.getWorld().terrain && <label>DEBUG <select
-        aria-label="Organic world debug layer" value={organicDebugMode}
-        onChange={(event) => setOrganicDebugMode(event.target.value as OrganicDebugMode)}>
-        {(['none', 'height', 'slope', 'centerlines', 'nodes', 'junctions',
-          'surfaces', 'footprints', 'foundations', 'entrances', 'bridges'] as const)
-          .map((item) => <option key={item} value={item}>{item.toUpperCase()}</option>)}
-      </select></label>}
-      {session.getWorld().places.some((place) => place.id === 'central-galleria') && <>
-        <button onClick={() => closeMall('bridge-entry')}>BRIDGE {snapshot.state.accessModes['bridge-entry'] === 'open' ? 'OPEN' : 'CLOSED'}</button>
-        <button onClick={() => closeMall('mall-entry')}>GALLERIA {snapshot.state.accessModes['mall-entry'] === 'open' ? 'OPEN' : 'CLOSED'}</button>
-      </>}
+      <button onClick={() => closeMall('bridge-entry')}>BRIDGE {snapshot.state.accessModes['bridge-entry'] === 'open' ? 'OPEN' : 'CLOSED'}</button>
+      <button onClick={() => closeMall('mall-entry')}>GALLERIA {snapshot.state.accessModes['mall-entry'] === 'open' ? 'OPEN' : 'CLOSED'}</button>
     </div>
     <div className="v06-bottom">
       <div className="v06-timeline"><span>TICK {snapshot.tick} {snapshot.isInspecting ? `/ LIVE ${snapshot.liveTick}` : ''}</span>
@@ -603,9 +587,7 @@ export function MultiLevelApp() {
   const exposure = Number.isFinite(exposureParam) && exposureParam >= 0.75 && exposureParam <= 2
     ? exposureParam : 1.2
   const prototype = params.get('world') === 'prototype'
-  const organic = params.get('world') === 'organic'
-  const seed = params.get('seed') || (organic ? ORGANIC_WORLD_CONFIG_V2.seed :
-    prototype ? DEFAULT_WORLD_CONFIG_V2.seed :
+  const seed = params.get('seed') || (prototype ? DEFAULT_WORLD_CONFIG_V2.seed :
     INTEGRATED_WORLD_CONFIG_V2.seed)
   const populationParam = Number(params.get('population') ?? DEFAULT_SIMULATION_CONFIG_V5.populationSize)
   const habitsEnabled = params.get('habits') !== 'off'
@@ -646,9 +628,8 @@ export function MultiLevelApp() {
     habitWeightInput <= 2 ? habitWeightInput : DEFAULT_HABIT_SCENARIO_V1.habitWeight
   const populationSize = Number.isSafeInteger(populationParam) && populationParam >= 0 && populationParam <= 200
     ? populationParam : DEFAULT_SIMULATION_CONFIG_V5.populationSize
-  const world = useMemo(() => organic ? generateOrganicWorld(seed) :
-    prototype ? generateWorldV2({ ...DEFAULT_WORLD_CONFIG_V2, seed }) :
-      generateIntegratedWorld(seed), [organic, prototype, seed])
+  const world = useMemo(() => prototype ? generateWorldV2({ ...DEFAULT_WORLD_CONFIG_V2, seed }) :
+    generateIntegratedWorld(seed), [prototype, seed])
   const session = useMemo(() => {
     const next = new SimulationSessionV5(world, { ...DEFAULT_SIMULATION_CONFIG_V5,
       populationSize, simulationSeed, offendingSeed, observationSeed,
@@ -686,11 +667,10 @@ export function MultiLevelApp() {
   const [eventExplorerOpen, setEventExplorerOpen] = useState(false)
   const [placeExplorerOpen, setPlaceExplorerOpen] = useState(false)
   const [selectedPlaceId, setSelectedPlaceId] = useState('central-galleria')
-  const [level, setLevel] = useState<'all' | 'L0' | 'L1' | 'L2'>('all')
+  const [level, setLevel] = useState<'all' | 'L0' | 'L1'>('all')
   const [pickedSurfaceId, setPickedSurfaceId] = useState<string | null>(null)
   const [cutaway, setCutaway] = useState(false)
   const [debug, setDebug] = useState(false)
-  const [organicDebugMode, setOrganicDebugMode] = useState<OrganicDebugMode>('none')
   const [mode, setMode] = useState<'truth' | 'observed' | 'compare'>('observed')
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 620)
   const [sidebarWidth, setSidebarWidth] = useState(320)
@@ -730,12 +710,7 @@ export function MultiLevelApp() {
       getSnapshot: () => session.getSnapshot(),
       getLifeTimings: () => [...lifeTimings],
       getWorld: () => world, getObserverView: () => session.getObserverView(),
-      getProfiles: () => session.getProfiles(),
       getCameraView: () => cameraController.getSnapshot(),
-      setBearing: (bearing: number) => cameraController.rotateBy(
-        bearing - cameraController.getSnapshot().bearingDeg),
-      setPitch: (pitch: number) => cameraController.setPitch(pitch),
-      resetCamera: () => cameraController.resetView(),
       focusAtWorld: (x: number, y: number, z: number) => cameraController.focusAt([x, y, z]),
       inspectAtWorld: (x: number, y: number, z: number) => cameraController.inspectAt([x, y, z]),
       benchmarkReplay500() {
@@ -822,7 +797,6 @@ export function MultiLevelApp() {
       selectedEncounterId={selectedEncounterId} onSelectEncounter={selectEncounter}
       cameraController={cameraController} level={level} setLevel={setLevel}
       cutaway={cutaway} setCutaway={setCutaway} debug={debug} setDebug={setDebug}
-      organicDebugMode={organicDebugMode} setOrganicDebugMode={setOrganicDebugMode}
       mode={mode} setMode={setMode} playing={playing} setPlaying={setPlaying}
       speed={speed} setSpeed={setSpeed} step={step} resetSimulation={resetSimulation}
       sidebarOpen={sidebarOpen}
@@ -855,8 +829,7 @@ export function MultiLevelApp() {
           castShadows={castShadows} shadowMode={shadowMode}
           ambientOcclusion={ambientOcclusion} lookdev={lookdev}
           bloomEnabled={bloomEnabled}
-          debugNavigation={debug} organicDebugMode={organicDebugMode}
-          onPickSurface={(surfaceId) => {
+          debugNavigation={debug} onPickSurface={(surfaceId) => {
             setPickedSurfaceId(surfaceId)
             const surface = world.surfaces.find((item) => item.id === surfaceId)
             const place = world.places.find((item) => item.id === surface?.placeId)
@@ -866,8 +839,7 @@ export function MultiLevelApp() {
               setEventExplorerOpen(false)
               setSidebarOpen(false)
             }
-            if (surface?.indoor && (surface.levelId === 'L0' || surface.levelId === 'L1' ||
-              surface.levelId === 'L2')) {
+            if (surface?.indoor && (surface.levelId === 'L0' || surface.levelId === 'L1')) {
               setLevel(surface.levelId)
             }
           }} />
@@ -921,9 +893,6 @@ declare global {
       scheduleAccessCommand(command: Parameters<SimulationSessionV5['scheduleAccessCommand']>[0]): void;
       resetSimulation(): void;
       getWorld(): unknown; getObserverView(): unknown; getCameraView(): unknown;
-      getProfiles(): unknown;
-      setBearing(bearing: number): void; setPitch(pitch: number): void;
-      resetCamera(): void;
       focusAtWorld(x: number, y: number, z: number): void;
       inspectAtWorld(x: number, y: number, z: number): void;
       benchmarkReplay500(): unknown }

@@ -244,10 +244,6 @@ See `SCENE_ARCHITECTURE.md` and `SCENE_VERIFICATION.md`. The work does not add p
 
 **Exit evidence and open gate:** Seven fixed-view Chrome/Apple M4 captures, preview/replay/camera checks, tests and build pass. The 200-resident p95 frame and simulation Tick targets remain above the reference limits, so performance acceptance is still open. Historical 30-second `habit-v1` experiments retain their versioned clock semantics and are excluded from the integrated six-second lighting path.
 
-## Organic city v1 — optional terrain and road workstream
-
-The optional `organic-city-v1` terrain/road workstream is documented in `ORGANIC_CITY_V1.md`. It preserves the integrated city as the default and reuses its building library and Galleria. Fixed-seed terrain, 3D roads, an elevated route, relocated building interiors and deterministic navigation are implemented. Full building retention, junction finish, generalized generator controls, terrain LOD and the 200-resident performance gate remain open. This experiment does not change the policing milestone or the existing crime decision path.
-
 ## v0.7 — Policing strategy design and implementation
 
 **Goal:** Compare explicit police decision strategies under transparent model assumptions.

@@ -21,7 +21,6 @@
     "visual:architecture": "node scripts/architecture-check.mjs",
     "visual:lookdev": "node scripts/lookdev-check.mjs",
     "visual:day-night": "node scripts/day-night-check.mjs",
-    "visual:organic": "node scripts/organic-check.mjs",
     "experiment:v06": "node scripts/v06-experiments.mjs",
     "assets:bake-impostors": "node scripts/bake-character-impostors.mjs",
     "assets:verify-characters": "python3 scripts/verify-character-animation-assets.py",

@@ -15,11 +15,6 @@ import type { LightingState } from './lighting/timeOfDay'
 import { ShadowUpdateController } from './lighting/ShadowUpdateController'
 import { RenderDiagnostics } from './RenderDiagnostics'
 import { WalkwayStructures } from './WalkwayStructures'
-import { OrganicWorldGeometry, type OrganicDebugMode } from './OrganicWorldGeometry'
-import { StreetFurniture } from './StreetFurniture'
-import { organicStreetFeatures } from '../world/generation/organicStreetFeatures'
-import { Buildings } from './Buildings'
-import { renderPlacedBuildings } from '../world/generation/placeExistingBuildings'
 import { GalleriaCanopy } from './GalleriaCanopy'
 import { GalleriaArchitecturalSkin } from './GalleriaArchitecturalSkin'
 import { surfaceTextures } from './SurfaceTextures'
@@ -122,9 +117,9 @@ function InstancedWorldBoxes({ boxes, onPick, quality }: { boxes: readonly World
 export function WorldSceneV2({ world, level, cutaway, debugNavigation, onPickSurface,
   quality = 'high', postprocessing = true, lighting = 'night', castShadows = true,
   ambientOcclusion = false, lookdev = 'final', bloomEnabled = false,
-  timeLighting = null, shadowMode = 'optimized', organicDebugMode = 'none' }: {
+  timeLighting = null, shadowMode = 'optimized' }: {
   world: WorldModelV2
-  level: 'all' | 'L0' | 'L1' | 'L2'
+  level: 'all' | 'L0' | 'L1'
   cutaway: boolean
   debugNavigation: boolean
   onPickSurface: (surfaceId: string | null) => void
@@ -137,15 +132,12 @@ export function WorldSceneV2({ world, level, cutaway, debugNavigation, onPickSur
   bloomEnabled?: boolean
   timeLighting?: LightingState | null
   shadowMode?: ShadowMode
-  organicDebugMode?: OrganicDebugMode
 }) {
   const groups = useMemo(() => {
-    const candidates = [...(world.baseCity || world.terrain ? [] : roadBoxes(world)), ...world.boxes].filter((box) => {
-      if (cutaway && (box.roofFor?.startsWith('organic:tower-') ||
-        box.roofFor === 'central-galleria' ||
+    const candidates = [...(world.baseCity ? [] : roadBoxes(world)), ...world.boxes].filter((box) => {
+      if (cutaway && (box.roofFor === 'central-galleria' ||
         box.id.startsWith('galleria-west-glass') ||
         box.id === 'galleria-notch-glass')) return false
-      if (world.terrain && level !== 'all' && box.levelId && box.levelId !== level) return false
       if (level === 'L0' && box.levelId === 'L1' &&
         (box.placeId === 'central-galleria' || box.roofFor === 'central-galleria' ||
           box.placeId?.startsWith('overpass-') || world.overpasses?.some((bridge) =>
@@ -166,12 +158,6 @@ export function WorldSceneV2({ world, level, cutaway, debugNavigation, onPickSur
     return world.navEdges.filter((edge) => edge.kind !== 'walk' || overpassEdges.has(edge.id))
   }, [world])
   const { gl } = useThree()
-  const placedCity = useMemo(() => world.terrain && world.baseCity &&
-    world.buildingPlacements ? renderPlacedBuildings(world.baseCity,
-      world.buildingPlacements, organicStreetFeatures(world)) : null, [world])
-  const buildingElevations = useMemo(() => new Map(world.buildingPlacements?.map(
-    (placement) => [placement.buildingId, placement.elevationMm / 1000] as const) ?? []),
-  [world])
   if (import.meta.env.DEV) {
     window.__shadowCityV06Rendering = { drawCalls: gl.info.render.calls,
       triangles: gl.info.render.triangles, geometries: gl.info.memory.geometries,
@@ -190,7 +176,7 @@ export function WorldSceneV2({ world, level, cutaway, debugNavigation, onPickSur
     <ShadowUpdateController enabled={Boolean(timeLighting && castShadows &&
       shadowMode === 'optimized')}
       revision={`${timeLighting?.worldSeconds ?? 'static'}:${cutaway}:${level}:${quality}:${world.config.seed}`} />
-    {world.baseCity && !world.terrain ? <>
+    {world.baseCity ? <>
       <CityStaticScene city={world.baseCity} quality={quality} postprocessing={postprocessing}
         lighting={lighting} castShadows={castShadows} ambientOcclusion={ambientOcclusion}
         lookdev={lookdev} bloomEnabled={bloomEnabled} timeLighting={timeLighting}
@@ -221,21 +207,14 @@ export function WorldSceneV2({ world, level, cutaway, debugNavigation, onPickSur
       shadow-camera-left={-185} shadow-camera-right={185}
       shadow-camera-top={185} shadow-camera-bottom={-185} shadow-bias={-0.00015} />}
     <hemisphereLight args={['#adc5d8', '#23394a', timeLighting?.hemisphereIntensity ?? 1.15]} />
-    {!world.terrain && <><mesh position={[0, -0.45, 0]} receiveShadow>
+    <mesh position={[0, -0.45, 0]} receiveShadow>
       <boxGeometry args={[328, 0.9, 328]} />
       <meshStandardMaterial color="#1a2a36" roughness={0.93} />
     </mesh>
     <mesh position={[0, -0.9, 0]}>
       <boxGeometry args={[332, 0.22, 332]} />
       <meshStandardMaterial color="#5a8d9c" emissive="#153d52" emissiveIntensity={0.7} />
-    </mesh></>}
-    </>}
-    {world.terrain && <>
-      <OrganicWorldGeometry world={world} onPickSurface={onPickSurface}
-        debugRegions={debugNavigation} debugMode={organicDebugMode} />
-      {placedCity && <Buildings city={placedCity} elevationById={buildingElevations} />}
-      {placedCity && <StreetFurniture city={placedCity} enableLights={false} />}
-      {import.meta.env.DEV && <RenderDiagnostics />}
+    </mesh>
     </>}
     {groups.map(([kind, boxes]) => <InstancedWorldBoxes key={kind} boxes={boxes} onPick={pick}
       quality={quality} />)}

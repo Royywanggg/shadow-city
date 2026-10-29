@@ -37,8 +37,7 @@ export function worldFingerprintV5(world: WorldModelV2, config: SimulationConfig
   commands: readonly AccessCommandV5[] = []): string {
   if (world.version !== 2 || config.version !== 5) throw new Error('V5 version mismatch')
   const worldHash = hashSeed(JSON.stringify({ config: world.config, bounds: world.bounds,
-    baseCity: world.baseCity, buildingPlacements: world.buildingPlacements,
-    terrain: world.terrain, regions: world.regions,
+    baseCity: world.baseCity,
     districts: world.districts, roadNodes: world.roadNodes, roadEdges: world.roadEdges,
     surfaces: world.surfaces, navNodes: world.navNodes, navEdges: world.navEdges,
     connectors: world.connectors, places: world.places,

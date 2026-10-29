@@ -6,7 +6,7 @@ import type { SimulationSessionV5 } from '../simulation/sessionV5'
 
 export function SceneSelectionMarkers({ state, level, visible, onSelect }: {
   state: SimulationStateV5
-  level: 'all' | 'L0' | 'L1' | 'L2'
+  level: 'all' | 'L0' | 'L1'
   visible: boolean
   onSelect: (sceneId: string) => void
 }) {
@@ -30,7 +30,7 @@ export function EventReconstructionLayer({ session, state, selected, level,
   session: SimulationSessionV5
   state: SimulationStateV5
   selected: ExplorerEventV1 | null
-  level: 'all' | 'L0' | 'L1' | 'L2'
+  level: 'all' | 'L0' | 'L1'
   traces: ReturnType<SimulationSessionV5['reconstructWindow']> | null
 }) {
   if (!selected) return null

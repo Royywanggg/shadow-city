@@ -1,5 +1,4 @@
 import type { GroundPointMm, NavEdgeV2, WorldModelV2, WorldPointMm } from '../../world/model'
-import { surfaceHeight } from '../../world/terrain/terrainV1'
 import type { AccessMode } from '../../world/navigation/routeV2'
 import { canonicalPair, compareEncounterIds, type EncounterTracePoint,
   type SpatialCandidateSample } from './spatialTypes'
@@ -121,7 +120,7 @@ export function hasClearSurfaceSegment(world: WorldModelV2, surfaceId: string,
   if (!surface) return false
   const blockers = index.blockersBySurface.get(surfaceId)!
   const onSurface = (point: WorldPointMm) =>
-    Math.abs(point.y - surfaceHeight(surface, world.terrain, point)) <= 350 &&
+    Math.abs(point.y - surface.elevationMm) <= 350 &&
     contains(surface.polygonXZ, { x: point.x, z: point.z }) &&
     !pointBlocked(blockers, { x: point.x, z: point.z })
   return onSurface(a) && onSurface(b) &&
@@ -137,7 +136,6 @@ function distanceToSegmentSquared(p: WorldPointMm, a: WorldPointMm, b: WorldPoin
 }
 
 function validTrace(trace: EncounterTracePoint,
-  world: WorldModelV2,
   surfaceById: ReadonlyMap<string, WorldModelV2['surfaces'][number]>,
   blockersBySurface: ReadonlyMap<string, BlockerIndex>,
   connectorEdges: ReadonlyMap<string, readonly NavEdgeV2[]>,
@@ -151,7 +149,7 @@ function validTrace(trace: EncounterTracePoint,
       distanceToSegmentSquared(trace.position, edge.path[index], point) <= SQUARE(350)))
   }
   const xz = { x: trace.position.x, z: trace.position.z }
-  if (Math.abs(trace.position.y - surfaceHeight(surface, world.terrain, trace.position)) <= 350 &&
+  if (Math.abs(trace.position.y - surface.elevationMm) <= 350 &&
     contains(surface.polygonXZ, xz) &&
     !pointBlocked(blockersBySurface.get(surface.id)!, xz)) return true
   const edge = trace.edgeId ? edgeById.get(trace.edgeId) : null
@@ -280,7 +278,7 @@ export function querySpatialCandidates(world: WorldModelV2,
     previousByAgent.set(trace.agentId, trace)
     if (trace.second === 0) continue
     const valid = unchangedPosition && validByAgent.get(trace.agentId) === true ||
-      validTrace(trace, world, surfaces, blockersBySurface, connectorEdges, edgeById, nodeById)
+      validTrace(trace, surfaces, blockersBySurface, connectorEdges, edgeById, nodeById)
     validByAgent.set(trace.agentId, valid)
     if (!valid) {
       throw new Error(`Encounter trace outside legal space: ${trace.agentId} at second ${trace.second}`)

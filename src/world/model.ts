@@ -11,35 +11,7 @@ export interface WorldConfigV2 {
   readonly version: 2
   readonly seed: string
   readonly extentMm: number
-  readonly generatorVersion: 'district-world-v1' | 'heritage-overlay-v1' | 'heritage-extension-v2' | 'heritage-extension-v3' | 'heritage-extension-v4' | 'heritage-extension-v5' | 'heritage-extension-v6' | 'organic-city-v1'
-}
-
-/** Immutable sampled terrain. Samples are row-major, with X changing fastest. */
-export interface TerrainFieldV1 {
-  readonly originX: number
-  readonly originZ: number
-  readonly stepMm: number
-  readonly columns: number
-  readonly rows: number
-  readonly heightsMm: readonly number[]
-}
-
-export interface UrbanRegionV1 {
-  readonly id: string
-  readonly kind: 'residential' | 'commercial' | 'mixedUse' | 'park'
-  readonly center: GroundPointMm
-  readonly radiusMm: number
-  readonly strength: number
-}
-
-/** Placement of an unchanged CityModel building asset in a derived world. */
-export interface BuildingPlacementV1 {
-  readonly siteId: string
-  readonly buildingId: string
-  readonly x: number
-  readonly z: number
-  readonly elevationMm: number
-  readonly foundationBottomMm: number
+  readonly generatorVersion: 'district-world-v1' | 'heritage-overlay-v1' | 'heritage-extension-v2' | 'heritage-extension-v3' | 'heritage-extension-v4' | 'heritage-extension-v5' | 'heritage-extension-v6'
 }
 
 export interface DistrictV2 {
@@ -56,8 +28,6 @@ export interface WalkableSurface {
   readonly placeId: string | null
   readonly interactionZoneId: string
   readonly elevationMm: number
-  /** On terrain surfaces, elevationMm is the offset above the sampled terrain. */
-  readonly elevationMode?: 'absolute' | 'terrain'
   readonly polygonXZ: readonly GroundPointMm[]
   readonly blockedPolygonsXZ: readonly (readonly GroundPointMm[])[]
   readonly clearanceMm: number
@@ -107,7 +77,6 @@ export interface SemanticPlace {
   readonly openingHours: readonly Readonly<{ openMinute: number; closeMinute: number }>[]
   readonly capacity: number
   readonly attractiveness: number
-  readonly housingCost?: number
   readonly typicalVisitTicks: readonly [number, number]
   readonly slotNodeIds: readonly string[]
 }
@@ -153,15 +122,10 @@ export interface WorldModelV2 {
   readonly version: 2
   readonly config: WorldConfigV2
   readonly baseCity?: CityModel
-  readonly terrain?: TerrainFieldV1
-  readonly regions?: readonly UrbanRegionV1[]
-  readonly buildingPlacements?: readonly BuildingPlacementV1[]
   readonly bounds: Readonly<{ minX: number; maxX: number; minZ: number; maxZ: number; maxY: number }>
   readonly districts: readonly DistrictV2[]
   readonly roadNodes: readonly Readonly<{ id: string; position: GroundPointMm }>[]
-  readonly roadEdges: readonly Readonly<{ id: string; from: string; to: string; widthMm: number;
-    hierarchy?: 'arterial' | 'collector' | 'local';
-    structure?: 'viaduct'; path?: readonly WorldPointMm[] }>[]
+  readonly roadEdges: readonly Readonly<{ id: string; from: string; to: string; widthMm: number }>[]
   readonly surfaces: readonly WalkableSurface[]
   readonly navNodes: readonly NavNodeV2[]
   readonly navEdges: readonly NavEdgeV2[]

@@ -1,9 +1,7 @@
 import type {
   NavEdgeV2, NavNodeV2, WalkableSurface, WorldBox, WorldPointMm,
   VerticalConnector, SemanticPlace, DistrictV2, PlaceResource, GroundPointMm,
-  TerrainFieldV1,
 } from '../model'
-import { surfaceHeight } from '../terrain/terrainV1'
 
 function distance(a: WorldPointMm, b: WorldPointMm): number {
   return Math.round(Math.hypot(b.x - a.x, b.y - a.y, b.z - a.z))
@@ -24,17 +22,14 @@ function polygonContains(polygon: readonly GroundPointMm[], point: GroundPointMm
   return inside
 }
 
-function surfaceContains(surface: WalkableSurface, position: WorldPointMm,
-  terrain?: TerrainFieldV1): boolean {
+function surfaceContains(surface: WalkableSurface, position: WorldPointMm): boolean {
   const xz = { x: position.x, z: position.z }
-  return Math.abs(surfaceHeight(surface, terrain, position) - position.y) <
-    (surface.elevationMode === 'terrain' ? 300 : 20) &&
+  return Math.abs(surface.elevationMm - position.y) < 20 &&
     polygonContains(surface.polygonXZ, xz) &&
     !surface.blockedPolygonsXZ.some((polygon) => polygonContains(polygon, xz))
 }
 
-function pathStaysOnSurface(surface: WalkableSurface, path: readonly WorldPointMm[],
-  terrain?: TerrainFieldV1): boolean {
+function pathStaysOnSurface(surface: WalkableSurface, path: readonly WorldPointMm[]): boolean {
   for (let index = 1; index < path.length; index += 1) {
     const a = path[index - 1]
     const b = path[index]
@@ -44,14 +39,13 @@ function pathStaysOnSurface(surface: WalkableSurface, path: readonly WorldPointM
       const point = { x: Math.round(a.x + (b.x - a.x) * fraction),
         y: Math.round(a.y + (b.y - a.y) * fraction),
         z: Math.round(a.z + (b.z - a.z) * fraction) }
-      if (!surfaceContains(surface, point, terrain)) return false
+      if (!surfaceContains(surface, point)) return false
     }
   }
   return true
 }
 
 export class WorldBuilder {
-  constructor(private readonly terrain?: TerrainFieldV1) {}
   readonly districts: DistrictV2[] = []
   readonly surfaces: WalkableSurface[] = []
   readonly nodes: NavNodeV2[] = []
@@ -100,7 +94,7 @@ export class WorldBuilder {
   buildValidation(): void {
     const surfaces = new Map(this.surfaces.map((surface) => [surface.id, surface]))
     for (const node of this.nodes) {
-      if (!surfaceContains(surfaces.get(node.surfaceId)!, node.position, this.terrain)) {
+      if (!surfaceContains(surfaces.get(node.surfaceId)!, node.position)) {
         throw new Error(`Navigation node outside walkable surface: ${node.id}`)
       }
     }
@@ -110,7 +104,7 @@ export class WorldBuilder {
         throw new Error(`Missing vertical connector ${edge.connectorId}`)
       }
       const surfaceId = edge.surfaceId
-      if (surfaceId && !pathStaysOnSurface(surfaces.get(surfaceId)!, edge.path, this.terrain)) {
+      if (surfaceId && !pathStaysOnSurface(surfaces.get(surfaceId)!, edge.path)) {
         throw new Error(`Navigation edge outside walkable surface: ${edge.id}`)
       }
     }
@@ -134,7 +128,7 @@ export class WorldBuilder {
     }
     for (const resource of this.resources) {
       if (!placeIds.has(resource.placeId) || !this.surfaceIds.has(resource.surfaceId) ||
-        !surfaceContains(surfaces.get(resource.surfaceId)!, resource.position, this.terrain)) {
+        !surfaceContains(surfaces.get(resource.surfaceId)!, resource.position)) {
         throw new Error(`Invalid place resource ${resource.id}`)
       }
     }

@@ -19,7 +19,7 @@ export function WorldCameraRig({ controller, world }: { controller: CameraContro
   const previousBaseZoom = useRef(0)
   const tracking = useRef<CameraTarget | null>(null)
   const wantedZoom = useRef<number | null>(null)
-  const integrated = Boolean(world.baseCity && !world.terrain)
+  const integrated = Boolean(world.baseCity)
   const diagnosticStreetPitch = new URLSearchParams(window.location.search)
     .get('cameraDiagnostic') === 'street'
   const homePosition = integrated ? INITIAL_CAMERA_POSITION : HOME_POSITION
@@ -27,8 +27,7 @@ export function WorldCameraRig({ controller, world }: { controller: CameraContro
   const half = world.config.extentMm / 2000
   const baseZoom = integrated ? Math.min(size.width / (world.baseCity!.size * 1.53),
     size.height / (world.baseCity!.size * 1.11)) :
-    world.terrain ? Math.min(size.width / 425, size.height / 350) :
-      Math.min(size.width / 500, size.height / 390)
+    Math.min(size.width / 500, size.height / 390)
   const publish = useCallback(() => {
     if (!controls.current) return
     const target = controls.current.target

@@ -18,7 +18,7 @@ interface MotionPair { prior: SimulationStateV5 | null; current: SimulationState
 export function WorldAgentLayerV5({ session, selectedId, onSelect, playing, getPlaybackAlpha,
   level }: { session: SimulationSessionV5; selectedId: string | null;
   onSelect: (id: string) => void; playing: boolean; getPlaybackAlpha: () => number;
-  level: 'all' | 'L0' | 'L1' | 'L2' }) {
+  level: 'all' | 'L0' | 'L1' }) {
   const snapshot = useSyncExternalStore(session.subscribe, session.getSnapshot, session.getSnapshot)
   const { camera, size, gl, invalidate } = useThree()
   const identities = useMemo(() => new Map(session.getProfiles().map((profile) =>
