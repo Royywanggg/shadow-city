@@ -1,5 +1,6 @@
-import { useEffect, useMemo } from 'react'
-import { BackSide, Color, ShaderMaterial } from 'three'
+import { useFrame, useThree } from '@react-three/fiber'
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { BackSide, Color, ShaderMaterial, type Mesh } from 'three'
 import type { LightingState } from './timeOfDay'
 
 const vertexShader = `
@@ -23,6 +24,8 @@ const fragmentShader = `
 `
 
 export function SkyDome({ lighting }: { lighting: LightingState }) {
+  const mesh = useRef<Mesh>(null)
+  const camera = useThree((state) => state.camera)
   const material = useMemo(() => new ShaderMaterial({ vertexShader, fragmentShader,
     side: BackSide, depthWrite: false, fog: false, toneMapped: false,
     uniforms: { uTop: { value: new Color() }, uHorizon: { value: new Color() } } }), [])
@@ -31,7 +34,9 @@ export function SkyDome({ lighting }: { lighting: LightingState }) {
     material.uniforms.uHorizon.value.set(lighting.horizonColor)
   }, [lighting, material])
   useEffect(() => () => material.dispose(), [material])
-  return <mesh material={material} renderOrder={-1000} frustumCulled={false}>
-    <sphereGeometry args={[900, 24, 12]} />
+  useLayoutEffect(() => { mesh.current?.position.copy(camera.position) }, [camera])
+  useFrame(() => { mesh.current?.position.copy(camera.position) })
+  return <mesh ref={mesh} material={material} renderOrder={-1000} frustumCulled={false}>
+    <sphereGeometry args={[600, 24, 12]} />
   </mesh>
 }
