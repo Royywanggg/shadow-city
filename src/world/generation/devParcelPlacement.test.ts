@@ -6,7 +6,14 @@ import { deriveDevRoadCorridor } from './devRoadCorridor'
 import { expandOriginalCity } from './expandOriginalCity'
 import { placeDevCorridorParcels } from './devParcelPlacement'
 
-const AFFECTED = ['block-6-4', 'block-6-5', 'block-7-4', 'block-7-5'] as const
+const AFFECTED = [
+  'block-2-4', 'block-2-5', 'block-3-4', 'block-3-5',
+  'block-6-1', 'block-6-2', 'block-7-1', 'block-7-2',
+  'block-6-4', 'block-6-5', 'block-7-4', 'block-7-5',
+] as const
+const COMPACT_BUILDINGS = new Set([
+  'building-block-3-4-0-0', 'building-block-3-5-1-0',
+])
 
 function base(seed: string): CityModel {
   return createDevOrganicLayout(expandOriginalCity(generateCity(seed)))
@@ -20,12 +27,22 @@ function groundCorners(building: Building): CityPointXZ[] {
     }))))
 }
 
-function inConvexPolygon(point: CityPointXZ, polygon: readonly CityPointXZ[]): boolean {
-  return polygon.every((a, index) => {
+function inPolygon(point: CityPointXZ, polygon: readonly CityPointXZ[]): boolean {
+  let inside = false
+  for (let index = 0; index < polygon.length; index += 1) {
+    const a = polygon[index]
     const b = polygon[(index + 1) % polygon.length]
-    return (b.x - a.x) * (point.z - a.z) -
-      (b.z - a.z) * (point.x - a.x) >= -1e-5
-  })
+    const cross = (b.x - a.x) * (point.z - a.z) -
+      (b.z - a.z) * (point.x - a.x)
+    if (Math.abs(cross) < 1e-5 &&
+      point.x >= Math.min(a.x, b.x) - 1e-5 &&
+      point.x <= Math.max(a.x, b.x) + 1e-5 &&
+      point.z >= Math.min(a.z, b.z) - 1e-5 &&
+      point.z <= Math.max(a.z, b.z) + 1e-5) return true
+    if (a.z > point.z !== b.z > point.z &&
+      point.x < a.x + (point.z - a.z) * (b.x - a.x) / (b.z - a.z)) inside = !inside
+  }
+  return inside
 }
 
 function roadClearance(city: CityModel, blockId: string, point: CityPointXZ): number {
@@ -64,12 +81,19 @@ describe('dev corridor parcel placement', () => {
       expect(placed.buildings).toHaveLength(before.buildings.length)
       for (const building of placed.buildings) {
         const original = before.buildings.find((item) => item.id === building.id)!
-        expect(building.masses).toEqual(original.masses)
-        expect(building.windows).toEqual(original.windows)
-        expect(building.entrance.x - original.entrance.x).toBeCloseTo(
-          building.x - original.x, 8)
-        expect(building.entrance.z - original.entrance.z).toBeCloseTo(
-          building.z - original.z, 8)
+        if (COMPACT_BUILDINGS.has(building.id)) {
+          expect(building.width).toBeLessThan(original.width)
+          expect(building.kind).toBe(original.kind)
+        } else {
+          expect(building.masses).toEqual(original.masses)
+          expect(building.windows).toEqual(original.windows)
+        }
+        if (!COMPACT_BUILDINGS.has(building.id)) {
+          expect(building.entrance.x - original.entrance.x).toBeCloseTo(
+            building.x - original.x, 8)
+          expect(building.entrance.z - original.entrance.z).toBeCloseTo(
+            building.z - original.z, 8)
+        }
         const parcel = placed.parcels.find((item) => item.id === building.parcelId)!
         for (const corner of groundCorners(building)) {
           expect(Math.abs(corner.x - parcel.x)).toBeLessThanOrEqual(parcel.width / 2 + 1e-5)
@@ -80,7 +104,8 @@ describe('dev corridor parcel placement', () => {
     }
   })
 
-  it('packs all four blocks inside road-safe polygons with legal south entrances', () => {
+  it('packs both corridors inside road-safe polygons with legal south entrances', () => {
+    const source = base(HERO_SEED)
     const placed = placeDevCorridorParcels(deriveDevRoadCorridor(base(HERO_SEED)))
     for (const id of AFFECTED) {
       const block = placed.blocks.find((item) => item.id === id)!
@@ -88,7 +113,8 @@ describe('dev corridor parcel placement', () => {
       expect(polygon.length).toBeGreaterThanOrEqual(4)
       const parcels = placed.parcels.filter((parcel) => parcel.blockId === id)
         .sort((a, b) => a.x - b.x)
-      expect(parcels).toHaveLength(id.startsWith('block-6-') ? 1 : 2)
+      expect(parcels).toHaveLength(source.parcels.filter((parcel) =>
+        parcel.blockId === id).length)
       if (parcels.length === 2) {
         expect(parcels[0].x + parcels[0].width / 2 + 0.249).toBeLessThanOrEqual(
           parcels[1].x - parcels[1].width / 2)
@@ -97,15 +123,34 @@ describe('dev corridor parcel placement', () => {
         const building = placed.buildings.find((item) => item.parcelId === parcel.id)!
         const corners = groundCorners(building)
         for (const point of corners) {
-          expect(inConvexPolygon(point, polygon)).toBe(true)
+          expect(inPolygon(point, polygon)).toBe(true)
           expect(roadClearance(placed, id, point)).toBeGreaterThanOrEqual(0.3)
         }
         for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-          expect(inConvexPolygon({ x: parcel.x + sx * parcel.width / 2,
+          expect(inPolygon({ x: parcel.x + sx * parcel.width / 2,
             z: parcel.z + sz * parcel.depth / 2 }, polygon)).toBe(true)
         }
         expect(roadClearance(placed, id, building.entrance)).toBeGreaterThanOrEqual(0.25)
         expect(building.entrance.z).toBeLessThan(Math.max(...polygon.map((p) => p.z)))
+      }
+    }
+  })
+
+  it('emits a curved road-facing outline at the same safety offset as the visible road', () => {
+    const placed = placeDevCorridorParcels(deriveDevRoadCorridor(base(HERO_SEED)))
+    for (const id of AFFECTED) {
+      const polygon = placed.blocks.find((block) => block.id === id)!.footprintXZ!
+      const curve = id.startsWith('block-6-') || id.startsWith('block-2-')
+        ? polygon.slice(1, -1) :
+        [polygon[0], ...polygon.slice(3).reverse()]
+      expect(curve.length).toBeGreaterThanOrEqual(7)
+      for (const point of curve) {
+        const clearance = roadClearance(placed, id, point)
+        expect(clearance).toBeGreaterThanOrEqual(0.95)
+        expect(clearance).toBeLessThan(1.05)
+      }
+      for (let index = 1; index < curve.length; index += 1) {
+        expect(curve[index].z).toBeGreaterThan(curve[index - 1].z)
       }
     }
   })
@@ -115,6 +160,8 @@ describe('dev corridor parcel placement', () => {
     const placed = placeDevCorridorParcels(deriveDevRoadCorridor(original))
     expect(original.roads.nodes.find((node) => node.id === 'node-7-5')?.x).toBe(100)
     expect(placed.roads.nodes.find((node) => node.id === 'node-7-5')?.x).toBe(108)
+    expect(placed.roads.nodes.find((node) => node.id === 'node-7-2')!.x -
+      original.roads.nodes.find((node) => node.id === 'node-7-2')!.x).toBe(8)
     for (const block of original.blocks.filter((item) => !AFFECTED.includes(item.id as typeof AFFECTED[number]))) {
       expect(placed.blocks.find((item) => item.id === block.id)).toEqual(block)
     }

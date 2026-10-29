@@ -76,7 +76,9 @@ describe('derived pedestrian network', () => {
       const polygonBlockIds = new Set(placed.blocks.filter((block) =>
         block.footprintXZ).map((block) => block.id))
       expect([...polygonBlockIds].sort()).toEqual([
-        'block-6-4', 'block-6-5', 'block-7-4', 'block-7-5'])
+        'block-2-4', 'block-2-5', 'block-3-4', 'block-3-5',
+        'block-6-1', 'block-6-2', 'block-6-4', 'block-6-5',
+        'block-7-1', 'block-7-2', 'block-7-4', 'block-7-5'])
       for (const block of placed.blocks.filter((item) => polygonBlockIds.has(item.id))) {
         const boundaryIds = [`edge-x-${block.column}-${block.row}`,
           `edge-x-${block.column}-${block.row + 1}`,

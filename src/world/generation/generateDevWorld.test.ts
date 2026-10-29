@@ -14,6 +14,9 @@ import { generateIntegratedWorld } from './generateIntegratedWorld'
 
 describe('isolated Twilight terrain world', () => {
   it('keeps the original city core and main generator unchanged', () => {
+    const compactDevBuildings = new Set([
+      'building-block-3-4-0-0', 'building-block-3-5-1-0',
+    ])
     const mainBefore = generateIntegratedWorld(HERO_SEED)
     const dev = generateDevWorld(HERO_SEED)
     const mainAfter = generateIntegratedWorld(HERO_SEED)
@@ -28,16 +31,24 @@ describe('isolated Twilight terrain world', () => {
       devSource.baseCity?.buildings.map((building) => building.id))
     for (const building of dev.baseCity!.buildings) {
       const original = originalBuildings.get(building.id)!
-      expect(building.masses).toEqual(original.masses)
-      expect(building.windows).toEqual(original.windows)
+      if (compactDevBuildings.has(building.id)) {
+        expect(building.width).toBeLessThan(original.width)
+        expect(dev.places.find((place) => place.id === `building:${building.id}`)?.kind)
+          .toBe(devSource.places.find((place) => place.id === `building:${building.id}`)?.kind)
+      } else {
+        expect(building.masses).toEqual(original.masses)
+        expect(building.windows).toEqual(original.windows)
+      }
       expect(building.kind).toBe(original.kind)
-      expect(building.entrance.x - building.x).toBeCloseTo(
-        original.entrance.x - original.x, 6)
-      expect(building.entrance.z - building.z).toBeCloseTo(
-        original.entrance.z - original.z, 6)
+      if (!compactDevBuildings.has(building.id)) {
+        expect(building.entrance.x - building.x).toBeCloseTo(
+          original.entrance.x - original.x, 6)
+        expect(building.entrance.z - building.z).toBeCloseTo(
+          original.entrance.z - original.z, 6)
+      }
     }
     expect(dev.baseCity?.buildings.length).toBeLessThan(mainBefore.baseCity!.buildings.length)
-    expect(dev.config.generatorVersion).toBe('twilight-dev-v4')
+    expect(dev.config.generatorVersion).toBe('twilight-dev-v5')
     expect(mainAfter.config.generatorVersion).toBe('heritage-extension-v6')
     expect(worldFingerprintV5(dev, DEFAULT_SIMULATION_CONFIG_V5))
       .not.toBe(worldFingerprintV5(mainAfter, DEFAULT_SIMULATION_CONFIG_V5))

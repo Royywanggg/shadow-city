@@ -1,5 +1,7 @@
 import type { Building, CityBlock, CityModel, CityPointXZ, Parcel, RoadEdge,
   RoadNode } from '../../city/model'
+import { createBuilding } from '../../city/generation/buildings'
+import { createRandom } from '../../city/generation/random'
 
 interface HalfPlane {
   readonly x: number
@@ -19,6 +21,8 @@ interface Placement {
 
 const CORRIDOR_BLOCKS = new Set([
   'block-6-4', 'block-6-5', 'block-7-4', 'block-7-5',
+  'block-6-1', 'block-6-2', 'block-7-1', 'block-7-2',
+  'block-2-4', 'block-2-5', 'block-3-4', 'block-3-5',
 ])
 const RING_OFFSET_M = 0.72
 const CURB_CLEARANCE_M = 0.25
@@ -77,6 +81,106 @@ function roadPlanes(block: CityBlock, city: CityModel, clearance: number): HalfP
         edge.width / 2 + clearance }
     })
   })
+}
+
+function lineIntersection(a: HalfPlane, b: HalfPlane): CityPointXZ {
+  const determinant = a.x * b.z - a.z * b.x
+  if (Math.abs(determinant) < EPSILON) throw new Error('Parallel corridor boundaries')
+  return { x: (a.minimum * b.z - a.z * b.minimum) / determinant,
+    z: (a.x * b.minimum - a.minimum * b.x) / determinant }
+}
+
+function signedDistance(point: CityPointXZ, plane: HalfPlane): number {
+  return point.x * plane.x + point.z * plane.z - plane.minimum
+}
+
+function segmentsCross(a: CityPointXZ, b: CityPointXZ,
+  c: CityPointXZ, d: CityPointXZ): boolean {
+  const cross = (p: CityPointXZ, q: CityPointXZ, r: CityPointXZ) =>
+    (q.x - p.x) * (r.z - p.z) - (q.z - p.z) * (r.x - p.x)
+  const abC = cross(a, b, c)
+  const abD = cross(a, b, d)
+  const cdA = cross(c, d, a)
+  const cdB = cross(c, d, b)
+  return abC * abD < -EPSILON && cdA * cdB < -EPSILON
+}
+
+function assertSimplePolygon(polygon: readonly CityPointXZ[], blockId: string): void {
+  for (let first = 0; first < polygon.length; first += 1) {
+    for (let second = first + 2; second < polygon.length; second += 1) {
+      if (first === 0 && second === polygon.length - 1) continue
+      if (segmentsCross(polygon[first], polygon[(first + 1) % polygon.length],
+        polygon[second], polygon[(second + 1) % polygon.length])) {
+        throw new Error(`Self-intersecting curved footprint at ${blockId}`)
+      }
+    }
+  }
+}
+
+function crossing(path: readonly CityPointXZ[], plane: HalfPlane,
+  direction: 'enter' | 'exit'): { point: CityPointXZ; segment: number } {
+  for (let index = 0; index < path.length - 1; index += 1) {
+    const before = signedDistance(path[index], plane)
+    const after = signedDistance(path[index + 1], plane)
+    if (direction === 'enter' ? before <= EPSILON && after >= -EPSILON :
+      before >= -EPSILON && after <= EPSILON) {
+      const t = Math.abs(before - after) < EPSILON ? 0 : before / (before - after)
+      return { point: { x: path[index].x + (path[index + 1].x - path[index].x) * t,
+        z: path[index].z + (path[index + 1].z - path[index].z) * t },
+      segment: index }
+    }
+  }
+  throw new Error(`Curved road does not reach the corridor ${direction}`)
+}
+
+function curvedFootprint(block: CityBlock, city: CityModel,
+  ring: readonly HalfPlane[]): CityPointXZ[] {
+  const curvedColumn = block.column < 4 ? 3 : 7
+  const edge = city.roads.edges.find((road) =>
+    road.id === `edge-z-${curvedColumn}-${block.row}`)
+  const path = edge?.centerlineXZ
+  if (!edge || !path || path.length < 3) {
+    throw new Error(`Missing curved corridor beside ${block.id}`)
+  }
+  const westOfCorridor = block.column === curvedColumn - 1
+  const interiorSign = westOfCorridor ? 1 : -1
+  const offset = edge.width / 2 + CURB_CLEARANCE_M + RING_OFFSET_M
+  const normals = path.slice(1).map((to, index) => {
+    const from = path[index]
+    const dx = to.x - from.x
+    const dz = to.z - from.z
+    const length = Math.hypot(dx, dz)
+    return { x: -interiorSign * dz / length, z: interiorSign * dx / length }
+  })
+  const offsetPath = path.map((point, index): CityPointXZ => {
+    const previous = normals[Math.max(0, index - 1)]
+    const next = normals[Math.min(normals.length - 1, index)]
+    const sum = { x: previous.x + next.x, z: previous.z + next.z }
+    const length = Math.hypot(sum.x, sum.z)
+    const miter = { x: sum.x / length, z: sum.z / length }
+    const scale = offset / (miter.x * previous.x + miter.z * previous.z)
+    return { x: point.x + miter.x * scale, z: point.z + miter.z * scale }
+  })
+  const north = ring[0]
+  const south = ring[1]
+  const opposite = westOfCorridor ? ring[2] : ring.at(-1)!
+  const start = crossing(offsetPath, north, 'enter')
+  const end = crossing(offsetPath, south, 'exit')
+  if (start.segment > end.segment) throw new Error(`Reversed corridor curve at ${block.id}`)
+  const curve = [start.point, ...offsetPath.slice(start.segment + 1, end.segment + 1),
+    end.point].filter((point, index, array) => index === 0 ||
+      Math.hypot(point.x - array[index - 1].x,
+        point.z - array[index - 1].z) > EPSILON)
+  const northCorner = lineIntersection(north, opposite)
+  const southCorner = lineIntersection(south, opposite)
+  const polygon = westOfCorridor
+    ? [northCorner, ...curve, southCorner]
+    : [curve[0], northCorner, southCorner, ...curve.slice(1).reverse()]
+  if (!polygon.every((point) => within(point, [north, south, opposite]))) {
+    throw new Error(`Curved corridor leaves its block at ${block.id}`)
+  }
+  assertSimplePolygon(polygon, block.id)
+  return polygon
 }
 
 function within(point: CityPointXZ, planes: readonly HalfPlane[]): boolean {
@@ -222,19 +326,23 @@ function fitGroups(groups: readonly ParcelGroup[], ring: readonly HalfPlane[],
   throw new Error('Dev corridor has no non-overlapping parcel placement')
 }
 
-/** Packs the original building meshes beside the curved east-side dev corridor. */
+/** Packs original building meshes beside the curved dev corridors. */
 export function placeDevCorridorParcels(city: CityModel): CityModel {
-  const target = city.roads.edges.find((edge) => edge.id === 'edge-z-7-4')
-  if (!target?.centerlineXZ) throw new Error('Dev corridor centreline is required')
+  for (const edgeId of ['edge-z-7-4', 'edge-z-7-1', 'edge-z-3-4']) {
+    if (!city.roads.edges.find((edge) => edge.id === edgeId)?.centerlineXZ) {
+      throw new Error(`Dev corridor centreline is required: ${edgeId}`)
+    }
+  }
   const blockUpdates = new Map<string, CityBlock>()
   const parcelUpdates = new Map<string, Parcel>()
   const buildingUpdates = new Map<string, Building>()
   for (const block of city.blocks.filter((item) => CORRIDOR_BLOCKS.has(item.id))) {
     const ring = roadPlanes(block, city, RING_OFFSET_M + CURB_CLEARANCE_M)
     const curb = roadPlanes(block, city, CURB_CLEARANCE_M)
-    const polygon = ring.reduce<CityPointXZ[]>((remaining, plane) =>
+    const safePolygon = ring.reduce<CityPointXZ[]>((remaining, plane) =>
       clip(remaining, plane), initialPolygon(city.size))
-    if (polygon.length < 3) throw new Error(`No safe corridor polygon for ${block.id}`)
+    if (safePolygon.length < 3) throw new Error(`No safe corridor polygon for ${block.id}`)
+    const polygon = curvedFootprint(block, city, ring)
     const box = bounds(polygon)
     const groups = city.parcels.filter((parcel) => parcel.blockId === block.id)
       .sort((a, b) => a.x - b.x).map((parcel) => {
@@ -242,11 +350,45 @@ export function placeDevCorridorParcels(city: CityModel): CityModel {
         if (!building) throw new Error(`Missing building on ${parcel.id}`)
         return { parcel, building }
       })
-    const placement = fitGroups(groups, ring, curb, city.size / 2)
+    let placement: Placement
+    let fittedGroups = groups
+    try {
+      placement = fitGroups(groups, ring, curb, city.size / 2)
+    } catch (error) {
+      if (block.column !== 3 || block.row !== 4 && block.row !== 5) {
+        throw new Error(`Cannot fit dev corridor block ${block.id}: ${
+          error instanceof Error ? error.message : String(error)}`)
+      }
+      let alternative: { groups: ParcelGroup[]; placement: Placement } | null = null
+      for (const index of [...groups.keys()].reverse()) {
+        for (const factor of [0.9, 0.85, 0.8, 0.75, 0.7, 0.65, 0.6, 0.55]) {
+          const parcel = { ...groups[index].parcel,
+            width: groups[index].parcel.width * factor }
+          const building = createBuilding(parcel, block.district, block.column,
+            block.row, createRandom(`${city.seed}:${parcel.id}`))
+          if (building.id !== groups[index].building.id ||
+            building.kind !== groups[index].building.kind) {
+            throw new Error(`Compact dev building changes identity at ${block.id}`)
+          }
+          const candidate = groups.map((group, groupIndex) => groupIndex === index
+            ? { parcel, building } : group)
+          try {
+            alternative = { groups: candidate,
+              placement: fitGroups(candidate, ring, curb, city.size / 2) }
+            break
+          } catch { /* Try the next parcel width. */ }
+        }
+        if (alternative) break
+      }
+      if (!alternative) throw new Error(`Cannot compact dev corridor block ${
+        block.id} while preserving its buildings`)
+      fittedGroups = alternative.groups
+      placement = alternative.placement
+    }
     blockUpdates.set(block.id, { ...block, footprintXZ: polygon,
       x: (box.minX + box.maxX) / 2, z: (box.minZ + box.maxZ) / 2,
       width: box.maxX - box.minX, depth: box.maxZ - box.minZ })
-    groups.forEach(({ parcel, building }, index) => {
+    fittedGroups.forEach(({ parcel, building }, index) => {
       const shift = placement.shifts[index]
       const movedParcel: Parcel = { ...parcel, x: parcel.x + shift.x,
         z: parcel.z + shift.z, width: parcel.width * placement.scale,
