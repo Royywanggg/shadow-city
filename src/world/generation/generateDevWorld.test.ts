@@ -5,7 +5,7 @@ import { advanceStateV5, createEnvironmentV5, createInitialStateV5,
 import { hasClearSurfaceSegment } from '../../simulation/encounter/spatial'
 import { DEFAULT_SIMULATION_CONFIG_V5 } from '../../simulation/v5Types'
 import { createNavigationIndexV2, findRouteV2 } from '../navigation/routeV2'
-import { blockPadElevationMm, heightAtMm } from '../terrain/devTerrain'
+import { blockPadElevationMm, heightAtMm, roadBendMm } from '../terrain/devTerrain'
 import { generateDevWorld } from './generateDevWorld'
 import { generateIntegratedWorld } from './generateIntegratedWorld'
 
@@ -131,5 +131,38 @@ describe('isolated Twilight terrain world', () => {
     expect(state.citizens).toHaveLength(24)
     expect(state.citizens.every((citizen) => Number.isSafeInteger(citizen.position.y) &&
       world.surfaces.some((surface) => surface.id === citizen.surfaceId))).toBe(true)
+  })
+
+  it('bends only selected outer roads within the available building clearance', () => {
+    const world = generateDevWorld(HERO_SEED)
+    const city = world.baseCity!
+    const roadById = new Map(city.roads.edges.map((road) => [road.id, road]))
+    const footprints = city.buildings.flatMap((building) => building.masses
+      .filter((mass) => mass.baseY < 2).map((mass) => ({
+        x: Math.round((building.x + mass.offsetX) * 1000),
+        z: Math.round((building.z + mass.offsetZ) * 1000),
+        halfWidth: Math.round(mass.width * 500),
+        halfDepth: Math.round(mass.depth * 500),
+      })))
+    const bent = world.terrain!.roadProfiles.filter((profile) => roadBendMm(profile.edgeId) !== 0)
+    expect(bent.length).toBeGreaterThanOrEqual(5)
+    for (const profile of bent) {
+      const road = roadById.get(profile.edgeId)!
+      const start = profile.path[0]
+      const end = profile.path.at(-1)!
+      expect(start.z).toBe(end.z)
+      expect(Math.abs(profile.path[Math.floor(profile.path.length / 2)].z - start.z))
+        .toBeGreaterThan(700)
+      for (const point of profile.path) {
+        const clearance = Math.min(...footprints.map((footprint) => Math.hypot(
+          Math.max(0, Math.abs(point.x - footprint.x) - footprint.halfWidth),
+          Math.max(0, Math.abs(point.z - footprint.z) - footprint.halfDepth))))
+        expect(clearance).toBeGreaterThan(Math.round((road.width / 2 + 0.3) * 1000))
+      }
+    }
+    expect(world.navEdges.some((edge) => edge.surfaceId === 'ground' &&
+      edge.path.length > 4 && Math.abs(edge.path[0].z - edge.path.at(-1)!.z) < 100 &&
+      Math.abs(edge.path[Math.floor(edge.path.length / 2)].z - edge.path[0].z) > 300))
+      .toBe(true)
   })
 })

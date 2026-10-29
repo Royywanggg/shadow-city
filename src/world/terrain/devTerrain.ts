@@ -60,6 +60,20 @@ const CHANNEL_HALF_WIDTH_MM = 3_800
 const CHANNEL_BANK_WIDTH_MM = 9_000
 const CHANNEL_DEPTH_MM = 8_000
 const BRIDGE_EDGE_IDS = new Set(['edge-x--1-5', 'edge-x--1-6'])
+/** Deliberate contour bends; endpoints and tangents remain aligned with the original graph. */
+const ROAD_BENDS_MM = new Map<string, number>([
+  ['edge-x--1-5', -1_150],
+  ['edge-x--1-6', 850],
+  ['edge-x-0--1', 1_200],
+  ['edge-x-1--1', 1_400],
+  ['edge-x-2--1', 1_250],
+  ['edge-x-5--1', 1_100],
+  ['edge-x-6--1', 1_150],
+])
+
+export function roadBendMm(edgeId: string): number {
+  return ROAD_BENDS_MM.get(edgeId) ?? 0
+}
 
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value))
@@ -133,9 +147,14 @@ function buildRoadProfiles(city: CityModel, terrain: DevTerrainV1): DevRoadProfi
     const dzMm = endZmm - startZmm
     const segments = Math.max(2, Math.ceil(Math.hypot(dxMm, dzMm) / STEP_MM))
     const bridge = BRIDGE_EDGE_IDS.has(edge.id)
+    const bendMm = roadBendMm(edge.id)
+    const lateralX = -dzMm / Math.hypot(dxMm, dzMm)
+    const lateralZ = dxMm / Math.hypot(dxMm, dzMm)
     const groundPoint = (index: number): WorldPointMm => {
-      const x = Math.round(startXmm + dxMm * index / segments)
-      const z = Math.round(startZmm + dzMm * index / segments)
+      const t = index / segments
+      const bow = 16 * t * t * (1 - t) * (1 - t) * bendMm
+      const x = Math.round(startXmm + dxMm * t + lateralX * bow)
+      const z = Math.round(startZmm + dzMm * t + lateralZ * bow)
       return { x, y: ROAD_TOP_MM + heightAtMm(terrain, x, z), z }
     }
     const path = Array.from({ length: segments + 1 }, (_, index) => groundPoint(index))

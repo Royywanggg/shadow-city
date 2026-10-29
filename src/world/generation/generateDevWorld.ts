@@ -1,24 +1,25 @@
 import { HERO_SEED } from '../../city/generation/generateCity'
 import type { WorldModelV2 } from '../model'
 import { createDevTerrainV1, DEV_OPEN_CHANNEL_BLOCK_IDS, heightAtMm,
-  blockPadElevationMm, type DevRoadProfileV1 } from '../terrain/devTerrain'
+  blockPadElevationMm, roadBendMm, type DevRoadProfileV1 } from '../terrain/devTerrain'
 import { generateIntegratedWorld } from './generateIntegratedWorld'
 
 const GROUND_Y_MM = 250
 const BRIDGE_SIDEWALK_OFFSET_MM = 180
 
-function roadTopAtX(profile: DevRoadProfileV1, xMm: number): number {
+function roadAtX(profile: DevRoadProfileV1, xMm: number): { y: number; z: number } {
   const path = profile.path
-  if (xMm <= path[0].x) return path[0].y
+  if (xMm <= path[0].x) return path[0]
   for (let index = 1; index < path.length; index += 1) {
     if (xMm <= path[index].x) {
       const before = path[index - 1]
       const after = path[index]
       const t = (xMm - before.x) / (after.x - before.x)
-      return Math.round(before.y + (after.y - before.y) * t)
+      return { y: Math.round(before.y + (after.y - before.y) * t),
+        z: Math.round(before.z + (after.z - before.z) * t) }
     }
   }
-  return path.at(-1)!.y
+  return path.at(-1)!
 }
 
 function openChannelRing(edgeId: string): boolean {
@@ -55,6 +56,8 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
   const originalNodeById = new Map(integrated.navNodes.map((node) => [node.id, node]))
   const nodeById = new Map(navNodes.map((node) => [node.id, node]))
   const bridgeProfiles = terrain.roadProfiles.filter((profile) => profile.bridge)
+  const curvedProfiles = terrain.roadProfiles.filter((profile) =>
+    roadBendMm(profile.edgeId) !== 0 && !profile.bridge)
   const bridgeSurfaceId = (profile: DevRoadProfileV1) => `terrain-bridge:${profile.edgeId}`
   const navEdges = integrated.navEdges.flatMap((edge) => {
     const oldFrom = originalNodeById.get(edge.fromNodeId)!
@@ -71,12 +74,37 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
       const path = Array.from({ length: segments + 1 }, (_, index) => {
         const t = index / segments
         const x = Math.round(from.position.x + (to.position.x - from.position.x) * t)
-        const z = Math.round(from.position.z + (to.position.z - from.position.z) * t)
-        return { x, y: roadTopAtX(bridge, x) + BRIDGE_SIDEWALK_OFFSET_MM, z }
+        const road = roadAtX(bridge, x)
+        const originalZ = Math.round(from.position.z + (to.position.z - from.position.z) * t)
+        const z = originalZ + road.z - bridge.path[0].z
+        return { x, y: road.y + BRIDGE_SIDEWALK_OFFSET_MM, z }
       })
       path[0] = from.position
       path[path.length - 1] = to.position
       return [{ ...edge, surfaceId: bridgeSurfaceId(bridge), path, lengthMm: lengthMm(path) }]
+    }
+    const curved = ground && Math.abs(to.position.x - from.position.x) > 8_000 &&
+      Math.abs(to.position.z - from.position.z) < 100
+      ? curvedProfiles.find((profile) => {
+        const start = profile.path[0]; const end = profile.path.at(-1)!
+        const minX = Math.min(from.position.x, to.position.x)
+        const maxX = Math.max(from.position.x, to.position.x)
+        return minX >= start.x - 100 && maxX <= end.x + 100 &&
+          Math.abs(from.position.z - start.z) < 6_000 &&
+          Math.abs(to.position.z - end.z) < 6_000
+      }) : undefined
+    if (curved) {
+      const segments = Math.max(2, Math.ceil(Math.abs(to.position.x - from.position.x) / 1_000))
+      const path = Array.from({ length: segments + 1 }, (_, index) => {
+        const t = index / segments
+        const x = Math.round(from.position.x + (to.position.x - from.position.x) * t)
+        const originalZ = Math.round(from.position.z + (to.position.z - from.position.z) * t)
+        const z = originalZ + roadAtX(curved, x).z - curved.path[0].z
+        return { x, y: GROUND_Y_MM + heightAtMm(terrain, x, z), z }
+      })
+      path[0] = from.position
+      path[path.length - 1] = to.position
+      return [{ ...edge, path, lengthMm: lengthMm(path) }]
     }
     const path = ground ? edge.path.flatMap((point, index) => {
       if (index === edge.path.length - 1) return []
