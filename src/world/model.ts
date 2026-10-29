@@ -1,4 +1,5 @@
 import type { CityModel } from '../city/model'
+import type { DevTerrainV1 } from './terrain/devTerrain'
 
 export type WorldPointMm = Readonly<{ x: number; y: number; z: number }>
 export type GroundPointMm = Readonly<{ x: number; z: number }>
@@ -28,6 +29,8 @@ export interface WalkableSurface {
   readonly placeId: string | null
   readonly interactionZoneId: string
   readonly elevationMm: number
+  /** A terrain surface samples its height from WorldModelV2.terrain. */
+  readonly elevationMode?: 'terrain'
   readonly polygonXZ: readonly GroundPointMm[]
   readonly blockedPolygonsXZ: readonly (readonly GroundPointMm[])[]
   readonly clearanceMm: number
@@ -122,6 +125,7 @@ export interface WorldModelV2 {
   readonly version: 2
   readonly config: WorldConfigV2
   readonly baseCity?: CityModel
+  readonly terrain?: DevTerrainV1
   readonly bounds: Readonly<{ minX: number; maxX: number; minZ: number; maxZ: number; maxY: number }>
   readonly districts: readonly DistrictV2[]
   readonly roadNodes: readonly Readonly<{ id: string; position: GroundPointMm }>[]

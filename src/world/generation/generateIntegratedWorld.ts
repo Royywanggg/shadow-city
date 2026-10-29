@@ -82,14 +82,22 @@ function curvedPath(waypoints: readonly WorldPointMm[], samplesPerSegment = 5): 
 }
 
 /** Adds multi-level places to the existing city's exact roads, blocks and pedestrian graph. */
-export function generateIntegratedWorld(seed = HERO_SEED): WorldModelV2 {
+export function generateIntegratedWorld(seed = HERO_SEED,
+  options: Readonly<{ openChannelBlockIds?: readonly string[] }> = {}): WorldModelV2 {
   const original = expandOriginalCity(generateCity(seed))
+  const openBlocks = new Set(options.openChannelBlockIds ?? [])
   const mallBlock = original.blocks.find((block) => block.id === 'block-4-3')!
   const removedParcelIds = new Set(original.parcels.filter((parcel) =>
-    parcel.blockId === mallBlock.id).map((parcel) => parcel.id))
+    parcel.blockId === mallBlock.id || openBlocks.has(parcel.blockId)).map((parcel) => parcel.id))
+  const openBlockBounds = original.blocks.filter((block) => openBlocks.has(block.id))
   const retainedCity: CityModel = { ...original,
+    blocks: original.blocks.map((block) => openBlocks.has(block.id)
+      ? { ...block, isPark: false } : block),
     parcels: original.parcels.filter((parcel) => !removedParcelIds.has(parcel.id)),
     buildings: original.buildings.filter((building) => !removedParcelIds.has(building.parcelId)),
+    streetFeatures: original.streetFeatures.filter((feature) =>
+      !openBlockBounds.some((block) => Math.abs(feature.x - block.x) < block.width / 2 &&
+        Math.abs(feature.z - block.z) < block.depth / 2)),
   }
   retainedCity.pedestrian = derivePedestrianNetwork(retainedCity)
   const config: WorldConfigV2 = { ...INTEGRATED_WORLD_CONFIG_V2, seed }
