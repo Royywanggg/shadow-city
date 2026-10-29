@@ -83,8 +83,13 @@ function curvedPath(waypoints: readonly WorldPointMm[], samplesPerSegment = 5): 
 
 /** Adds multi-level places to the existing city's exact roads, blocks and pedestrian graph. */
 export function generateIntegratedWorld(seed = HERO_SEED,
-  options: Readonly<{ openChannelBlockIds?: readonly string[] }> = {}): WorldModelV2 {
-  const original = expandOriginalCity(generateCity(seed))
+  options: Readonly<{ openChannelBlockIds?: readonly string[];
+    baseCity?: CityModel }> = {}): WorldModelV2 {
+  if (options.baseCity && (options.baseCity.size !== EXPANDED_CITY_SIZE ||
+    options.baseCity.seed !== seed)) {
+    throw new Error('Injected baseCity must match the seed and expanded 300 m extent')
+  }
+  const original = options.baseCity ?? expandOriginalCity(generateCity(seed))
   const openBlocks = new Set(options.openChannelBlockIds ?? [])
   const mallBlock = original.blocks.find((block) => block.id === 'block-4-3')!
   const removedParcelIds = new Set(original.parcels.filter((parcel) =>
@@ -99,7 +104,8 @@ export function generateIntegratedWorld(seed = HERO_SEED,
       !openBlockBounds.some((block) => Math.abs(feature.x - block.x) < block.width / 2 &&
         Math.abs(feature.z - block.z) < block.depth / 2)),
   }
-  retainedCity.pedestrian = derivePedestrianNetwork(retainedCity)
+  retainedCity.pedestrian = derivePedestrianNetwork(retainedCity,
+    options.baseCity ? { curbPlacement: 'endpointVector' } : undefined)
   const config: WorldConfigV2 = { ...INTEGRATED_WORLD_CONFIG_V2, seed }
   const builder = new WorldBuilder()
   const half = original.size / 2

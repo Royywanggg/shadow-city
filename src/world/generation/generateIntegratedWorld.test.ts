@@ -6,8 +6,26 @@ import { createNavigationIndexV2, findRouteV2 } from '../navigation/routeV2'
 import { createWalkwayDeckGeometry, overpassDeckPath, overpassEndCapPaths,
   overpassGuardPaths } from '../../scene/WalkwayStructures'
 import { generateIntegratedWorld } from './generateIntegratedWorld'
+import { expandOriginalCity } from './expandOriginalCity'
 
 describe('original-city v0.6 integration', () => {
+  it('accepts an already-expanded city without mutating it or the default world', () => {
+    const defaultBefore = generateIntegratedWorld(HERO_SEED)
+    const baseCity = expandOriginalCity(generateCity(HERO_SEED))
+    const baseBefore = structuredClone(baseCity)
+    const injected = generateIntegratedWorld(HERO_SEED, { baseCity })
+    expect(baseCity).toEqual(baseBefore)
+    expect(injected.baseCity?.roads).toEqual(baseCity.roads)
+    expect(injected.roadNodes.map((node) => node.id))
+      .toEqual(baseCity.roads.nodes.map((node) => node.id))
+    expect(injected.baseCity?.size).toBe(300)
+    expect(generateIntegratedWorld(HERO_SEED)).toEqual(defaultBefore)
+    expect(() => generateIntegratedWorld(HERO_SEED, { baseCity:
+      { ...baseCity, size: 200 } })).toThrow('expanded 300 m extent')
+    expect(() => generateIntegratedWorld('different-seed', { baseCity }))
+      .toThrow('match the seed')
+  })
+
   it('expands the original map while preserving its roads, plaza and buildings outside one Galleria block', () => {
     const city = generateCity(HERO_SEED)
     const world = generateIntegratedWorld(HERO_SEED)

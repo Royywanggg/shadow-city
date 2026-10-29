@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { generateCity, HERO_SEED } from '../generation/generateCity'
+import { derivePedestrianNetwork } from './derivePedestrianNetwork'
 import type { Building, PedestrianNode } from '../model'
 
 function reachableNodeIds(nodes: readonly PedestrianNode[], edges: readonly { from: string; to: string }[]): Set<string> {
@@ -43,6 +44,44 @@ function distanceToSegment(x: number, z: number, a: PedestrianNode, b: Pedestria
 }
 
 describe('derived pedestrian network', () => {
+  it('places diagonal crossing curbs on the actual approach through the road', () => {
+    const city: Parameters<typeof derivePedestrianNetwork>[0] = {
+      roads: { nodes: [{ id: 'left', x: 8, z: -10 },
+        { id: 'right', x: 8, z: 10 }],
+      edges: [{ id: 'edge-z-1-0', from: 'left', to: 'right', width: 4,
+        kind: 'street' }] },
+      blocks: [
+        { id: 'block-0-0', column: 0, row: 0, x: 0, z: 0,
+          width: 10, depth: 10, district: 'residential', isPlaza: false, isPark: false },
+        { id: 'block-1-0', column: 1, row: 0, x: 16, z: 4,
+          width: 10, depth: 10, district: 'residential', isPlaza: false, isPark: false },
+      ], parcels: [], buildings: [], plaza: { x: 0, z: 0, width: 1, depth: 1 },
+    }
+    const graph = derivePedestrianNetwork(city, { curbPlacement: 'endpointVector' })
+    const nodes = new Map(graph.nodes.map((node) => [node.id, node]))
+    const crossing = graph.edges.find((edge) => edge.id === 'ped-cross-east-block-0-0')!
+    const a = nodes.get('ped-block-0-0-1-0')!
+    const b = nodes.get('ped-block-1-0-0-0')!
+    const curbA = nodes.get(crossing.from)!
+    const curbB = nodes.get(crossing.to)!
+    const dx = b.x - a.x
+    const dz = b.z - a.z
+    for (const curb of [curbA, curbB]) {
+      expect(Math.abs((curb.x - a.x) * dz - (curb.z - a.z) * dx))
+        .toBeLessThan(1e-8)
+    }
+    expect(curbB.x - curbA.x).toBeCloseTo(4, 8)
+    expect(curbB.z - curbA.z).toBeGreaterThan(0)
+    expect(crossing.sourceRoadEdgeId).toBe('edge-z-1-0')
+  })
+
+  it('keeps the legacy curb placement byte-for-byte on the default path', () => {
+    const city = generateCity(HERO_SEED)
+    expect(derivePedestrianNetwork(city)).toEqual(city.pedestrian)
+    expect(derivePedestrianNetwork(city, { curbPlacement: 'axisAligned' }))
+      .toEqual(city.pedestrian)
+  })
+
   for (const seed of [HERO_SEED, 'shadow-city-variation-a', 'shadow-city-variation-b']) {
     it(`connects every entrance and public destination without crossing buildings for ${seed}`, () => {
       const city = generateCity(seed)

@@ -20,6 +20,11 @@ const PARK_PATH_Z = [-0.34, -0.17, 0, 0.17, 0.34] as const
 
 type SpatialCity = Pick<CityModel, 'roads' | 'blocks' | 'parcels' | 'buildings' | 'plaza'>
 
+export interface PedestrianDerivationOptions {
+  /** Use the actual block-to-block approach across a possibly diagonal road. */
+  readonly curbPlacement?: 'axisAligned' | 'endpointVector'
+}
+
 interface BlockWalkways {
   west: number
   east: number
@@ -60,7 +65,8 @@ function crossesBuilding(a: Pick<PedestrianNode, 'x' | 'z'>, b: Pick<PedestrianN
 }
 
 /** Derives walkable space from visible block sidewalks, frontage, and road crossings. */
-export function derivePedestrianNetwork(city: SpatialCity): PedestrianNetwork {
+export function derivePedestrianNetwork(city: SpatialCity,
+  options: PedestrianDerivationOptions = {}): PedestrianNetwork {
   const nodes: PedestrianNode[] = []
   const edges: PedestrianEdge[] = []
   const anchors: PedestrianAnchor[] = []
@@ -243,13 +249,45 @@ export function derivePedestrianNetwork(city: SpatialCity): PedestrianNetwork {
     const to = nodeById.get(b)!
     const roadStart = roadNodeById.get(road.from)!
     const roadEnd = roadNodeById.get(road.to)!
-    const center = direction === 'x' ? (roadStart.x + roadEnd.x) / 2 : (roadStart.z + roadEnd.z) / 2
-    const curbA = center - road.width / 2
-    const curbB = center + road.width / 2
+    let first: Pick<PedestrianNode, 'x' | 'z'>
+    let second: Pick<PedestrianNode, 'x' | 'z'>
+    if (options.curbPlacement === 'endpointVector') {
+      const dx = to.x - from.x
+      const dz = to.z - from.z
+      const roadDx = roadEnd.x - roadStart.x
+      const roadDz = roadEnd.z - roadStart.z
+      const determinant = dx * roadDz - dz * roadDx
+      const roadLength = Math.hypot(roadDx, roadDz)
+      if (Math.abs(determinant) < EPSILON || roadLength < EPSILON) {
+        throw new Error(`Pedestrian crossing does not meet road ${road.id}`)
+      }
+      const startDx = roadStart.x - from.x
+      const startDz = roadStart.z - from.z
+      const centerFraction = (startDx * roadDz - startDz * roadDx) / determinant
+      const roadFraction = (startDx * dz - startDz * dx) / determinant
+      const halfFraction = road.width * roadLength / (2 * Math.abs(determinant))
+      if (centerFraction - halfFraction <= 0 || centerFraction + halfFraction >= 1 ||
+        roadFraction < -EPSILON || roadFraction > 1 + EPSILON) {
+        throw new Error(`Pedestrian crossing lacks curb clearance at ${road.id}`)
+      }
+      first = { x: from.x + dx * (centerFraction - halfFraction),
+        z: from.z + dz * (centerFraction - halfFraction) }
+      second = { x: from.x + dx * (centerFraction + halfFraction),
+        z: from.z + dz * (centerFraction + halfFraction) }
+    } else {
+      const center = direction === 'x' ? (roadStart.x + roadEnd.x) / 2 :
+        (roadStart.z + roadEnd.z) / 2
+      const curbA = center - road.width / 2
+      const curbB = center + road.width / 2
+      first = { x: direction === 'x' ? curbA : from.x,
+        z: direction === 'z' ? curbA : from.z }
+      second = { x: direction === 'x' ? curbB : to.x,
+        z: direction === 'z' ? curbB : to.z }
+    }
     const firstId = `${id}-curb-a`
     const secondId = `${id}-curb-b`
-    addNode({ id: firstId, x: direction === 'x' ? curbA : from.x, z: direction === 'z' ? curbA : from.z, surfaceY: CURB_Y, kind: 'crossing' })
-    addNode({ id: secondId, x: direction === 'x' ? curbB : to.x, z: direction === 'z' ? curbB : to.z, surfaceY: CURB_Y, kind: 'crossing' })
+    addNode({ id: firstId, ...first, surfaceY: CURB_Y, kind: 'crossing' })
+    addNode({ id: secondId, ...second, surfaceY: CURB_Y, kind: 'crossing' })
     addEdge(`${id}-approach-a`, a, firstId, 'access')
     addEdge(id, firstId, secondId, 'crossing', road.id)
     addEdge(`${id}-approach-b`, secondId, b, 'access')
