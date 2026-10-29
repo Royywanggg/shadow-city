@@ -106,7 +106,7 @@ function makeSkirt(terrain: DevTerrainV1): BufferGeometry {
   return geometry
 }
 
-function makeChannel(terrain: DevTerrainV1): BufferGeometry {
+function sampleChannel(terrain: DevTerrainV1): { x: number; z: number }[] {
   const control = terrain.channel.centerline
   const points = control.flatMap((from, index) => {
     const to = control[index + 1]
@@ -119,9 +119,32 @@ function makeChannel(terrain: DevTerrainV1): BufferGeometry {
         z: Math.round(from.z + (to.z - from.z) * t) }
     })
   })
+  // Keep the terminal cross-section inside the diorama wall. The water and
+  // banks meet the recessed outfall instead of producing an exterior wedge.
+  const mouthX = terrain.grid.originXmm + 800
+  const firstOutside = points.findIndex((point) => point.x < mouthX)
+  if (firstOutside < 1) return points
+  const previous = points[firstOutside - 1]
+  const next = points[firstOutside]
+  const fraction = (mouthX - previous.x) / (next.x - previous.x)
+  return [...points.slice(0, firstOutside), { x: mouthX,
+    z: Math.round(previous.z + (next.z - previous.z) * fraction) }]
+}
+
+function makeChannel(terrain: DevTerrainV1): BufferGeometry {
+  // The head of the terrain channel falls eight metres before reaching its
+  // full-depth bed. Exposing that entire slope as water creates a waterfall
+  // shaped sheet; the visible stream begins where the bed levels out.
+  const points = sampleChannel(terrain).filter((point) =>
+    point.z >= terrain.channel.fullDepthZmm)
+  const minX = terrain.grid.originXmm / 1000 + 0.2
   const positions: number[] = []
+  const colors: number[] = []
   const indices: number[] = []
   const width = terrain.channel.halfWidthMm / 1000 * 0.67
+  const stream = new Color('#468a96')
+  const mouth = new Color('#10262e')
+  const tone = new Color()
   for (let index = 0; index < points.length; index += 1) {
     const point = points[index]
     const before = points[Math.max(0, index - 1)]
@@ -132,9 +155,14 @@ function makeChannel(terrain: DevTerrainV1): BufferGeometry {
     const nx = -dz / length * width
     const nz = dx / length * width
     const variation = 1 + 0.08 * Math.sin(index * 0.82)
-    const y = heightAtMm(terrain, point.x, point.z) / 1000 + 0.38
-    positions.push(point.x / 1000 + nx * variation, y, point.z / 1000 + nz * variation,
-      point.x / 1000 - nx * variation, y, point.z / 1000 - nz * variation)
+    const y = -terrain.channel.depthMm / 1000 + 0.38
+    positions.push(Math.max(minX, point.x / 1000 + nx * variation), y,
+      point.z / 1000 + nz * variation,
+      Math.max(minX, point.x / 1000 - nx * variation), y,
+      point.z / 1000 - nz * variation)
+    const outletFade = Math.max(0, Math.min(1, (-point.x - 138_000) / 12_000))
+    tone.copy(stream).lerp(mouth, outletFade * outletFade)
+    colors.push(tone.r, tone.g, tone.b, tone.r, tone.g, tone.b)
     if (index > 0) {
       const a = (index - 1) * 2
       const b = index * 2
@@ -143,50 +171,50 @@ function makeChannel(terrain: DevTerrainV1): BufferGeometry {
   }
   const geometry = new BufferGeometry()
   geometry.setAttribute('position', new Float32BufferAttribute(positions, 3))
+  geometry.setAttribute('color', new Float32BufferAttribute(colors, 3))
   geometry.setIndex(indices)
   geometry.computeVertexNormals()
   return geometry
 }
 
 function makeRockBanks(terrain: DevTerrainV1): BufferGeometry {
-  const points = terrain.channel.centerline
+  const points = sampleChannel(terrain)
+  const minX = terrain.grid.originXmm / 1000 + 0.2
   const positions: number[] = []
   const colors: number[] = []
   const indices: number[] = []
-  const tones = [new Color('#65777a'), new Color('#53656a'), new Color('#71807d')]
-  for (let index = 0; index < points.length - 1; index += 1) {
-    const a = points[index]
-    const b = points[index + 1]
-    const count = Math.max(2, Math.ceil(Math.hypot(b.x - a.x, b.z - a.z) / 2_000))
-    const dx = b.x - a.x
-    const dz = b.z - a.z
-    const length = Math.hypot(dx, dz) || 1
-    const nx = -dz / length
-    const nz = dx / length
-    for (const side of [-1, 1]) {
-      for (let step = 0; step < count; step += 1) {
-        const addPoint = (t: number, fraction: number) => {
-          const x = a.x + dx * t + nx * side * (terrain.channel.halfWidthMm +
-            terrain.channel.bankWidthMm * fraction)
-          const z = a.z + dz * t + nz * side * (terrain.channel.halfWidthMm +
-            terrain.channel.bankWidthMm * fraction)
-          const y = heightAtMm(terrain, Math.round(x), Math.round(z)) / 1000 + 0.08
-          positions.push(x / 1000, y, z / 1000)
-          const tone = tones[(index + step + (side + 1)) % tones.length]
-          colors.push(tone.r, tone.g, tone.b)
-        }
-        const start = positions.length / 3
-        const midpointX = (a.x + dx * (step + 0.5) / count +
-          nx * side * (terrain.channel.halfWidthMm + terrain.channel.bankWidthMm * 0.55)) / 1000
-        const midpointZ = (a.z + dz * (step + 0.5) / count +
-          nz * side * (terrain.channel.halfWidthMm + terrain.channel.bankWidthMm * 0.55)) / 1000
-        if (overlapsRoad(terrain, midpointX, midpointZ, 0.4)) continue
-        addPoint(step / count, 0.21)
-        addPoint(step / count, 0.92)
-        addPoint((step + 1) / count, 0.21)
-        addPoint((step + 1) / count, 0.92)
-        indices.push(start, start + 2, start + 1,
-          start + 1, start + 2, start + 3)
+  const distances = [terrain.channel.halfWidthMm * 0.68,
+    terrain.channel.halfWidthMm, terrain.channel.halfWidthMm +
+      terrain.channel.bankWidthMm * 0.48,
+    terrain.channel.halfWidthMm + terrain.channel.bankWidthMm * 1.04]
+  const tones = [new Color('#344f55'), new Color('#4d6260'),
+    new Color('#64736b'), new Color('#496251')]
+  for (const side of [-1, 1]) {
+    const start = positions.length / 3
+    for (let index = 0; index < points.length; index += 1) {
+      const point = points[index]
+      const before = points[Math.max(0, index - 1)]
+      const after = points[Math.min(points.length - 1, index + 1)]
+      const dx = after.x - before.x
+      const dz = after.z - before.z
+      const length = Math.hypot(dx, dz) || 1
+      const nx = -dz / length
+      const nz = dx / length
+      distances.forEach((distance, band) => {
+        const variation = 1 + 0.025 * Math.sin(index * 0.71 + side * 2 + band)
+        const x = Math.max(minX, (point.x + nx * side * distance * variation) / 1000)
+        const z = (point.z + nz * side * distance * variation) / 1000
+        const y = heightAtMm(terrain, Math.round(x * 1000),
+          Math.round(z * 1000)) / 1000 + 0.045
+        positions.push(x, y, z)
+        const tone = tones[band]
+        colors.push(tone.r, tone.g, tone.b)
+      })
+      if (index === 0) continue
+      for (let band = 0; band < distances.length - 1; band += 1) {
+        const a = start + (index - 1) * distances.length + band
+        const b = start + index * distances.length + band
+        indices.push(a, b, a + 1, a + 1, b, b + 1)
       }
     }
   }
@@ -277,17 +305,33 @@ export function TerrainGround({ terrain, city }: { terrain: DevTerrainV1;
   const banks = useMemo(() => makeRockBanks(terrain), [terrain])
   const outfall = useMemo(() => {
     const outlet = terrain.channel.centerline.at(-1)!
-    const x = terrain.grid.originXmm / 1000 - 0.075
+    const x = terrain.grid.originXmm / 1000 + 0.07
     const z = outlet.z / 1000
     const base = skirtBase(terrain)
-    const top = heightAtMm(terrain, outlet.x, outlet.z) / 1000 + 0.75
-    const height = Math.max(0.6, top - base)
-    const width = terrain.channel.halfWidthMm / 1000 * 1.5
-    const panel: BoxInstance = { position: [x, base + height / 2, z],
-      scale: [0.13, height, width], color: '#10262e' }
-    const cap: BoxInstance = { position: [x - 0.015, top + 0.13, z],
-      scale: [0.22, 0.25, width + 0.48], color: '#66767a' }
-    return [panel, cap]
+    const top = Math.max(0.6, heightAtMm(terrain, outlet.x, outlet.z - 10_000) / 1000,
+      heightAtMm(terrain, outlet.x, outlet.z + 10_000) / 1000)
+    const river = -terrain.channel.depthMm / 1000 + 0.38
+    const portalBottom = river - 1.15
+    const portalTop = river + 1.15
+    const portalHalfWidth = terrain.channel.halfWidthMm / 1000 * 0.78
+    const wallHalfWidth = terrain.channel.halfWidthMm / 1000 +
+      terrain.channel.bankWidthMm / 1000 + 0.6
+    const wingWidth = wallHalfWidth - portalHalfWidth
+    const wallColor = '#273844'
+    const wings: BoxInstance[] = [-1, 1].map((side) => ({
+      position: [x, (top + base) / 2,
+        z + side * (portalHalfWidth + wingWidth / 2)],
+      scale: [0.18, top - base, wingWidth], color: wallColor,
+    }))
+    const lintel: BoxInstance = { position: [x, (top + portalTop) / 2, z],
+      scale: [0.18, top - portalTop, portalHalfWidth * 2], color: wallColor }
+    const sill: BoxInstance = { position: [x, (portalBottom + base) / 2, z],
+      scale: [0.18, portalBottom - base, portalHalfWidth * 2], color: wallColor }
+    const darkOpening: BoxInstance = { position: [x + 0.13,
+      (portalTop + portalBottom) / 2, z],
+      scale: [0.08, portalTop - portalBottom, portalHalfWidth * 2],
+      color: '#0c2027' }
+    return [...wings, lintel, sill, darkOpening]
   }, [terrain])
   useEffect(() => () => {
     ground.dispose()
@@ -304,8 +348,8 @@ export function TerrainGround({ terrain, city }: { terrain: DevTerrainV1;
     </mesh>
     <InstancedBoxes items={outfall} receiveShadow roughness={0.9} />
     <mesh geometry={channel} receiveShadow>
-      <meshStandardMaterial color="#468a96" roughness={0.27} metalness={0.15}
-        emissive="#1d5360" emissiveIntensity={0.4} side={2} />
+      <meshStandardMaterial vertexColors roughness={0.3} metalness={0.12}
+        emissive="#132d34" emissiveIntensity={0.12} side={2} />
     </mesh>
     <mesh geometry={banks} castShadow receiveShadow>
       <meshStandardMaterial vertexColors roughness={0.98} flatShading side={2} />

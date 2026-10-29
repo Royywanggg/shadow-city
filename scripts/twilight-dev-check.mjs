@@ -70,6 +70,13 @@ try {
     await capture(dev, `dev-bridge-${edgeId.slice(-1)}-close-1440x900`)
   }
   await dev.evaluate(() => {
+    const terrain = window.__shadowCityV06.getWorld().terrain
+    const outlet = terrain.channel.centerline.at(-1)
+    window.__shadowCityV06.inspectAtWorld(outlet.x / 1000, 0, outlet.z / 1000)
+  })
+  await dev.waitForTimeout(950)
+  await capture(dev, 'dev-outfall-close-1440x900')
+  await dev.evaluate(() => {
     const profile = window.__shadowCityV06.getWorld().terrain.roadProfiles
       .find((item) => item.edgeId === 'dev-road:ridge-link')
     const mid = profile.path[Math.floor(profile.path.length / 2)]
