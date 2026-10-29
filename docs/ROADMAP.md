@@ -244,6 +244,12 @@ See `SCENE_ARCHITECTURE.md` and `SCENE_VERIFICATION.md`. The work does not add p
 
 **Exit evidence and open gate:** Seven fixed-view Chrome/Apple M4 captures, preview/replay/camera checks, tests and build pass. The 200-resident p95 frame and simulation Tick targets remain above the reference limits, so performance acceptance is still open. Historical 30-second `habit-v1` experiments retain their versioned clock semantics and are excluded from the integrated six-second lighting path.
 
+## Experimental workstream — Twilight terrain and roads
+
+`?world=dev` is a versioned, isolated terrain and road experiment on the integrated 300 m city. Its first vertical slice supplies continuous height data, graded roads, a lower channel with two road bridges and two culverts, protected building pads and stairs, and one three-way ridge diversion whose visible road and pedestrian paths use the same coordinates. Main and legacy scenarios remain separate.
+
+The infrastructure tests and real Chrome screenshots are recorded in [`TWILIGHT_TERRAIN_DEV.md`](TWILIGHT_TERRAIN_DEV.md). **The visual exit gate remains open:** the full Hero view still reads mostly as a Manhattan grid and does not yet carry the reference image's strong terrace/valley composition. Citywide organic layout requires an earlier dev-only CityModel layout step and a graph-driven pedestrian derivation; do not ship this experiment as the default world before those spatial and visual gates pass.
+
 ## v0.7 — Policing strategy design and implementation
 
 **Goal:** Compare explicit police decision strategies under transparent model assumptions.
