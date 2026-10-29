@@ -22,6 +22,21 @@ function roadAtX(profile: DevRoadProfileV1, xMm: number): { y: number; z: number
   return path.at(-1)!
 }
 
+function roadAtZ(profile: DevRoadProfileV1, zMm: number): { x: number; y: number } {
+  const path = profile.path
+  if (zMm <= path[0].z) return path[0]
+  for (let index = 1; index < path.length; index += 1) {
+    if (zMm <= path[index].z) {
+      const before = path[index - 1]
+      const after = path[index]
+      const t = (zMm - before.z) / (after.z - before.z)
+      return { x: Math.round(before.x + (after.x - before.x) * t),
+        y: Math.round(before.y + (after.y - before.y) * t) }
+    }
+  }
+  return path.at(-1)!
+}
+
 function openChannelRing(edgeId: string): boolean {
   return DEV_OPEN_CHANNEL_BLOCK_IDS.some((blockId) =>
     edgeId.startsWith(`ped-${blockId}-h-`))
@@ -56,6 +71,7 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
   const originalNodeById = new Map(integrated.navNodes.map((node) => [node.id, node]))
   const nodeById = new Map(navNodes.map((node) => [node.id, node]))
   const bridgeProfiles = terrain.roadProfiles.filter((profile) => profile.bridge)
+  const culvertProfile = terrain.roadProfiles.find((profile) => profile.culvertSpan)!
   const curvedProfiles = terrain.roadProfiles.filter((profile) =>
     roadBendMm(profile.edgeId) !== 0 && !profile.bridge)
   const bridgeSurfaceId = (profile: DevRoadProfileV1) => `terrain-bridge:${profile.edgeId}`
@@ -65,6 +81,24 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
     const from = nodeById.get(edge.fromNodeId)!
     const to = nodeById.get(edge.toNodeId)!
     const ground = from.surfaceId === 'ground' && to.surfaceId === 'ground'
+    const culvertWalk = ground && edge.id.startsWith('ped-block--1-6-v-') &&
+      Math.abs(from.position.x - culvertProfile.path[0].x) < 6_000 &&
+      Math.abs(to.position.x - culvertProfile.path[0].x) < 6_000 &&
+      Math.abs(from.position.z - to.position.z) > 8_000
+    if (culvertWalk) {
+      const segments = Math.max(2, Math.ceil(Math.abs(to.position.z - from.position.z) / 1_000))
+      const path = Array.from({ length: segments + 1 }, (_, index) => {
+        const t = index / segments
+        const z = Math.round(from.position.z + (to.position.z - from.position.z) * t)
+        const road = roadAtZ(culvertProfile, z)
+        return { x: from.position.x + road.x - culvertProfile.path[0].x,
+          y: road.y + BRIDGE_SIDEWALK_OFFSET_MM, z }
+      })
+      path[0] = from.position
+      path[path.length - 1] = to.position
+      return [{ ...edge, surfaceId: `terrain-culvert:${culvertProfile.edgeId}`,
+        path, lengthMm: lengthMm(path) }]
+    }
     if (ground && openChannelRing(edge.id)) {
       const zMm = (from.position.z + to.position.z) / 2
       const bridge = bridgeProfiles.find((profile) =>
@@ -142,7 +176,17 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
             polygonXZ: [{ x: minX, z: z - halfWidth }, { x: maxX, z: z - halfWidth },
               { x: maxX, z: z + halfWidth }, { x: minX, z: z + halfWidth }],
             blockedPolygonsXZ: [], clearanceMm: 20_000, indoor: false }
-        }))
+        }), {
+          id: `terrain-culvert:${culvertProfile.edgeId}`, levelId: 'L0', placeId: null,
+          interactionZoneId: `terrain-culvert:${culvertProfile.edgeId}`,
+          elevationMm: GROUND_Y_MM,
+          polygonXZ: [
+            { x: culvertProfile.path[0].x - 6_000, z: culvertProfile.path[0].z - 500 },
+            { x: culvertProfile.path[0].x + 6_000, z: culvertProfile.path[0].z - 500 },
+            { x: culvertProfile.path[0].x + 6_000, z: culvertProfile.path.at(-1)!.z + 500 },
+            { x: culvertProfile.path[0].x - 6_000, z: culvertProfile.path.at(-1)!.z + 500 },
+          ], blockedPolygonsXZ: [], clearanceMm: 20_000, indoor: false,
+        })
   const resources = integrated.resources.map((resource) => {
     const shift = resource.surfaceId === 'ground'
       ? heightAtMm(terrain, resource.position.x, resource.position.z)

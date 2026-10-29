@@ -113,7 +113,7 @@ describe('isolated Twilight terrain world', () => {
         const roadPoint = road.path.reduce((nearest, point) =>
           Math.abs(point.x - center.x) < Math.abs(nearest.x - center.x) ? point : nearest)
         expect(Math.abs(center.y - roadPoint.y - 180)).toBeLessThan(100)
-        expect(center.y - heightAtMm(terrain, center.x, center.z)).toBeGreaterThan(5_000)
+        expect(center.y - heightAtMm(terrain, center.x, center.z)).toBeGreaterThan(4_000)
       }
     }
     expect(world.navEdges.some((edge) => terrain.openChannelBlockIds.some((blockId) =>
@@ -164,5 +164,35 @@ describe('isolated Twilight terrain world', () => {
       edge.path.length > 4 && Math.abs(edge.path[0].z - edge.path.at(-1)!.z) < 100 &&
       Math.abs(edge.path[Math.floor(edge.path.length / 2)].z - edge.path[0].z) > 300))
       .toBe(true)
+  })
+
+  it('carries the channel to the west edge through a covered, navigable culvert', () => {
+    const world = generateDevWorld(HERO_SEED)
+    const terrain = world.terrain!
+    const outlet = terrain.channel.centerline.at(-1)!
+    expect(outlet.x).toBe(world.bounds.minX)
+    expect(outlet.z).toBeLessThan(100_000)
+    expect(heightAtMm(terrain, outlet.x, outlet.z)).toBeLessThan(-6_000)
+    expect(terrain.roadProfiles.filter((profile) => profile.bridge)).toHaveLength(2)
+    const culvert = terrain.roadProfiles.find((profile) => profile.culvertSpan)!
+    expect(culvert.edgeId).toBe('edge-z--1-6')
+    expect(culvert.bridge).toBe(false)
+    const { startIndex, endIndex } = culvert.culvertSpan!
+    const center = culvert.path[Math.floor((startIndex + endIndex) / 2)]
+    expect(center.y - heightAtMm(terrain, center.x, center.z)).toBeGreaterThan(5_000)
+    for (const point of [culvert.path[startIndex], culvert.path[endIndex]]) {
+      expect(Math.abs(point.y - 70 - heightAtMm(terrain, point.x, point.z)))
+        .toBeLessThan(250)
+    }
+    const index = createNavigationIndexV2(world)
+    const surfaceId = `terrain-culvert:${culvert.edgeId}`
+    expect(index.surfaceById.has(surfaceId)).toBe(true)
+    const sidewalk = world.navEdges.find((edge) => edge.surfaceId === surfaceId)!
+    expect(sidewalk).toBeDefined()
+    expect(findRouteV2(index, sidewalk.fromNodeId, sidewalk.toNodeId).status).toBe('ok')
+    const sidewalkCenter = sidewalk.path[Math.floor(sidewalk.path.length / 2)]
+    expect(sidewalkCenter.y - heightAtMm(terrain, sidewalkCenter.x,
+      sidewalkCenter.z)).toBeGreaterThan(5_000)
+    expect(hasClearSurfaceSegment(world, surfaceId, sidewalkCenter, sidewalkCenter)).toBe(true)
   })
 })

@@ -27,6 +27,8 @@ export interface DevRoadProfileV1 {
   readonly bridge: boolean
   /** Both indices are inclusive and refer to points in path. */
   readonly bridgeSpan?: Readonly<{ startIndex: number; endIndex: number }>
+  /** A covered stream crossing; its road top stays continuous with the approaches. */
+  readonly culvertSpan?: Readonly<{ startIndex: number; endIndex: number }>
 }
 
 export interface DevTerrainV1 {
@@ -54,12 +56,14 @@ const CHANNEL_CENTERLINE: readonly GroundPointMm[] = [
   { x: -125_000, z: 20_000 },
   { x: -122_000, z: 47_000 },
   { x: -119_000, z: 75_000 },
-  { x: -123_000, z: 112_000 },
+  { x: -136_000, z: 84_000 },
+  { x: -150_000, z: 90_000 },
 ]
 const CHANNEL_HALF_WIDTH_MM = 3_800
 const CHANNEL_BANK_WIDTH_MM = 9_000
 const CHANNEL_DEPTH_MM = 8_000
 const BRIDGE_EDGE_IDS = new Set(['edge-x--1-5', 'edge-x--1-6'])
+const CULVERT_EDGE_ID = 'edge-z--1-6'
 /** Deliberate contour bends; endpoints and tangents remain aligned with the original graph. */
 const ROAD_BENDS_MM = new Map<string, number>([
   ['edge-x--1-5', -1_150],
@@ -100,7 +104,7 @@ function channelXAt(zMm: number): number {
 function rawHeightMm(xMm: number, zMm: number): number {
   const northRise = 9_400 * smoothstep((-zMm - 30_000) / 90_000)
   const channelAlong = smoothstep((zMm - 17_000) / 16_000) *
-    (1 - smoothstep((zMm - 112_000) / 17_000))
+    (1 - smoothstep((zMm - 88_000) / 10_000))
   const distance = Math.abs(xMm - channelXAt(zMm))
   const channelAcross = 1 - smoothstep((distance - CHANNEL_HALF_WIDTH_MM) /
     CHANNEL_BANK_WIDTH_MM)
@@ -158,6 +162,23 @@ function buildRoadProfiles(city: CityModel, terrain: DevTerrainV1): DevRoadProfi
       return { x, y: ROAD_TOP_MM + heightAtMm(terrain, x, z), z }
     }
     const path = Array.from({ length: segments + 1 }, (_, index) => groundPoint(index))
+    if (edge.id === CULVERT_EDGE_ID) {
+      const flooded = path.map((point, index) => ({ point, index }))
+        .filter(({ point }) => point.y < ROAD_TOP_MM - 250)
+      if (flooded.length === 0) throw new Error('Culvert misses terrain channel')
+      const startIndex = Math.max(0, flooded[0].index - 1)
+      const endIndex = Math.min(path.length - 1, flooded.at(-1)!.index + 1)
+      const start = path[startIndex]
+      const end = path[endIndex]
+      const deckPath = path.map((point, index) => {
+        if (index < startIndex || index > endIndex) return point
+        const t = (point.z - start.z) / (end.z - start.z)
+        return { ...point, y: Math.round(start.y + (end.y - start.y) * t) +
+          Math.round(90 * Math.sin(Math.PI * t)) }
+      })
+      return { edgeId: edge.id, path: deckPath, bridge: false,
+        culvertSpan: { startIndex, endIndex } }
+    }
     if (!bridge) return { edgeId: edge.id, path, bridge }
     const zMid = (startZmm + endZmm) / 2
     const channelX = channelXAt(zMid)
