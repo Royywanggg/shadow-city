@@ -177,7 +177,8 @@ export function WorldSceneV2({ world, level, cutaway, debugNavigation, onPickSur
       shadowMode === 'optimized')}
       revision={`${timeLighting?.worldSeconds ?? 'static'}:${cutaway}:${level}:${quality}:${world.config.seed}`} />
     {world.baseCity ? <>
-      <CityStaticScene city={world.baseCity} quality={quality} postprocessing={postprocessing}
+      <CityStaticScene city={world.baseCity} terrain={world.terrain} quality={quality}
+        postprocessing={postprocessing}
         lighting={lighting} castShadows={castShadows} ambientOcclusion={ambientOcclusion}
         lookdev={lookdev} bloomEnabled={bloomEnabled} timeLighting={timeLighting}
         shadowMode={shadowMode} />

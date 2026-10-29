@@ -1,8 +1,9 @@
 import type { CityModel } from '../city/model'
 import { InstancedBoxes, type BoxInstance } from './InstancedBoxes'
 import { surfaceTextures } from './SurfaceTextures'
+import type { DevTerrainV1 } from '../world/terrain/devTerrain'
 
-export function Plaza({ city }: { city: CityModel }) {
+export function Plaza({ city, terrain }: { city: CityModel; terrain?: DevTerrainV1 }) {
   const paving = surfaceTextures().paving
   const { x, z, width, depth } = city.plaza
   const hasBridgePavilion = city.size > 212
@@ -29,8 +30,10 @@ export function Plaza({ city }: { city: CityModel }) {
 
   return (
     <group>
-      {city.blocks.filter((block) => block.isPark).map((block) => (
-        <group key={block.id}>
+      {city.blocks.filter((block) => block.isPark &&
+        !terrain?.openChannelBlockIds.includes(block.id)).map((block) => (
+        <group key={block.id} position={[0,
+          (terrain?.blockPads.find((pad) => pad.blockId === block.id)?.elevationMm ?? 0) / 1000, 0]}>
           <mesh position={[block.x, 0.28, block.z]} receiveShadow>
             <boxGeometry args={[block.width * 0.92, 0.08, block.depth * 0.92]} />
             <meshStandardMaterial color="#36524d" roughness={1} />

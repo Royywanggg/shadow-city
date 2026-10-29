@@ -11,6 +11,7 @@ import { bearingFromOffset, clampPitch, MAX_PITCH_DEG, MIN_PITCH_DEG, normalizeB
 
 const HOME_POSITION: CameraTarget = [245, 195, 245]
 const HOME_TARGET: CameraTarget = [15, 0, 0]
+const TERRAIN_HOME_POSITION: CameraTarget = [-188, 168, 188]
 const TOUCH_MAPPING = { ONE: TOUCH.PAN, TWO: TOUCH.DOLLY_PAN }
 
 export function WorldCameraRig({ controller, world }: { controller: CameraController; world: WorldModelV2 }) {
@@ -20,13 +21,17 @@ export function WorldCameraRig({ controller, world }: { controller: CameraContro
   const tracking = useRef<CameraTarget | null>(null)
   const wantedZoom = useRef<number | null>(null)
   const integrated = Boolean(world.baseCity)
+  const terrainDev = Boolean(world.terrain)
+  const terrainMinY = useMemo(() => world.terrain?.grid.heightsMm.reduce((minimum, height) =>
+    Math.min(minimum, height), 0) ?? 0, [world.terrain])
   const diagnosticStreetPitch = new URLSearchParams(window.location.search)
     .get('cameraDiagnostic') === 'street'
-  const homePosition = integrated ? INITIAL_CAMERA_POSITION : HOME_POSITION
+  const homePosition = terrainDev ? TERRAIN_HOME_POSITION :
+    integrated ? INITIAL_CAMERA_POSITION : HOME_POSITION
   const homeTarget = integrated ? INITIAL_CAMERA_TARGET : HOME_TARGET
   const half = world.config.extentMm / 2000
   const baseZoom = integrated ? Math.min(size.width / (world.baseCity!.size * 1.53),
-    size.height / (world.baseCity!.size * 1.11)) :
+    size.height / (world.baseCity!.size * 1.11)) * (terrainDev ? 1.09 : 1) :
     Math.min(size.width / 500, size.height / 390)
   const publish = useCallback(() => {
     if (!controls.current) return
@@ -39,9 +44,10 @@ export function WorldCameraRig({ controller, world }: { controller: CameraContro
       zoomRatio: camera.zoom / baseZoom })
   }, [baseZoom, camera, controller])
   const clampTarget = useCallback((target: CameraTarget): CameraTarget => [
-    Math.max(-half - 10, Math.min(half + 10, target[0])), Math.max(0, Math.min(42, target[1])),
+    Math.max(-half - 10, Math.min(half + 10, target[0])),
+    Math.max(terrainDev ? terrainMinY / 1000 - 3 : 0, Math.min(42, target[1])),
     Math.max(-half - 10, Math.min(half + 10, target[2])),
-  ], [half])
+  ], [half, terrainDev, terrainMinY])
   useLayoutEffect(() => {
     if (!(camera instanceof OrthographicCamera)) return
     const previous = previousBaseZoom.current

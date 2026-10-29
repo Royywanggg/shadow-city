@@ -9,6 +9,8 @@ import { selectHeroBuildings } from './architecture/heroDistrict'
 import { LookDevArchitecture } from './lookdev/LookDevArchitecture'
 import { selectLookDevArea } from './lookdev/selectLookDevArea'
 import type { LookDevMode } from './CityScene'
+import type { DevTerrainV1 } from '../world/terrain/devTerrain'
+import { heightAtMm } from '../world/terrain/devTerrain'
 
 const facades: Record<BuildingKind, string[]> = {
   residential: ['#5e6974', '#667078', '#6e6d70'],
@@ -25,6 +27,9 @@ const roofs = ['#293c4d', '#344959', '#3d5160', '#465866']
 const trim = ['#607889', '#718897', '#586f80']
 
 interface BuildingGeometry {
+  foundations: BoxInstance[]
+  plinths: BoxInstance[]
+  entrySteps: BoxInstance[]
   shells: BoxInstance[]
   heroBrickShells: BoxInstance[]
   heroStoneShells: BoxInstance[]
@@ -245,8 +250,8 @@ function addBuilding(building: Building, geometry: BuildingGeometry, hero: boole
   addFacadeFeatures(building, geometry)
 }
 
-export function Buildings({ city, lookdev = 'final' }: { city: CityModel;
-  lookdev?: LookDevMode }) {
+export function Buildings({ city, lookdev = 'final', terrain }: { city: CityModel;
+  lookdev?: LookDevMode; terrain?: DevTerrainV1 }) {
   const area = useMemo(() => selectLookDevArea(city), [city])
   const replacement = useMemo(() => (lookdev === 'geometry' || lookdev === 'final') && area
     ? new Set([area.civic.id, area.commercial.id]) : null, [area, lookdev])
@@ -255,20 +260,61 @@ export function Buildings({ city, lookdev = 'final' }: { city: CityModel;
   const maps = useMemo(() => architecturalTextures(), [])
   const geometry = useMemo(() => {
     const result: BuildingGeometry = {
+      foundations: [], plinths: [], entrySteps: [],
       shells: [], heroBrickShells: [], heroStoneShells: [], heroConcreteShells: [],
       ledges: [], parapets: [], roofPrisms: [], roofEquipment: [], facadeRibs: [],
       balconySlabs: [], balconyRails: [], entries: [], windowFrames: [], darkWindows: [],
       warmWindows: [], coolWindows: [], storefronts: [], warmSigns: [], coolAccents: [],
     }
     const heroIds = new Set(heroBuildings.map((building) => building.id))
+    const pads = new Map(terrain?.buildingPads.map((pad) => [pad.buildingId, pad]) ?? [])
     city.buildings.forEach((building) => {
-      if (!replacement?.has(building.id)) addBuilding(building, result, heroIds.has(building.id))
+      if (replacement?.has(building.id)) return
+      const starts = Object.fromEntries(Object.entries(result).map(([key, items]) =>
+        [key, items.length])) as Record<keyof BuildingGeometry, number>
+      addBuilding(building, result, heroIds.has(building.id))
+      const pad = pads.get(building.id)
+      const elevation = (pad?.elevationMm ?? 0) / 1000
+      if (elevation !== 0) for (const [key, items] of Object.entries(result)) {
+        for (const item of items.slice(starts[key as keyof BuildingGeometry])) {
+          item.position[1] += elevation
+        }
+      }
+      if (terrain) {
+        const base = building.masses.find((mass) => mass.baseY < 2)!
+        const cx = building.x + base.offsetX
+        const cz = building.z + base.offsetZ
+        const corners = [[cx - base.width / 2, cz - base.depth / 2],
+          [cx + base.width / 2, cz - base.depth / 2],
+          [cx - base.width / 2, cz + base.depth / 2],
+          [cx + base.width / 2, cz + base.depth / 2], [cx, cz]]
+        const lower = Math.min(...corners.map(([x, z]) =>
+          heightAtMm(terrain, Math.round(x * 1000), Math.round(z * 1000)) / 1000))
+        if (elevation - lower > 0.15) result.foundations.push(box([
+          cx, (elevation + lower) / 2, cz], [base.width + 0.45,
+          elevation - lower, base.depth + 0.45], '#435662'))
+        result.plinths.push(box([cx, elevation + 0.045, cz],
+          [base.width + 0.72, 0.09, base.depth + 0.72], '#63717a'))
+        if (pad?.entryStair) {
+          for (const tread of pad.entryStair.treads) {
+            const ground = heightAtMm(terrain, tread.center.x, tread.center.z) / 1000
+            const top = tread.topMm / 1000
+            const height = Math.max(0.07, top - ground)
+            result.entrySteps.push(box([tread.center.x / 1000,
+              ground + height / 2, tread.center.z / 1000],
+              [1.9, height, pad.entryStair.stepDepthMm / 1000], '#899397'))
+          }
+        }
+      }
     })
     return result
-  }, [city, heroBuildings, replacement])
+  }, [city, heroBuildings, replacement, terrain])
 
   return (
     <>
+      <InstancedBoxes items={geometry.foundations} castShadow receiveShadow roughness={0.96} />
+      <InstancedBoxes items={geometry.plinths} receiveShadow roughness={0.89} />
+      <InstancedBoxes items={geometry.entrySteps} castShadow receiveShadow roughness={0.82} />
       <InstancedBoxes items={geometry.shells} castShadow receiveShadow roughness={0.87}
         metalness={0.04} map={maps.concrete.color} normalMap={maps.concrete.normal}
         roughnessMap={maps.concrete.roughness} textureWorldScale={6} />

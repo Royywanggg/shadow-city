@@ -16,6 +16,9 @@ import { LookDevLighting } from './lookdev/LookDevLighting'
 import { selectLookDevArea } from './lookdev/selectLookDevArea'
 import type { LightingState } from './lighting/timeOfDay'
 import { SkyDome } from './lighting/SkyDome'
+import type { DevTerrainV1 } from '../world/terrain/devTerrain'
+import { TerrainGround } from './terrain/TerrainGround'
+import { TerrainRoads } from './terrain/TerrainRoads'
 
 export type RenderingQuality = 'low' | 'high'
 export type LightingDiagnostic = 'night' | 'day'
@@ -47,8 +50,9 @@ function ClayOverride() {
 
 export function CityStaticScene({ city, quality = 'high', postprocessing = true,
   lighting = 'night', castShadows = true, ambientOcclusion = false, lookdev = 'final',
-  bloomEnabled = false, timeLighting = null, shadowMode = 'optimized' }: {
+  bloomEnabled = false, timeLighting = null, shadowMode = 'optimized', terrain }: {
   city: CityModel
+  terrain?: DevTerrainV1
   quality?: RenderingQuality
   postprocessing?: boolean
   lighting?: LightingDiagnostic
@@ -76,6 +80,8 @@ export function CityStaticScene({ city, quality = 'high', postprocessing = true,
         Math.hypot(building.x - city.plaza.x, building.z - city.plaza.z)
       return distance(a) - distance(b)
     }).slice(0, 3), [city])
+  const buildingElevation = useMemo(() => new Map(terrain?.buildingPads.map((pad) =>
+    [pad.buildingId, pad.elevationMm / 1000]) ?? []), [terrain])
   return (
     <>
       <color attach="background" args={[timeLighting?.skyColor ?? (day ? '#8ea5b5' : '#08111f')]} />
@@ -118,13 +124,14 @@ export function CityStaticScene({ city, quality = 'high', postprocessing = true,
         shadow-radius={2}
       />
       {windowLights > 0.01 && plazaLights.map((building) => <pointLight key={`entry-light-${building.id}`}
-        position={[building.entrance.x, 3.1, building.entrance.z + 0.6]}
+        position={[building.entrance.x, 3.1 + (buildingElevation.get(building.id) ?? 0),
+          building.entrance.z + 0.6]}
         color="#eab37a" intensity={(quality === 'high' ? 17 : 11) * windowLights}
         distance={13} decay={2} />)}
       {windowLights > 0.01 && lookdevArea && lookdev !== 'baseline' &&
         <LookDevLighting area={lookdevArea} intensity={windowLights} />}
 
-      <mesh position={[0, -3.25, 0]} receiveShadow>
+      {!terrain && <><mesh position={[0, -3.25, 0]} receiveShadow>
         <boxGeometry args={[city.size + 22, 1, city.size + 22]} />
         <meshStandardMaterial color="#0b1725" roughness={1} />
       </mesh>
@@ -143,11 +150,13 @@ export function CityStaticScene({ city, quality = 'high', postprocessing = true,
         emissive="#3c9f9c"
         emissiveIntensity={0.28}
         roughness={0.5}
-      />
-      <Roads city={city} />
-      <Plaza city={city} />
-      <Buildings city={city} lookdev={lookdev} />
-      <StreetFurniture city={city} enableLights={!clay} lightIntensity={windowLights} />
+      /></>}
+      {terrain && <TerrainGround terrain={terrain} city={city} />}
+      {terrain ? <TerrainRoads city={city} terrain={terrain} /> : <Roads city={city} />}
+      <Plaza city={city} terrain={terrain} />
+      <Buildings city={city} lookdev={lookdev} terrain={terrain} />
+      <StreetFurniture city={city} terrain={terrain} enableLights={!clay}
+        lightIntensity={windowLights} />
       {clay && <ClayOverride />}
       {postprocessing && lookdev !== 'geometry' && !clay &&
       <EffectComposer multisampling={quality === 'high' ? 4 : 0}>
