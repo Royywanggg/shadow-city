@@ -58,6 +58,24 @@ try {
     return gl?.getParameter(extension?.UNMASKED_RENDERER_WEBGL ?? gl.RENDERER) ?? null
   })
   await capture(dev, 'dev-hero-1440x900')
+  for (const [edgeId, name] of [
+    ['edge-z-7-4', 'dev-curved-corridor-close-1440x900'],
+    ['edge-z-7-1', 'dev-north-corridor-close-1440x900'],
+    ['edge-z-3-4', 'dev-central-corridor-close-1440x900'],
+  ]) {
+    const found = await dev.evaluate((id) => {
+      const profile = window.__shadowCityV06.getWorld().terrain.roadProfiles
+        .find((item) => item.edgeId === id)
+      if (!profile || !window.__shadowCityV06.getWorld().baseCity.roads.edges
+        .find((item) => item.id === id)?.centerlineXZ) return false
+      const mid = profile.path[Math.floor(profile.path.length / 2)]
+      window.__shadowCityV06.inspectAtWorld(mid.x / 1000, mid.y / 1000, mid.z / 1000)
+      return true
+    }, edgeId)
+    if (!found) continue
+    await dev.waitForTimeout(950)
+    await capture(dev, name)
+  }
   for (const edgeId of ['edge-x-0-5', 'edge-x-0-6']) {
     await dev.evaluate((id) => {
       const profile = window.__shadowCityV06.getWorld().terrain.roadProfiles
