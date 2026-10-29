@@ -32,6 +32,7 @@ import { calendarAtTick } from '../simulation/habits/calendar'
 import { DEFAULT_WORLD_CONFIG_V2 } from '../world/model'
 import { generateWorldV2 } from '../world/generation/generateWorldV2'
 import { generateIntegratedWorld, INTEGRATED_WORLD_CONFIG_V2 } from '../world/generation/generateIntegratedWorld'
+import { generateDevWorld } from '../world/generation/generateDevWorld'
 import { CameraControls } from './CameraControls'
 import './v06.css'
 
@@ -587,6 +588,7 @@ export function MultiLevelApp() {
   const exposure = Number.isFinite(exposureParam) && exposureParam >= 0.75 && exposureParam <= 2
     ? exposureParam : 1.2
   const prototype = params.get('world') === 'prototype'
+  const devWorld = params.get('world') === 'dev'
   const seed = params.get('seed') || (prototype ? DEFAULT_WORLD_CONFIG_V2.seed :
     INTEGRATED_WORLD_CONFIG_V2.seed)
   const populationParam = Number(params.get('population') ?? DEFAULT_SIMULATION_CONFIG_V5.populationSize)
@@ -629,7 +631,7 @@ export function MultiLevelApp() {
   const populationSize = Number.isSafeInteger(populationParam) && populationParam >= 0 && populationParam <= 200
     ? populationParam : DEFAULT_SIMULATION_CONFIG_V5.populationSize
   const world = useMemo(() => prototype ? generateWorldV2({ ...DEFAULT_WORLD_CONFIG_V2, seed }) :
-    generateIntegratedWorld(seed), [prototype, seed])
+    devWorld ? generateDevWorld(seed) : generateIntegratedWorld(seed), [prototype, devWorld, seed])
   const session = useMemo(() => {
     const next = new SimulationSessionV5(world, { ...DEFAULT_SIMULATION_CONFIG_V5,
       populationSize, simulationSeed, offendingSeed, observationSeed,
