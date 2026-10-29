@@ -6,8 +6,18 @@ import { heightAtMm } from '../../world/terrain/devTerrain'
 import type { WorldPointMm } from '../../world/model'
 import { InstancedBoxes, type BoxInstance } from '../InstancedBoxes'
 import { surfaceTextures } from '../SurfaceTextures'
+import { junctionTrimKey, planCurvedJunctions, trimRoadPath,
+  type JunctionPlan } from './roadJunctions'
 
 type RoadProfile = DevTerrainV1['roadProfiles'][number]
+
+interface SurfaceVertex {
+  readonly x: number
+  readonly y: number
+  readonly z: number
+}
+
+type SurfaceQuad = readonly [SurfaceVertex, SurfaceVertex, SurfaceVertex, SurfaceVertex]
 
 function tangent(path: readonly WorldPointMm[], index: number): readonly [number, number] {
   const before = path[Math.max(0, index - 1)]
@@ -27,7 +37,7 @@ interface RibbonInput {
   deckSpan?: Readonly<{ startIndex: number; endIndex: number }>
 }
 
-function ribbon(inputs: readonly RibbonInput[]): BufferGeometry {
+function ribbon(inputs: readonly RibbonInput[], quads: readonly SurfaceQuad[] = []): BufferGeometry {
   const positions: number[] = []
   const uvs: number[] = []
   const indices: number[] = []
@@ -58,6 +68,15 @@ function ribbon(inputs: readonly RibbonInput[]): BufferGeometry {
       const b = start + index * 2
       indices.push(a, b, a + 1, a + 1, b, b + 1)
     }
+  }
+  for (const quad of quads) {
+    const start = positions.length / 3
+    for (const vertex of quad) {
+      positions.push(vertex.x, vertex.y, vertex.z)
+      uvs.push(vertex.x / 5, vertex.z / 5)
+    }
+    indices.push(start, start + 1, start + 2,
+      start, start + 2, start + 3)
   }
   const geometry = new BufferGeometry()
   geometry.setAttribute('position', new Float32BufferAttribute(positions, 3))
@@ -110,7 +129,7 @@ function spanSidePanels(profiles: readonly RoadProfile[], widths: ReadonlyMap<st
 }
 
 function junctionPatches(city: CityModel, terrain: DevTerrainV1,
-  widths: ReadonlyMap<string, number>): BufferGeometry {
+  widths: ReadonlyMap<string, number>, plan: JunctionPlan): BufferGeometry {
   const positions: number[] = []
   const uvs: number[] = []
   const indices: number[] = []
@@ -130,6 +149,18 @@ function junctionPatches(city: CityModel, terrain: DevTerrainV1,
     const half = width / 2
     const start = positions.length / 3
     add(node.x, node.z)
+    const fitted = plan.cornersByNode.get(node.id)
+    if (fitted) {
+      const corners = [...fitted].sort((a, b) =>
+        Math.atan2(a.point.z - node.z, a.point.x - node.x) -
+        Math.atan2(b.point.z - node.z, b.point.x - node.x))
+      for (const corner of corners) add(corner.point.x, corner.point.z)
+      for (let index = 0; index < corners.length; index += 1) {
+        indices.push(start, start + 1 + index,
+          start + 1 + (index + 1) % corners.length)
+      }
+      continue
+    }
     if (degree.get(node.id) === 3) {
       const segments = 12
       for (let index = 0; index < segments; index += 1) {
@@ -166,9 +197,16 @@ export function TerrainRoads({ city, terrain }: { city: CityModel; terrain: DevT
   const geometry = useMemo(() => {
     const widths = new Map(city.roads.edges.map((edge) => [edge.id, edge.width]))
     const kinds = new Map(city.roads.edges.map((edge) => [edge.id, edge.kind]))
+    const plan = planCurvedJunctions(city, terrain)
     const road: RibbonInput[] = []
     const sidewalk: RibbonInput[] = []
     const curb: RibbonInput[] = []
+    const sidewalkQuads: SurfaceQuad[] = []
+    const curbQuads: SurfaceQuad[] = []
+    const sections = new Map<string, Readonly<{
+      sidewalk: readonly [SurfaceVertex, SurfaceVertex]
+      curb: readonly [SurfaceVertex, SurfaceVertex]
+    }>>()
     const marks: RibbonInput[] = []
     const underdecks: RibbonInput[] = []
     const piers: BoxInstance[] = []
@@ -178,14 +216,51 @@ export function TerrainRoads({ city, terrain }: { city: CityModel; terrain: DevT
       const deckSpan = profile.bridgeSpan ?? profile.culvertSpan
       road.push({ path: profile.path, width, sideOffset: 0, lift: 0.02,
         terrain, deckSpan })
+      const section = (path: readonly WorldPointMm[], side: number,
+        atStart: boolean, inner: number, outer: number,
+        lift: number): readonly [SurfaceVertex, SurfaceVertex] => {
+        const index = atStart ? 0 : path.length - 1
+        const point = path[index]
+        const [dx, dz] = tangent(path, index)
+        const vertex = (distance: number): SurfaceVertex => {
+          const x = point.x / 1000 - dz * side * (width / 2 + distance)
+          const z = point.z / 1000 + dx * side * (width / 2 + distance)
+          return { x, y: heightAtMm(terrain, Math.round(x * 1000),
+            Math.round(z * 1000)) / 1000 + 0.07 + lift, z }
+        }
+        return [vertex(inner), vertex(outer)]
+      }
       for (const side of [-1, 1]) {
-        sidewalk.push({ path: profile.path, width: 1.45,
+        const startTrim = plan.trimsMm.get(junctionTrimKey(profile.edgeId, true, side)) ?? 0
+        const endTrim = plan.trimsMm.get(junctionTrimKey(profile.edgeId, false, side)) ?? 0
+        const path = deckSpan ? profile.path : trimRoadPath(profile.path, startTrim, endTrim)
+        sidewalk.push({ path, width: 1.45,
           sideOffset: side * (width / 2 + 0.95), lift: 0.19, terrain, deckSpan })
-        curb.push({ path: profile.path, width: 0.19,
+        curb.push({ path, width: 0.19,
           sideOffset: side * (width / 2 + 0.1), lift: 0.12, terrain, deckSpan })
+        for (const [atStart, trim] of [[true, startTrim], [false, endTrim]] as const) {
+          if (!trim) continue
+          sections.set(junctionTrimKey(profile.edgeId, atStart, side), {
+            sidewalk: section(path, side, atStart, 0.225, 1.675, 0.19),
+            curb: section(path, side, atStart, 0.005, 0.195, 0.12),
+          })
+        }
       }
       if (kinds.get(profile.edgeId) === 'avenue') {
+        const startClear = Math.max(...[-1, 1].map((side) =>
+          plan.trimsMm.get(junctionTrimKey(profile.edgeId, true, side)) ?? 0))
+        const endClear = Math.max(...[-1, 1].map((side) =>
+          plan.trimsMm.get(junctionTrimKey(profile.edgeId, false, side)) ?? 0))
+        const distances = [0]
+        for (let index = 1; index < profile.path.length; index += 1) {
+          distances.push(distances[index - 1] + Math.hypot(
+            profile.path[index].x - profile.path[index - 1].x,
+            profile.path[index].z - profile.path[index - 1].z))
+        }
+        const total = distances.at(-1) ?? 0
         for (let index = 0; index + 2 < profile.path.length; index += 5) {
+          if (startClear && distances[index] < startClear + 4_000 ||
+            endClear && total - distances[index + 2] < endClear + 4_000) continue
           marks.push({ path: profile.path.slice(index, index + 3), width: 0.13,
             sideOffset: 0, lift: 0.044, terrain })
         }
@@ -224,6 +299,17 @@ export function TerrainRoads({ city, terrain }: { city: CityModel; terrain: DevT
         }
       }
     }
+    for (const corners of plan.cornersByNode.values()) for (const corner of corners) {
+      const first = sections.get(junctionTrimKey(corner.first.edge.id,
+        corner.first.atStart, corner.first.atStart ? 1 : -1))
+      const second = sections.get(junctionTrimKey(corner.second.edge.id,
+        corner.second.atStart, corner.second.atStart ? -1 : 1))
+      if (!first || !second) throw new Error('Curved junction is missing a sidewalk end')
+      sidewalkQuads.push([first.sidewalk[0], first.sidewalk[1],
+        second.sidewalk[1], second.sidewalk[0]])
+      curbQuads.push([first.curb[0], first.curb[1],
+        second.curb[1], second.curb[0]])
+    }
     const profileById = new Map(terrain.roadProfiles.map((profile) => [profile.edgeId, profile]))
     const nodeWidths = new Map<string, number>()
     for (const edge of city.roads.edges) {
@@ -232,11 +318,12 @@ export function TerrainRoads({ city, terrain }: { city: CityModel; terrain: DevT
       nodeWidths.set(edge.from, Math.max(nodeWidths.get(edge.from) ?? 0, edge.width))
       nodeWidths.set(edge.to, Math.max(nodeWidths.get(edge.to) ?? 0, edge.width))
     }
-    return { road: ribbon(road), sidewalk: ribbon(sidewalk), curb: ribbon(curb),
+    return { road: ribbon(road), sidewalk: ribbon(sidewalk, sidewalkQuads),
+      curb: ribbon(curb, curbQuads),
       underdecks: ribbon(underdecks),
       marks: ribbon(marks), bridgeWalls: spanSidePanels(terrain.roadProfiles, widths, 'bridge'),
       culvertWalls: spanSidePanels(terrain.roadProfiles, widths, 'culvert'),
-      piers, junctions: junctionPatches(city, terrain, nodeWidths) }
+      piers, junctions: junctionPatches(city, terrain, nodeWidths, plan) }
   }, [city, terrain])
   useEffect(() => () => {
     geometry.road.dispose()
