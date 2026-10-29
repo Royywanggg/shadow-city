@@ -17,12 +17,19 @@ export interface RoadNode {
   z: number
 }
 
+export interface CityPointXZ {
+  readonly x: number
+  readonly z: number
+}
+
 export interface RoadEdge {
   id: string
   from: string
   to: string
   width: number
   kind: RoadKind
+  /** Optional authoritative centreline for curved dev roads, in world metres. */
+  centerlineXZ?: readonly CityPointXZ[]
 }
 
 export interface RoadNetwork {
@@ -41,6 +48,8 @@ export interface CityBlock {
   district: DistrictKind
   isPlaza: boolean
   isPark: boolean
+  /** Optional buildable outline for non-rectangular dev blocks, in world metres. */
+  footprintXZ?: readonly CityPointXZ[]
 }
 
 export interface Parcel {
@@ -130,6 +139,8 @@ export interface PedestrianEdge {
   costMm: number
   kind: 'sidewalk' | 'access' | 'crossing' | 'publicSpace'
   sourceRoadEdgeId?: string
+  /** Optional authoritative curved walking path, in world metres. */
+  pathXZ?: readonly CityPointXZ[]
 }
 
 export interface PedestrianAnchor {

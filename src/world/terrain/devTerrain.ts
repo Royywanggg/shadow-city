@@ -258,7 +258,18 @@ function buildRoadProfiles(city: CityModel, terrain: DevTerrainV1): DevRoadProfi
       const z = Math.round(startZmm + dzMm * t + lateralZ * bow)
       return { x, y: ROAD_TOP_MM + heightAtMm(terrain, x, z), z }
     }
-    const path = Array.from({ length: segments + 1 }, (_, index) => groundPoint(index))
+    const path = edge.centerlineXZ ? edge.centerlineXZ.map((point) => {
+      const x = Math.round(point.x * 1000)
+      const z = Math.round(point.z * 1000)
+      return { x, y: ROAD_TOP_MM + heightAtMm(terrain, x, z), z }
+    }) : Array.from({ length: segments + 1 }, (_, index) => groundPoint(index))
+    if (edge.centerlineXZ && (path.length < 2 ||
+      path[0].x !== startXmm || path[0].z !== startZmm ||
+      path.at(-1)!.x !== endXmm || path.at(-1)!.z !== endZmm ||
+      path.slice(1).some((point, index) =>
+        point.x === path[index].x && point.z === path[index].z))) {
+      throw new Error(`Road centreline does not match its graph edge ${edge.id}`)
+    }
     if (CULVERT_EDGE_IDS.has(edge.id)) {
       const flooded = path.map((point, index) => ({ point, index }))
         .filter(({ point }) => point.y < ROAD_TOP_MM - 250)
