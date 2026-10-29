@@ -112,6 +112,7 @@ export interface StreetFeature {
   z: number
   rotationY: number
   scale: number
+  surfaceY?: number
 }
 
 export interface PedestrianNode {

@@ -7,7 +7,7 @@ export function EncounterLayerV1({ state, world, episodeId, level }: {
   state: SimulationStateV5
   world: WorldModelV2
   episodeId: string | null
-  level: 'all' | 'L0' | 'L1'
+  level: 'all' | 'L0' | 'L1' | 'L2'
 }) {
   const social = state.social
   if (!social || !episodeId) return null

@@ -238,15 +238,21 @@ function addFacadeFeatures(building: Building, geometry: BuildingGeometry) {
   }
 }
 
-function addBuilding(building: Building, geometry: BuildingGeometry, hero: boolean) {
+function addBuilding(building: Building, geometry: BuildingGeometry, hero: boolean,
+  elevation = 0) {
+  const counts = Object.fromEntries(Object.entries(geometry).map(([key, items]) =>
+    [key, items.length])) as Record<keyof BuildingGeometry, number>
   addMassing(building, geometry, hero)
   addWindows(building, geometry, hero)
   if (!hero) addStreetFront(building, geometry)
   addFacadeFeatures(building, geometry)
+  if (elevation !== 0) for (const key of Object.keys(geometry) as (keyof BuildingGeometry)[]) {
+    for (const item of geometry[key].slice(counts[key])) item.position[1] += elevation
+  }
 }
 
-export function Buildings({ city, lookdev = 'final' }: { city: CityModel;
-  lookdev?: LookDevMode }) {
+export function Buildings({ city, lookdev = 'final', elevationById }: { city: CityModel;
+  lookdev?: LookDevMode; elevationById?: ReadonlyMap<string, number> }) {
   const area = useMemo(() => selectLookDevArea(city), [city])
   const replacement = useMemo(() => (lookdev === 'geometry' || lookdev === 'final') && area
     ? new Set([area.civic.id, area.commercial.id]) : null, [area, lookdev])
@@ -262,10 +268,11 @@ export function Buildings({ city, lookdev = 'final' }: { city: CityModel;
     }
     const heroIds = new Set(heroBuildings.map((building) => building.id))
     city.buildings.forEach((building) => {
-      if (!replacement?.has(building.id)) addBuilding(building, result, heroIds.has(building.id))
+      if (!replacement?.has(building.id)) addBuilding(building, result, heroIds.has(building.id),
+        elevationById?.get(building.id) ?? 0)
     })
     return result
-  }, [city, heroBuildings, replacement])
+  }, [city, elevationById, heroBuildings, replacement])
 
   return (
     <>
@@ -296,8 +303,14 @@ export function Buildings({ city, lookdev = 'final' }: { city: CityModel;
       <InstancedBoxes items={geometry.storefronts} roughness={0.32} metalness={0.45} />
       <InstancedBoxes items={geometry.warmSigns} color="#e6ab73" emissive="#dd8e4f" emissiveIntensity={1.45} />
       <InstancedBoxes items={geometry.coolAccents} color="#9ed8d3" emissive="#4bb3ad" emissiveIntensity={1.15} />
-      <HeroDistrictArchitecture buildings={heroBuildings} />
-      <ArchitecturalAssetDetails buildings={heroBuildings} />
+      {elevationById ? heroBuildings.map((building) =>
+        <group key={building.id} position={[0, elevationById.get(building.id) ?? 0, 0]}>
+          <HeroDistrictArchitecture buildings={[building]} />
+          <ArchitecturalAssetDetails buildings={[building]} />
+        </group>) : <>
+        <HeroDistrictArchitecture buildings={heroBuildings} />
+        <ArchitecturalAssetDetails buildings={heroBuildings} />
+      </>}
       {replacement && area && <LookDevArchitecture area={area} />}
     </>
   )

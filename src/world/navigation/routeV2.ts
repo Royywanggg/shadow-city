@@ -81,7 +81,8 @@ export function canTraverseV2(index: NavigationIndexV2, edge: NavEdgeV2, fromNod
     if (mode === 'open') return true
     if (accessId === 'mall-entry') {
       return (from.surfaceId.startsWith('galleria-') &&
-        (to.surfaceId === 'ground' || to.surfaceId === 'skybridge')) ||
+        (to.surfaceId === 'ground' || to.surfaceId === 'organic:ground' ||
+          to.surfaceId === 'skybridge')) ||
         (from.surfaceId.startsWith('galleria-shop-') &&
           (to.surfaceId === 'galleria-l0' || to.surfaceId === 'galleria-l1'))
     }
