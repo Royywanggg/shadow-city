@@ -1,9 +1,10 @@
 import { chromium } from 'playwright'
 import { existsSync } from 'node:fs'
 import { mkdir, writeFile } from 'node:fs/promises'
-import { resolve } from 'node:path'
+import { dirname, resolve } from 'node:path'
 
-const output = resolve('.visual/twilight-performance/report.json')
+const output = resolve(process.env.SHADOW_CITY_PERF_OUTPUT ??
+  '.visual/twilight-performance/report.json')
 const chromePath = process.env.SHADOW_CITY_CHROME ??
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 const base = new URL(process.env.SHADOW_CITY_URL ?? 'http://127.0.0.1:5174/')
@@ -161,7 +162,7 @@ try {
   report.failure = error instanceof Error ? error.message : String(error)
 } finally {
   if (browser) await browser.close()
-  await mkdir(resolve('.visual/twilight-performance'), { recursive: true })
+  await mkdir(dirname(output), { recursive: true })
   await writeFile(output, JSON.stringify(report, null, 2) + '\n')
 }
 
