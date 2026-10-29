@@ -20,6 +20,19 @@ export interface DevBlockPadV1 {
   readonly elevationMm: number
 }
 
+export interface DevBuildingPadV1 {
+  readonly buildingId: string
+  readonly elevationMm: number
+  readonly entryRiseMm: number
+  readonly entryKind: 'level' | 'ramp' | 'stair'
+}
+
+export interface DevEscarpmentPatchV1 {
+  readonly blockId: string
+  readonly polygonXZ: readonly GroundPointMm[]
+  readonly riseMm: number
+}
+
 export interface DevRoadProfileV1 {
   readonly edgeId: string
   /** The y coordinate is the road top in authoritative world millimetres. */
@@ -36,8 +49,12 @@ export interface DevTerrainV1 {
   readonly seed: string
   readonly grid: DevTerrainGridV1
   readonly blockPads: readonly DevBlockPadV1[]
+  readonly buildingPads: readonly DevBuildingPadV1[]
   readonly roadProfiles: readonly DevRoadProfileV1[]
   readonly openChannelBlockIds: readonly string[]
+  readonly nonWalkableEscarpment: Readonly<{
+    patches: readonly DevEscarpmentPatchV1[]
+  }>
   readonly channel: Readonly<{
     centerline: readonly GroundPointMm[]
     halfWidthMm: number
@@ -47,27 +64,31 @@ export interface DevTerrainV1 {
 }
 
 export const DEV_OPEN_CHANNEL_BLOCK_IDS = [
-  'block--1-4', 'block--1-5', 'block--1-6',
+  'block-0-4', 'block-0-5', 'block-0-6', 'block--1-6',
+] as const
+export const DEV_ESCARPMENT_BLOCK_IDS = [
+  'block-4--1', 'block-5--1', 'block-6--1',
 ] as const
 
 const STEP_MM = 2_000
 const ROAD_TOP_MM = 70
 const CHANNEL_CENTERLINE: readonly GroundPointMm[] = [
-  { x: -125_000, z: 20_000 },
-  { x: -122_000, z: 47_000 },
-  { x: -119_000, z: 75_000 },
-  { x: -136_000, z: 84_000 },
-  { x: -150_000, z: 90_000 },
+  { x: -88_000, z: 35_000 },
+  { x: -88_000, z: 51_000 },
+  { x: -87_000, z: 76_000 },
+  { x: -88_000, z: 81_000 },
+  { x: -110_000, z: 87_000 },
+  { x: -150_000, z: 93_000 },
 ]
-const CHANNEL_HALF_WIDTH_MM = 3_800
-const CHANNEL_BANK_WIDTH_MM = 9_000
+const CHANNEL_HALF_WIDTH_MM = 3_000
+const CHANNEL_BANK_WIDTH_MM = 6_000
 const CHANNEL_DEPTH_MM = 8_000
-const BRIDGE_EDGE_IDS = new Set(['edge-x--1-5', 'edge-x--1-6'])
-const CULVERT_EDGE_ID = 'edge-z--1-6'
+const BRIDGE_EDGE_IDS = new Set(['edge-x-0-5', 'edge-x-0-6'])
+const CULVERT_EDGE_IDS = new Set(['edge-z-0-6', 'edge-z--1-6'])
 /** Deliberate contour bends; endpoints and tangents remain aligned with the original graph. */
 const ROAD_BENDS_MM = new Map<string, number>([
-  ['edge-x--1-5', -1_150],
-  ['edge-x--1-6', 850],
+  ['edge-x-0-5', -900],
+  ['edge-x-0-6', 700],
   ['edge-x-0--1', 1_200],
   ['edge-x-1--1', 1_400],
   ['edge-x-2--1', 1_250],
@@ -101,25 +122,50 @@ function channelXAt(zMm: number): number {
   return CHANNEL_CENTERLINE.at(-1)!.x
 }
 
-function rawHeightMm(xMm: number, zMm: number): number {
-  const northRise = 9_400 * smoothstep((-zMm - 30_000) / 90_000)
-  const channelAlong = smoothstep((zMm - 17_000) / 16_000) *
-    (1 - smoothstep((zMm - 88_000) / 10_000))
+export function channelCenterXAtMm(terrain: DevTerrainV1, zMm: number): number {
+  const points = terrain.channel.centerline
+  if (zMm <= points[0].z) return points[0].x
+  for (let index = 1; index < points.length; index += 1) {
+    const previous = points[index - 1]
+    const next = points[index]
+    if (zMm <= next.z) {
+      const t = smoothstep((zMm - previous.z) / (next.z - previous.z))
+      return Math.round(previous.x + (next.x - previous.x) * t)
+    }
+  }
+  return points.at(-1)!.x
+}
+
+function patchHeightMm(patches: readonly DevEscarpmentPatchV1[], xMm: number,
+  zMm: number): number {
+  for (const patch of patches) {
+    const xs = patch.polygonXZ.map((point) => point.x)
+    const zs = patch.polygonXZ.map((point) => point.z)
+    const minX = Math.min(...xs); const maxX = Math.max(...xs)
+    const minZ = Math.min(...zs); const maxZ = Math.max(...zs)
+    if (xMm < minX || xMm > maxX || zMm < minZ || zMm > maxZ) continue
+    const edge = 3_000
+    const xBlend = smoothstep((xMm - minX) / edge) * smoothstep((maxX - xMm) / edge)
+    const zBlend = smoothstep((zMm - minZ) / edge) * smoothstep((maxZ - zMm) / edge)
+    return Math.round(patch.riseMm * xBlend * zBlend)
+  }
+  return 0
+}
+
+function rawHeightMm(xMm: number, zMm: number,
+  patches: readonly DevEscarpmentPatchV1[]): number {
+  const northRise = 7_600 * smoothstep((-zMm - 22_000) / 128_000)
+  const channelAlong = smoothstep((zMm - 35_000) / 14_000) *
+    (1 - smoothstep((zMm - 93_000) / 7_000))
   const distance = Math.abs(xMm - channelXAt(zMm))
   const channelAcross = 1 - smoothstep((distance - CHANNEL_HALF_WIDTH_MM) /
     CHANNEL_BANK_WIDTH_MM)
-  return Math.round(northRise - CHANNEL_DEPTH_MM * channelAlong * channelAcross)
-}
-
-function insidePad(pad: DevBlockPadV1, xMm: number, zMm: number): boolean {
-  return Math.abs(xMm - pad.centerXmm) <= pad.widthMm / 2 &&
-    Math.abs(zMm - pad.centerZmm) <= pad.depthMm / 2
+  return Math.round(northRise - CHANNEL_DEPTH_MM * channelAlong * channelAcross +
+    patchHeightMm(patches, xMm, zMm))
 }
 
 /** Shared authoritative terrain sampler for rendering and simulation. */
 export function heightAtMm(terrain: DevTerrainV1, xMm: number, zMm: number): number {
-  const pad = terrain.blockPads.find((item) => insidePad(item, xMm, zMm))
-  if (pad) return pad.elevationMm
   const { grid } = terrain
   const gx = Math.max(0, Math.min(grid.width - 1, (xMm - grid.originXmm) / grid.stepMm))
   const gz = Math.max(0, Math.min(grid.depth - 1, (zMm - grid.originZmm) / grid.stepMm))
@@ -135,6 +181,12 @@ export function heightAtMm(terrain: DevTerrainV1, xMm: number, zMm: number): num
 export function blockPadElevationMm(terrain: DevTerrainV1, blockId: string): number {
   const pad = terrain.blockPads.find((item) => item.blockId === blockId)
   if (!pad) throw new Error(`Unknown terrain block pad ${blockId}`)
+  return pad.elevationMm
+}
+
+export function buildingPadElevationMm(terrain: DevTerrainV1, buildingId: string): number {
+  const pad = terrain.buildingPads.find((item) => item.buildingId === buildingId)
+  if (!pad) throw new Error(`Unknown terrain building pad ${buildingId}`)
   return pad.elevationMm
 }
 
@@ -162,12 +214,12 @@ function buildRoadProfiles(city: CityModel, terrain: DevTerrainV1): DevRoadProfi
       return { x, y: ROAD_TOP_MM + heightAtMm(terrain, x, z), z }
     }
     const path = Array.from({ length: segments + 1 }, (_, index) => groundPoint(index))
-    if (edge.id === CULVERT_EDGE_ID) {
+    if (CULVERT_EDGE_IDS.has(edge.id)) {
       const flooded = path.map((point, index) => ({ point, index }))
         .filter(({ point }) => point.y < ROAD_TOP_MM - 250)
       if (flooded.length === 0) throw new Error('Culvert misses terrain channel')
-      const startIndex = Math.max(0, flooded[0].index - 1)
-      const endIndex = Math.min(path.length - 1, flooded.at(-1)!.index + 1)
+      const startIndex = Math.max(0, flooded[0].index - 2)
+      const endIndex = Math.min(path.length - 1, flooded.at(-1)!.index + 2)
       const start = path[startIndex]
       const end = path[endIndex]
       const deckPath = path.map((point, index) => {
@@ -180,19 +232,8 @@ function buildRoadProfiles(city: CityModel, terrain: DevTerrainV1): DevRoadProfi
         culvertSpan: { startIndex, endIndex } }
     }
     if (!bridge) return { edgeId: edge.id, path, bridge }
-    const zMid = (startZmm + endZmm) / 2
-    const channelX = channelXAt(zMid)
-    const leftBank = channelX - CHANNEL_HALF_WIDTH_MM - CHANNEL_BANK_WIDTH_MM - 1_000
-    const rightBank = channelX + CHANNEL_HALF_WIDTH_MM + CHANNEL_BANK_WIDTH_MM + 1_000
-    const isInSpan = (point: WorldPointMm) => point.x >= leftBank && point.x <= rightBank
-    const startIndex = path.findIndex(isInSpan)
-    let endIndex = -1
-    for (let index = path.length - 1; index >= 0; index -= 1) {
-      if (isInSpan(path[index])) { endIndex = index; break }
-    }
-    if (startIndex < 1 || endIndex >= path.length - 1 || endIndex <= startIndex) {
-      throw new Error(`Bridge span does not fit road edge ${edge.id}`)
-    }
+    const startIndex = 0
+    const endIndex = path.length - 1
     const start = path[startIndex]
     const end = path[endIndex]
     const deckPath = path.map((point, index) => {
@@ -208,15 +249,17 @@ function buildRoadProfiles(city: CityModel, terrain: DevTerrainV1): DevRoadProfi
 
 export function createDevTerrainV1(city: CityModel, seed: string): DevTerrainV1 {
   const openChannelBlockIds = [...DEV_OPEN_CHANNEL_BLOCK_IDS]
-  const open = new Set<string>(openChannelBlockIds)
-  const blockPads = city.blocks.filter((block) => !open.has(block.id)).map((block) => {
-    const centerXmm = Math.round(block.x * 1000)
-    const centerZmm = Math.round(block.z * 1000)
-    const protectedCore = block.id === 'block-3-3' || block.id === 'block-4-3'
-    return { blockId: block.id, centerXmm, centerZmm,
-      widthMm: Math.round((block.width + 2.25) * 1000),
-      depthMm: Math.round((block.depth + 2.25) * 1000),
-      elevationMm: protectedCore ? 0 : Math.round(rawHeightMm(centerXmm, centerZmm) / 250) * 250 }
+  const open = new Set<string>([...openChannelBlockIds, ...DEV_ESCARPMENT_BLOCK_IDS])
+  const patches = city.blocks.filter((block) =>
+    DEV_ESCARPMENT_BLOCK_IDS.some((id) => id === block.id)).map((block) => {
+    const insetMm = 3_800
+    const x0 = Math.round((block.x - block.width / 2) * 1000) + insetMm
+    const x1 = Math.round((block.x + block.width / 2) * 1000) - insetMm
+    const z0 = Math.round((block.z - block.depth / 2) * 1000) + insetMm
+    const z1 = Math.round((block.z + block.depth / 2) * 1000) - insetMm
+    return { blockId: block.id, polygonXZ: [
+      { x: x0, z: z0 }, { x: x1, z: z0 }, { x: x1, z: z1 }, { x: x0, z: z1 },
+    ], riseMm: 6_400 }
   })
   const halfMm = Math.round(city.size * 500)
   const width = Math.round(halfMm * 2 / STEP_MM) + 1
@@ -225,10 +268,44 @@ export function createDevTerrainV1(city: CityModel, seed: string): DevTerrainV1 
     stepMm: STEP_MM, width, depth,
     heightsMm: Array.from({ length: width * depth }, (_, index) =>
       rawHeightMm(-halfMm + index % width * STEP_MM,
-        -halfMm + Math.floor(index / width) * STEP_MM)) }
-  const initial: DevTerrainV1 = { version: 'twilight-terrain-v1', seed, grid,
-    blockPads, roadProfiles: [], openChannelBlockIds,
+        -halfMm + Math.floor(index / width) * STEP_MM, patches)) }
+  const sampler: DevTerrainV1 = { version: 'twilight-terrain-v1', seed, grid,
+    blockPads: [], buildingPads: [], roadProfiles: [], openChannelBlockIds,
+    nonWalkableEscarpment: { patches },
     channel: { centerline: CHANNEL_CENTERLINE, halfWidthMm: CHANNEL_HALF_WIDTH_MM,
       bankWidthMm: CHANNEL_BANK_WIDTH_MM, depthMm: CHANNEL_DEPTH_MM } }
+  const blockPads = city.blocks.filter((block) => !open.has(block.id)).map((block) => {
+    const centerXmm = Math.round(block.x * 1000)
+    const centerZmm = Math.round(block.z * 1000)
+    return { blockId: block.id, centerXmm, centerZmm,
+      widthMm: Math.round((block.width + 2.25) * 1000),
+      depthMm: Math.round((block.depth + 2.25) * 1000),
+      elevationMm: heightAtMm(sampler, centerXmm, centerZmm) }
+  })
+  const footprintSamples = (minMm: number, maxMm: number, originMm: number) => {
+    const samples = [minMm, maxMm]
+    const first = Math.ceil((minMm - originMm) / STEP_MM)
+    const last = Math.floor((maxMm - originMm) / STEP_MM)
+    for (let index = first; index <= last; index += 1) samples.push(originMm + index * STEP_MM)
+    return samples
+  }
+  const buildingPads = city.buildings.map((building) => {
+    const baseHeights = building.masses.filter((mass) => mass.baseY < 2).flatMap((mass) => {
+      const x = building.x + mass.offsetX
+      const z = building.z + mass.offsetZ
+      const xs = footprintSamples(Math.round((x - mass.width / 2) * 1000),
+        Math.round((x + mass.width / 2) * 1000), grid.originXmm)
+      const zs = footprintSamples(Math.round((z - mass.depth / 2) * 1000),
+        Math.round((z + mass.depth / 2) * 1000), grid.originZmm)
+      return xs.flatMap((xMm) => zs.map((zMm) => heightAtMm(sampler, xMm, zMm)))
+    })
+    const entranceHeight = heightAtMm(sampler, Math.round(building.entrance.x * 1000),
+      Math.round(building.entrance.z * 1000))
+    const elevationMm = Math.max(entranceHeight, ...baseHeights) + 80
+    const entryRiseMm = elevationMm - entranceHeight
+    return { buildingId: building.id, elevationMm, entryRiseMm,
+      entryKind: entryRiseMm > 150 ? 'stair' as const : 'level' as const }
+  })
+  const initial: DevTerrainV1 = { ...sampler, blockPads, buildingPads }
   return { ...initial, roadProfiles: buildRoadProfiles(city, initial) }
 }

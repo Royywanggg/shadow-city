@@ -26,6 +26,12 @@ describe('isolated Twilight terrain world', () => {
     expect(mainAfter.config.generatorVersion).toBe('heritage-extension-v6')
     expect(worldFingerprintV5(dev, DEFAULT_SIMULATION_CONFIG_V5))
       .not.toBe(worldFingerprintV5(mainAfter, DEFAULT_SIMULATION_CONFIG_V5))
+    const changedPad = { ...dev, terrain: { ...dev.terrain!,
+      buildingPads: [{ ...dev.terrain!.buildingPads[0],
+        elevationMm: dev.terrain!.buildingPads[0].elevationMm + 1 },
+      ...dev.terrain!.buildingPads.slice(1)] } }
+    expect(worldFingerprintV5(changedPad, DEFAULT_SIMULATION_CONFIG_V5))
+      .not.toBe(worldFingerprintV5(dev, DEFAULT_SIMULATION_CONFIG_V5))
   })
 
   it('serializes a reproducible high terrace, protected core and lower channel', () => {
@@ -34,11 +40,17 @@ describe('isolated Twilight terrain world', () => {
     expect(second).toEqual(first)
     const terrain = first.terrain!
     expect(terrain.grid.heightsMm).toHaveLength(terrain.grid.width * terrain.grid.depth)
-    expect(heightAtMm(terrain, 0, -130_000)).toBeGreaterThan(8_000)
+    expect(heightAtMm(terrain, 0, -130_000)).toBeGreaterThan(6_000)
     expect(heightAtMm(terrain, 0, 0)).toBe(0)
-    expect(heightAtMm(terrain, -119_000, 75_000)).toBeLessThan(-4_000)
+    expect(heightAtMm(terrain, -87_000, 75_000)).toBeLessThan(-6_000)
     expect(blockPadElevationMm(terrain, 'block-3-3')).toBe(0)
     expect(blockPadElevationMm(terrain, 'block-4-3')).toBe(0)
+    expect(terrain.nonWalkableEscarpment.patches).toHaveLength(3)
+    for (const patch of terrain.nonWalkableEscarpment.patches) {
+      const x = Math.round((patch.polygonXZ[0].x + patch.polygonXZ[1].x) / 2)
+      const z = Math.round((patch.polygonXZ[0].z + patch.polygonXZ[2].z) / 2)
+      expect(heightAtMm(terrain, x, z)).toBeGreaterThan(8_000)
+    }
     for (const blockId of terrain.openChannelBlockIds) {
       expect(first.baseCity!.buildings.some((building) =>
         first.baseCity!.parcels.some((parcel) => parcel.id === building.parcelId &&
@@ -52,7 +64,7 @@ describe('isolated Twilight terrain world', () => {
     const nodes = new Map(world.roadNodes.map((node) => [node.id, node.position]))
     const edges = new Map(world.roadEdges.map((edge) => [edge.id, edge]))
     expect(terrain.roadProfiles.filter((profile) => profile.bridge).map((profile) =>
-      profile.edgeId).sort()).toEqual(['edge-x--1-5', 'edge-x--1-6'])
+      profile.edgeId).sort()).toEqual(['edge-x-0-5', 'edge-x-0-6'])
     for (const profile of terrain.roadProfiles) {
       const road = edges.get(profile.edgeId)!
       expect(profile.path[0].x).toBe(nodes.get(road.from)!.x)
@@ -62,14 +74,14 @@ describe('isolated Twilight terrain world', () => {
     }
     for (const profile of terrain.roadProfiles.filter((item) => item.bridge)) {
       const { startIndex, endIndex } = profile.bridgeSpan!
-      expect(startIndex).toBeGreaterThan(0)
-      expect(endIndex).toBeLessThan(profile.path.length - 1)
+      expect(startIndex).toBe(0)
+      expect(endIndex).toBe(profile.path.length - 1)
       const center = profile.path[Math.floor((startIndex + endIndex) / 2)]
       expect(center.y - heightAtMm(terrain, center.x, center.z)).toBeGreaterThan(4_000)
       const first = profile.path[startIndex]
       const last = profile.path[endIndex]
-      expect(first.y - heightAtMm(terrain, first.x, first.z)).toBeLessThan(250)
-      expect(last.y - heightAtMm(terrain, last.x, last.z)).toBeLessThan(250)
+      expect(first.y - heightAtMm(terrain, first.x, first.z)).toBe(70)
+      expect(last.y - heightAtMm(terrain, last.x, last.z)).toBe(70)
     }
   })
 
@@ -91,6 +103,21 @@ describe('isolated Twilight terrain world', () => {
       expect(edge.path[0]).toEqual(nodes.get(edge.fromNodeId)!.position)
       expect(edge.path.at(-1)).toEqual(nodes.get(edge.toNodeId)!.position)
       expect(edge.lengthMm).toBeGreaterThan(0)
+    }
+    const openNodes = world.navNodes.filter((node) => terrain.openChannelBlockIds.some((blockId) =>
+      node.id.startsWith(`ped-${blockId}-`)))
+    expect(openNodes.map((node) => node.id)).toEqual([])
+    for (const building of world.baseCity!.buildings) {
+      const pad = terrain.buildingPads.find((item) => item.buildingId === building.id)!
+      for (const mass of building.masses.filter((item) => item.baseY < 2)) {
+        for (const xRatio of [-0.5, 0, 0.5]) for (const zRatio of [-0.5, 0, 0.5]) {
+          const x = Math.round((building.x + mass.offsetX + mass.width * xRatio) * 1000)
+          const z = Math.round((building.z + mass.offsetZ + mass.depth * zRatio) * 1000)
+          expect(pad.elevationMm).toBeGreaterThan(heightAtMm(terrain, x, z))
+        }
+      }
+      const portal = world.navEdges.find((edge) => edge.id === `portal:${building.id}`)!
+      expect(portal.kind).toBe(pad.entryKind === 'stair' ? 'stair' : 'portal')
     }
     const north = world.navNodes.find((node) => node.surfaceId === 'ground' &&
       node.position.z < -110_000)!
@@ -114,10 +141,13 @@ describe('isolated Twilight terrain world', () => {
           Math.abs(point.x - center.x) < Math.abs(nearest.x - center.x) ? point : nearest)
         expect(Math.abs(center.y - roadPoint.y - 180)).toBeLessThan(100)
         expect(center.y - heightAtMm(terrain, center.x, center.z)).toBeGreaterThan(4_000)
+        for (const point of sidewalk.path) {
+          expect(hasClearSurfaceSegment(world, surfaceId, point, point)).toBe(true)
+        }
       }
     }
     expect(world.navEdges.some((edge) => terrain.openChannelBlockIds.some((blockId) =>
-      edge.id.startsWith(`ped-${blockId}-h-`) && edge.surfaceId === 'ground'))).toBe(false)
+      edge.id.startsWith(`ped-${blockId}-`) && edge.surfaceId === 'ground'))).toBe(false)
   })
 
   it('advances a fixed population on the derived three-dimensional network', () => {
@@ -152,7 +182,7 @@ describe('isolated Twilight terrain world', () => {
       const end = profile.path.at(-1)!
       expect(start.z).toBe(end.z)
       expect(Math.abs(profile.path[Math.floor(profile.path.length / 2)].z - start.z))
-        .toBeGreaterThan(700)
+        .toBeGreaterThan(500)
       for (const point of profile.path) {
         const clearance = Math.min(...footprints.map((footprint) => Math.hypot(
           Math.max(0, Math.abs(point.x - footprint.x) - footprint.halfWidth),
@@ -166,7 +196,7 @@ describe('isolated Twilight terrain world', () => {
       .toBe(true)
   })
 
-  it('carries the channel to the west edge through a covered, navigable culvert', () => {
+  it('carries the channel to the west edge beneath two continuous road culverts', () => {
     const world = generateDevWorld(HERO_SEED)
     const terrain = world.terrain!
     const outlet = terrain.channel.centerline.at(-1)!
@@ -174,25 +204,53 @@ describe('isolated Twilight terrain world', () => {
     expect(outlet.z).toBeLessThan(100_000)
     expect(heightAtMm(terrain, outlet.x, outlet.z)).toBeLessThan(-6_000)
     expect(terrain.roadProfiles.filter((profile) => profile.bridge)).toHaveLength(2)
-    const culvert = terrain.roadProfiles.find((profile) => profile.culvertSpan)!
-    expect(culvert.edgeId).toBe('edge-z--1-6')
-    expect(culvert.bridge).toBe(false)
-    const { startIndex, endIndex } = culvert.culvertSpan!
-    const center = culvert.path[Math.floor((startIndex + endIndex) / 2)]
-    expect(center.y - heightAtMm(terrain, center.x, center.z)).toBeGreaterThan(5_000)
-    for (const point of [culvert.path[startIndex], culvert.path[endIndex]]) {
-      expect(Math.abs(point.y - 70 - heightAtMm(terrain, point.x, point.z)))
-        .toBeLessThan(250)
-    }
+    const culverts = terrain.roadProfiles.filter((profile) => profile.culvertSpan)
+    expect(culverts.map((profile) => profile.edgeId).sort())
+      .toEqual(['edge-z--1-6', 'edge-z-0-6'])
     const index = createNavigationIndexV2(world)
-    const surfaceId = `terrain-culvert:${culvert.edgeId}`
-    expect(index.surfaceById.has(surfaceId)).toBe(true)
-    const sidewalk = world.navEdges.find((edge) => edge.surfaceId === surfaceId)!
-    expect(sidewalk).toBeDefined()
-    expect(findRouteV2(index, sidewalk.fromNodeId, sidewalk.toNodeId).status).toBe('ok')
-    const sidewalkCenter = sidewalk.path[Math.floor(sidewalk.path.length / 2)]
-    expect(sidewalkCenter.y - heightAtMm(terrain, sidewalkCenter.x,
-      sidewalkCenter.z)).toBeGreaterThan(5_000)
-    expect(hasClearSurfaceSegment(world, surfaceId, sidewalkCenter, sidewalkCenter)).toBe(true)
+    for (const culvert of culverts) {
+      expect(culvert.bridge).toBe(false)
+      const { startIndex, endIndex } = culvert.culvertSpan!
+      const center = culvert.path[Math.floor((startIndex + endIndex) / 2)]
+      expect(center.y - heightAtMm(terrain, center.x, center.z)).toBeGreaterThan(250)
+      for (const point of [culvert.path[startIndex], culvert.path[endIndex]]) {
+        expect(Math.abs(point.y - 70 - heightAtMm(terrain, point.x, point.z)))
+          .toBeLessThan(250)
+      }
+      const surfaceId = `terrain-culvert:${culvert.edgeId}`
+      expect(index.surfaceById.has(surfaceId)).toBe(true)
+      expect(hasClearSurfaceSegment(world, surfaceId, center, center)).toBe(true)
+    }
+  })
+
+  it('keeps road and pedestrian grades within their declared limits', () => {
+    const world = generateDevWorld(HERO_SEED)
+    const grade = (a: { x: number; y: number; z: number },
+      b: { x: number; y: number; z: number }) =>
+      Math.abs(b.y - a.y) / Math.max(1, Math.hypot(b.x - a.x, b.z - a.z))
+    const roadOffenders = world.terrain!.roadProfiles
+      .flatMap((profile) => profile.path.slice(1).map((point, index) => ({
+        id: profile.edgeId, grade: grade(profile.path[index], point),
+      })).filter((item) => item.grade > 0.1))
+      .sort((a, b) => b.grade - a.grade)
+    const walkOffenders = world.navEdges.filter((edge) => edge.surfaceId === 'ground' ||
+      edge.surfaceId?.startsWith('terrain-bridge:'))
+      .flatMap((edge) => edge.path.slice(1).map((point, index) => ({
+        id: edge.id, grade: grade(edge.path[index], point),
+      })).filter((item) => item.grade > 0.12))
+      .sort((a, b) => b.grade - a.grade)
+    expect(roadOffenders.slice(0, 8)).toEqual([])
+    expect(walkOffenders.slice(0, 8)).toEqual([])
+  })
+
+  it('keeps ground navigation clear of the channel and north escarpment', () => {
+    const world = generateDevWorld(HERO_SEED)
+    const affected = world.navEdges.filter((edge) => edge.surfaceId === 'ground' &&
+      edge.path.some((point) => point.x < -65_000 && point.z > 30_000 ||
+        point.z < -75_000 && point.x > 25_000))
+    const blocked = affected.flatMap((edge) => edge.path.slice(1).flatMap((point, index) =>
+      hasClearSurfaceSegment(world, 'ground', edge.path[index], point)
+        ? [] : [edge.id]))
+    expect(blocked).toEqual([])
   })
 })

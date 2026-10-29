@@ -1,7 +1,8 @@
 import { HERO_SEED } from '../../city/generation/generateCity'
-import type { WorldModelV2 } from '../model'
+import type { GroundPointMm, NavEdgeV2, NavNodeV2, WorldModelV2 } from '../model'
 import { createDevTerrainV1, DEV_OPEN_CHANNEL_BLOCK_IDS, heightAtMm,
-  blockPadElevationMm, roadBendMm, type DevRoadProfileV1 } from '../terrain/devTerrain'
+  DEV_ESCARPMENT_BLOCK_IDS, buildingPadElevationMm,
+  roadBendMm, type DevRoadProfileV1, type DevTerrainV1 } from '../terrain/devTerrain'
 import { generateIntegratedWorld } from './generateIntegratedWorld'
 
 const GROUND_Y_MM = 250
@@ -22,24 +23,22 @@ function roadAtX(profile: DevRoadProfileV1, xMm: number): { y: number; z: number
   return path.at(-1)!
 }
 
-function roadAtZ(profile: DevRoadProfileV1, zMm: number): { x: number; y: number } {
-  const path = profile.path
-  if (zMm <= path[0].z) return path[0]
-  for (let index = 1; index < path.length; index += 1) {
-    if (zMm <= path[index].z) {
-      const before = path[index - 1]
-      const after = path[index]
-      const t = (zMm - before.z) / (after.z - before.z)
-      return { x: Math.round(before.x + (after.x - before.x) * t),
-        y: Math.round(before.y + (after.y - before.y) * t) }
-    }
-  }
-  return path.at(-1)!
-}
-
-function openChannelRing(edgeId: string): boolean {
-  return DEV_OPEN_CHANNEL_BLOCK_IDS.some((blockId) =>
-    edgeId.startsWith(`ped-${blockId}-h-`))
+function channelBlockedPolygons(terrain: DevTerrainV1): GroundPointMm[][] {
+  const points = terrain.channel.centerline
+  return points.slice(1).map((end, index) => {
+    const start = points[index]
+    const dx = end.x - start.x
+    const dz = end.z - start.z
+    const length = Math.hypot(dx, dz) || 1
+    const nx = -dz / length * (terrain.channel.halfWidthMm + 2_000)
+    const nz = dx / length * (terrain.channel.halfWidthMm + 2_000)
+    return [
+      { x: Math.round(start.x + nx), z: Math.round(start.z + nz) },
+      { x: Math.round(end.x + nx), z: Math.round(end.z + nz) },
+      { x: Math.round(end.x - nx), z: Math.round(end.z - nz) },
+      { x: Math.round(start.x - nx), z: Math.round(start.z - nz) },
+    ]
+  })
 }
 
 function lengthMm(path: readonly { x: number; y: number; z: number }[]): number {
@@ -50,15 +49,77 @@ function lengthMm(path: readonly { x: number; y: number; z: number }[]): number 
   }, 0)
 }
 
+function bridgePedestrianLinks(profile: DevRoadProfileV1,
+  nodes: readonly NavNodeV2[], terrain: DevTerrainV1):
+  Readonly<{ nodes: readonly NavNodeV2[]; edges: readonly NavEdgeV2[] }> {
+  const row = Number(profile.edgeId.split('-').at(-1))
+  const nodeOnBank = (blockId: string, side: 'west' | 'east') => {
+    const candidates = nodes.filter((node) => node.id.startsWith(`ped-${blockId}-`))
+      .sort((a, b) => Math.abs(a.position.z - profile.path[0].z) -
+        Math.abs(b.position.z - profile.path[0].z) ||
+        (side === 'west' ? b.position.x - a.position.x : a.position.x - b.position.x) ||
+        a.id.localeCompare(b.id))
+    if (!candidates[0]) throw new Error(`Missing bridge landing for ${blockId}`)
+    return candidates[0]
+  }
+  const addedNodes: NavNodeV2[] = []
+  const addedEdges: NavEdgeV2[] = []
+  const edges = [row - 1, row].map((bankRow, index) => {
+    const to = nodeOnBank(`block-1-${bankRow}`, 'east')
+    let from = nodeOnBank(`block--1-${row === 6 && index === 1 ? row - 1 : bankRow}`,
+      'west')
+    if (row === 6 && index === 1) {
+      const landing: NavNodeV2 = {
+        id: `terrain-bridge-landing:${profile.edgeId}:west-south`,
+        position: { x: from.position.x, z: to.position.z,
+          y: GROUND_Y_MM + heightAtMm(terrain, from.position.x, to.position.z) },
+        surfaceId: 'ground',
+      }
+      const segments = Math.max(2, Math.ceil((landing.position.z - from.position.z) / 1_000))
+      const path = Array.from({ length: segments + 1 }, (_, step) => {
+        const z = Math.round(from.position.z +
+          (landing.position.z - from.position.z) * step / segments)
+        return { x: from.position.x, y: GROUND_Y_MM +
+          heightAtMm(terrain, from.position.x, z), z }
+      })
+      path[0] = from.position
+      path[path.length - 1] = landing.position
+      addedNodes.push(landing)
+      addedEdges.push({ id: `terrain-bridge-approach:${profile.edgeId}:west-south`,
+        fromNodeId: from.id, toNodeId: landing.id, path, surfaceId: 'ground',
+        connectorId: null, kind: 'walk', lengthMm: lengthMm(path), accessId: null,
+        direction: 'both' })
+      from = landing
+    }
+    const segments = Math.max(2, Math.ceil((to.position.x - from.position.x) / 1_000))
+    const path = Array.from({ length: segments + 1 }, (_, step) => {
+      const t = step / segments
+      const x = Math.round(from.position.x + (to.position.x - from.position.x) * t)
+      const road = roadAtX(profile, x)
+      const z = Math.round(from.position.z + (to.position.z - from.position.z) * t) +
+        road.z - profile.path[0].z
+      return { x, y: road.y + BRIDGE_SIDEWALK_OFFSET_MM, z }
+    })
+    path[0] = from.position
+    path[path.length - 1] = to.position
+    return { id: `terrain-ped-bridge:${profile.edgeId}:${index === 0 ? 'north' : 'south'}`,
+      fromNodeId: from.id, toNodeId: to.id, path,
+      surfaceId: `terrain-bridge:${profile.edgeId}`, connectorId: null,
+      kind: 'walk' as const, lengthMm: lengthMm(path), accessId: null,
+      direction: 'both' as const }
+  })
+  return { nodes: addedNodes, edges: [...addedEdges, ...edges] }
+}
+
 /** Isolated terrain experiment derived from the integrated city, never mutating main. */
 export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
   const integrated = generateIntegratedWorld(seed,
-    { openChannelBlockIds: DEV_OPEN_CHANNEL_BLOCK_IDS })
+    { openChannelBlockIds: [...DEV_OPEN_CHANNEL_BLOCK_IDS, ...DEV_ESCARPMENT_BLOCK_IDS] })
   const city = integrated.baseCity!
   const terrain = createDevTerrainV1(city, seed)
-  const parcelBlock = new Map(city.parcels.map((parcel) => [parcel.id, parcel.blockId]))
   const buildingPad = new Map(city.buildings.map((building) => [building.id,
-    blockPadElevationMm(terrain, parcelBlock.get(building.parcelId)!)]))
+    buildingPadElevationMm(terrain, building.id)]))
+  const buildingEntry = new Map(terrain.buildingPads.map((pad) => [pad.buildingId, pad]))
   const surfaceShift = (surfaceId: string): number => surfaceId.startsWith('interior:')
     ? buildingPad.get(surfaceId.slice('interior:'.length)) ?? 0 : 0
   const navNodes = integrated.navNodes.map((node) => {
@@ -71,52 +132,25 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
   const originalNodeById = new Map(integrated.navNodes.map((node) => [node.id, node]))
   const nodeById = new Map(navNodes.map((node) => [node.id, node]))
   const bridgeProfiles = terrain.roadProfiles.filter((profile) => profile.bridge)
-  const culvertProfile = terrain.roadProfiles.find((profile) => profile.culvertSpan)!
+  const culvertProfiles = terrain.roadProfiles.filter((profile) => profile.culvertSpan)
   const curvedProfiles = terrain.roadProfiles.filter((profile) =>
     roadBendMm(profile.edgeId) !== 0 && !profile.bridge)
   const bridgeSurfaceId = (profile: DevRoadProfileV1) => `terrain-bridge:${profile.edgeId}`
-  const navEdges = integrated.navEdges.flatMap((edge) => {
+  const closedBlocks = [...DEV_OPEN_CHANNEL_BLOCK_IDS, ...DEV_ESCARPMENT_BLOCK_IDS]
+  const isClosedBlockNode = (nodeId: string) => closedBlocks.some((blockId) =>
+    nodeId.startsWith(`ped-${blockId}-`))
+  const closedCrossings = new Set(integrated.navEdges.filter((edge) =>
+    edge.id.startsWith('ped-cross-') &&
+    (isClosedBlockNode(edge.fromNodeId) || isClosedBlockNode(edge.toNodeId)))
+    .map((edge) => edge.id.replace(/-approach-[ab]$/, '')))
+  const navEdges: NavEdgeV2[] = integrated.navEdges.flatMap((edge) => {
+    if (isClosedBlockNode(edge.fromNodeId) || isClosedBlockNode(edge.toNodeId) ||
+      closedCrossings.has(edge.id.replace(/-approach-[ab]$/, ''))) return []
     const oldFrom = originalNodeById.get(edge.fromNodeId)!
     const oldTo = originalNodeById.get(edge.toNodeId)!
     const from = nodeById.get(edge.fromNodeId)!
     const to = nodeById.get(edge.toNodeId)!
     const ground = from.surfaceId === 'ground' && to.surfaceId === 'ground'
-    const culvertWalk = ground && edge.id.startsWith('ped-block--1-6-v-') &&
-      Math.abs(from.position.x - culvertProfile.path[0].x) < 6_000 &&
-      Math.abs(to.position.x - culvertProfile.path[0].x) < 6_000 &&
-      Math.abs(from.position.z - to.position.z) > 8_000
-    if (culvertWalk) {
-      const segments = Math.max(2, Math.ceil(Math.abs(to.position.z - from.position.z) / 1_000))
-      const path = Array.from({ length: segments + 1 }, (_, index) => {
-        const t = index / segments
-        const z = Math.round(from.position.z + (to.position.z - from.position.z) * t)
-        const road = roadAtZ(culvertProfile, z)
-        return { x: from.position.x + road.x - culvertProfile.path[0].x,
-          y: road.y + BRIDGE_SIDEWALK_OFFSET_MM, z }
-      })
-      path[0] = from.position
-      path[path.length - 1] = to.position
-      return [{ ...edge, surfaceId: `terrain-culvert:${culvertProfile.edgeId}`,
-        path, lengthMm: lengthMm(path) }]
-    }
-    if (ground && openChannelRing(edge.id)) {
-      const zMm = (from.position.z + to.position.z) / 2
-      const bridge = bridgeProfiles.find((profile) =>
-        Math.abs(profile.path[0].z - zMm) < 6_000)
-      if (!bridge) return []
-      const segments = Math.max(2, Math.ceil(Math.abs(to.position.x - from.position.x) / 1_000))
-      const path = Array.from({ length: segments + 1 }, (_, index) => {
-        const t = index / segments
-        const x = Math.round(from.position.x + (to.position.x - from.position.x) * t)
-        const road = roadAtX(bridge, x)
-        const originalZ = Math.round(from.position.z + (to.position.z - from.position.z) * t)
-        const z = originalZ + road.z - bridge.path[0].z
-        return { x, y: road.y + BRIDGE_SIDEWALK_OFFSET_MM, z }
-      })
-      path[0] = from.position
-      path[path.length - 1] = to.position
-      return [{ ...edge, surfaceId: bridgeSurfaceId(bridge), path, lengthMm: lengthMm(path) }]
-    }
     const curved = ground && Math.abs(to.position.x - from.position.x) > 8_000 &&
       Math.abs(to.position.z - from.position.z) < 100
       ? curvedProfiles.find((profile) => {
@@ -159,34 +193,50 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
       const toShift = to.position.y - oldTo.position.y
       return { ...point, y: point.y + Math.round(fromShift + (toShift - fromShift) * t) }
     })
-    return [{ ...edge, path, lengthMm: lengthMm(path) }]
+    const portalBuildingId = edge.id.startsWith('portal:')
+      ? edge.id.slice('portal:'.length) : null
+    const portalPad = portalBuildingId ? buildingEntry.get(portalBuildingId) : null
+    return [{ ...edge, path, lengthMm: lengthMm(path),
+      kind: portalPad?.entryKind === 'stair' ? 'stair' as const : edge.kind }]
   })
+  const bridgeLinks = bridgeProfiles.map((profile) =>
+    bridgePedestrianLinks(profile, navNodes, terrain))
+  navEdges.push(...bridgeLinks.flatMap((link) => link.edges))
+  const usedNodeIds = new Set(navEdges.flatMap((edge) => [edge.fromNodeId, edge.toNodeId]))
+  const reachableNavNodes = [...navNodes, ...bridgeLinks.flatMap((link) => link.nodes)]
+    .filter((node) => usedNodeIds.has(node.id))
   const surfaces = integrated.surfaces.map((surface) => surface.id === 'ground'
-    ? { ...surface, elevationMode: 'terrain' as const }
+    ? { ...surface, elevationMode: 'terrain' as const,
+      blockedPolygonsXZ: [...surface.blockedPolygonsXZ,
+        ...terrain.nonWalkableEscarpment.patches.map((patch) => patch.polygonXZ),
+        ...channelBlockedPolygons(terrain)] }
     : surfaceShift(surface.id) === 0 ? surface : { ...surface,
       elevationMm: surface.elevationMm + surfaceShift(surface.id) }).concat(
         bridgeProfiles.map((profile) => {
-          const xs = profile.path.map((point) => point.x)
-          const z = profile.path[0].z
+          const sidewalkPoints = navEdges.filter((edge) =>
+            edge.surfaceId === bridgeSurfaceId(profile)).flatMap((edge) => edge.path)
+          const xs = [...profile.path, ...sidewalkPoints].map((point) => point.x)
+          const zs = [...profile.path, ...sidewalkPoints].map((point) => point.z)
           const minX = Math.min(...xs) - 500
           const maxX = Math.max(...xs) + 500
-          const halfWidth = 6_000
+          const minZ = Math.min(...zs) - 500
+          const maxZ = Math.max(...zs) + 500
           return { id: bridgeSurfaceId(profile), levelId: 'L0', placeId: null,
             interactionZoneId: bridgeSurfaceId(profile), elevationMm: GROUND_Y_MM,
-            polygonXZ: [{ x: minX, z: z - halfWidth }, { x: maxX, z: z - halfWidth },
-              { x: maxX, z: z + halfWidth }, { x: minX, z: z + halfWidth }],
+            polygonXZ: [{ x: minX, z: minZ }, { x: maxX, z: minZ },
+              { x: maxX, z: maxZ }, { x: minX, z: maxZ }],
             blockedPolygonsXZ: [], clearanceMm: 20_000, indoor: false }
-        }), {
-          id: `terrain-culvert:${culvertProfile.edgeId}`, levelId: 'L0', placeId: null,
-          interactionZoneId: `terrain-culvert:${culvertProfile.edgeId}`,
+        }), ...culvertProfiles.map((profile) => ({
+          id: `terrain-culvert:${profile.edgeId}`, levelId: 'L0', placeId: null,
+          interactionZoneId: `terrain-culvert:${profile.edgeId}`,
           elevationMm: GROUND_Y_MM,
           polygonXZ: [
-            { x: culvertProfile.path[0].x - 6_000, z: culvertProfile.path[0].z - 500 },
-            { x: culvertProfile.path[0].x + 6_000, z: culvertProfile.path[0].z - 500 },
-            { x: culvertProfile.path[0].x + 6_000, z: culvertProfile.path.at(-1)!.z + 500 },
-            { x: culvertProfile.path[0].x - 6_000, z: culvertProfile.path.at(-1)!.z + 500 },
+            { x: profile.path[0].x - 6_000, z: profile.path[0].z - 500 },
+            { x: profile.path[0].x + 6_000, z: profile.path[0].z - 500 },
+            { x: profile.path[0].x + 6_000, z: profile.path.at(-1)!.z + 500 },
+            { x: profile.path[0].x - 6_000, z: profile.path.at(-1)!.z + 500 },
           ], blockedPolygonsXZ: [], clearanceMm: 20_000, indoor: false,
-        })
+        })))
   const resources = integrated.resources.map((resource) => {
     const shift = resource.surfaceId === 'ground'
       ? heightAtMm(terrain, resource.position.x, resource.position.z)
@@ -197,6 +247,6 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
   return {
     ...integrated,
     config: { ...integrated.config, generatorVersion: 'twilight-dev-v1' },
-    terrain, surfaces, navNodes, navEdges, resources,
+    terrain, surfaces, navNodes: reachableNavNodes, navEdges, resources,
   }
 }
