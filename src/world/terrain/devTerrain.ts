@@ -36,6 +36,9 @@ export interface DevBuildingPadV1 {
 
 export interface DevEscarpmentPatchV1 {
   readonly blockId: string
+  /** Shared curved contours, ordered west to east. The polygon is built from these lines. */
+  readonly backLine: readonly GroundPointMm[]
+  readonly frontLine: readonly GroundPointMm[]
   readonly polygonXZ: readonly GroundPointMm[]
   readonly riseMm: number
 }
@@ -64,6 +67,8 @@ export interface DevTerrainV1 {
   }>
   readonly channel: Readonly<{
     centerline: readonly GroundPointMm[]
+    /** First point where the bed reaches its full depth and open water begins. */
+    fullDepthZmm: number
     halfWidthMm: number
     bankWidthMm: number
     depthMm: number
@@ -80,7 +85,7 @@ export const DEV_ESCARPMENT_BLOCK_IDS = [
 const STEP_MM = 2_000
 const ROAD_TOP_MM = 70
 const CHANNEL_CENTERLINE: readonly GroundPointMm[] = [
-  { x: -88_000, z: 35_000 },
+  { x: -88_000, z: 33_000 },
   { x: -88_000, z: 51_000 },
   { x: -87_000, z: 76_000 },
   { x: -88_000, z: 81_000 },
@@ -90,6 +95,7 @@ const CHANNEL_CENTERLINE: readonly GroundPointMm[] = [
 const CHANNEL_HALF_WIDTH_MM = 3_000
 const CHANNEL_BANK_WIDTH_MM = 6_000
 const CHANNEL_DEPTH_MM = 8_000
+const CHANNEL_FULL_DEPTH_Z_MM = 40_000
 const BRIDGE_EDGE_IDS = new Set(['edge-x-0-5', 'edge-x-0-6'])
 const CULVERT_EDGE_IDS = new Set(['edge-z-0-6', 'edge-z--1-6'])
 /** Deliberate contour bends; endpoints and tangents remain aligned with the original graph. */
@@ -152,17 +158,39 @@ export function channelCenterXAtMm(terrain: DevTerrainV1, zMm: number): number {
   return points.at(-1)!.x
 }
 
+function lineZAtX(line: readonly GroundPointMm[], xMm: number): number {
+  if (xMm <= line[0].x) return line[0].z
+  for (let index = 1; index < line.length; index += 1) {
+    const before = line[index - 1]
+    const after = line[index]
+    if (xMm <= after.x) {
+      const t = (xMm - before.x) / (after.x - before.x)
+      return before.z + (after.z - before.z) * t
+    }
+  }
+  return line.at(-1)!.z
+}
+
+export function escarpmentZBoundsAtMm(patch: DevEscarpmentPatchV1,
+  xMm: number): Readonly<{ backZ: number; frontZ: number }> {
+  return { backZ: lineZAtX(patch.backLine, xMm),
+    frontZ: lineZAtX(patch.frontLine, xMm) }
+}
+
 function patchHeightMm(patches: readonly DevEscarpmentPatchV1[], xMm: number,
   zMm: number): number {
   for (const patch of patches) {
-    const xs = patch.polygonXZ.map((point) => point.x)
-    const zs = patch.polygonXZ.map((point) => point.z)
-    const minX = Math.min(...xs); const maxX = Math.max(...xs)
-    const minZ = Math.min(...zs); const maxZ = Math.max(...zs)
-    if (xMm < minX || xMm > maxX || zMm < minZ || zMm > maxZ) continue
-    const edge = 3_000
-    const xBlend = smoothstep((xMm - minX) / edge) * smoothstep((maxX - xMm) / edge)
-    const zBlend = smoothstep((zMm - minZ) / edge) * smoothstep((maxZ - zMm) / edge)
+    const minX = patch.frontLine[0].x
+    const maxX = patch.frontLine.at(-1)!.x
+    if (xMm < minX || xMm > maxX) continue
+    const { backZ, frontZ } = escarpmentZBoundsAtMm(patch, xMm)
+    if (zMm < backZ || zMm > frontZ) continue
+    // Short rock faces meet a broad flat terrace. Long taper distances made
+    // these narrow open blocks read as separate conical mounds.
+    const xBlend = smoothstep((xMm - minX) / 2_000) *
+      smoothstep((maxX - xMm) / 2_000)
+    const zBlend = smoothstep((zMm - backZ) / 3_000) *
+      smoothstep((frontZ - zMm) / 2_400)
     return Math.round(patch.riseMm * xBlend * zBlend)
   }
   return 0
@@ -171,7 +199,8 @@ function patchHeightMm(patches: readonly DevEscarpmentPatchV1[], xMm: number,
 function rawHeightMm(xMm: number, zMm: number,
   patches: readonly DevEscarpmentPatchV1[]): number {
   const northRise = 10_000 * terraceRamp((-zMm - 22_000) / 128_000)
-  const channelAlong = smoothstep((zMm - 35_000) / 14_000) *
+  const channelAlong = smoothstep((zMm - CHANNEL_CENTERLINE[0].z) /
+    (CHANNEL_FULL_DEPTH_Z_MM - CHANNEL_CENTERLINE[0].z)) *
     (1 - smoothstep((zMm - 93_000) / 7_000))
   const distance = Math.abs(xMm - channelXAt(zMm))
   const channelAcross = 1 - smoothstep((distance - CHANNEL_HALF_WIDTH_MM) /
@@ -275,12 +304,20 @@ export function createDevTerrainV1(city: CityModel, seed: string): DevTerrainV1 
     const x1 = block.id === 'block-4--1'
       ? Math.round((block.x + block.width / 2) * 1000)
       : Math.round((block.x + block.width / 2) * 1000) - insetMm
-    const z0 = Math.round((block.z - block.depth / 2) * 1000) + insetMm
-    const z1 = Math.round((block.z + block.depth / 2) * 1000) - insetMm -
-      (block.id === 'block-4--1' ? 2_700 : 0)
-    return { blockId: block.id, polygonXZ: [
-      { x: x0, z: z0 }, { x: x1, z: z0 }, { x: x1, z: z1 }, { x: x0, z: z1 },
-    ], riseMm: 8_000 }
+    const samples = Math.max(6, Math.ceil((x1 - x0) / 1_200))
+    const backLine = Array.from({ length: samples + 1 }, (_, index) => {
+      const x = Math.round(x0 + (x1 - x0) * index / samples)
+      return { x, z: Math.round(-137_700 +
+        850 * Math.sin((x - 36_000) / 13_500 + 0.4)) }
+    })
+    const frontLine = Array.from({ length: samples + 1 }, (_, index) => {
+      const x = Math.round(x0 + (x1 - x0) * index / samples)
+      return { x, z: Math.round(-112_000 +
+        2_200 * Math.sin((x - 36_000) / 10_500) +
+        650 * Math.sin((x - 36_000) / 3_900)) }
+    })
+    return { blockId: block.id, backLine, frontLine,
+      polygonXZ: [...backLine, ...[...frontLine].reverse()], riseMm: 8_000 }
   })
   const halfMm = Math.round(city.size * 500)
   const width = Math.round(halfMm * 2 / STEP_MM) + 1
@@ -293,7 +330,8 @@ export function createDevTerrainV1(city: CityModel, seed: string): DevTerrainV1 
   const sampler: DevTerrainV1 = { version: 'twilight-terrain-v1', seed, grid,
     blockPads: [], buildingPads: [], roadProfiles: [], openChannelBlockIds,
     nonWalkableEscarpment: { patches },
-    channel: { centerline: CHANNEL_CENTERLINE, halfWidthMm: CHANNEL_HALF_WIDTH_MM,
+    channel: { centerline: CHANNEL_CENTERLINE, fullDepthZmm: CHANNEL_FULL_DEPTH_Z_MM,
+      halfWidthMm: CHANNEL_HALF_WIDTH_MM,
       bankWidthMm: CHANNEL_BANK_WIDTH_MM, depthMm: CHANNEL_DEPTH_MM } }
   const blockPads = city.blocks.filter((block) => !open.has(block.id)).map((block) => {
     const centerXmm = Math.round(block.x * 1000)
