@@ -19,7 +19,8 @@ const PLAZA_PROMENADE_Z = [-0.27, 0.27] as const
 const PARK_PATH_X = [-0.05, 0, 0.05] as const
 const PARK_PATH_Z = [-0.34, -0.17, 0, 0.17, 0.34] as const
 
-type SpatialCity = Pick<CityModel, 'roads' | 'blocks' | 'parcels' | 'buildings' | 'plaza'>
+type SpatialCity = Pick<CityModel, 'roads' | 'blocks' | 'parcels' | 'buildings' | 'plaza'> &
+  Partial<Pick<CityModel, 'streetFeatures'>>
 
 export interface PedestrianDerivationOptions {
   /** Use the actual block-to-block approach across a possibly diagonal road. */
@@ -78,6 +79,33 @@ function distanceToPath(point: CityPointXZ, path: readonly CityPointXZ[]): numbe
   }))
 }
 
+function insidePolygon(point: CityPointXZ,
+  polygon: readonly CityPointXZ[]): boolean {
+  if (distanceToPath(point, [...polygon, polygon[0]]) <= EPSILON) return true
+  let inside = false
+  for (let index = 0, previous = polygon.length - 1;
+    index < polygon.length; previous = index, index += 1) {
+    const a = polygon[index]
+    const b = polygon[previous]
+    if ((a.z > point.z) !== (b.z > point.z) &&
+      point.x < (b.x - a.x) * (point.z - a.z) / (b.z - a.z) + a.x) {
+      inside = !inside
+    }
+  }
+  return inside
+}
+
+function segmentInsidePolygon(from: CityPointXZ, to: CityPointXZ,
+  polygon: readonly CityPointXZ[]): boolean {
+  const count = Math.max(1, Math.ceil(Math.hypot(to.x - from.x,
+    to.z - from.z) / 0.25))
+  return Array.from({ length: count + 1 }, (_, index) => {
+    const t = index / count
+    return insidePolygon({ x: from.x + (to.x - from.x) * t,
+      z: from.z + (to.z - from.z) * t }, polygon)
+  }).every(Boolean)
+}
+
 function southernRayHit(origin: CityPointXZ, polygon: readonly CityPointXZ[]):
   { edgeIndex: number; t: number; point: CityPointXZ } {
   const candidates = polygon.flatMap((a, edgeIndex) => {
@@ -97,6 +125,22 @@ function southernRayHit(origin: CityPointXZ, polygon: readonly CityPointXZ[]):
 function sortedDistinct(values: readonly number[]): number[] {
   const sorted = [...values].sort((a, b) => a - b)
   return sorted.filter((value, index) => index === 0 || value - sorted[index - 1] > EPSILON)
+}
+
+function boundaryRoadIds(block: CityModel['blocks'][number]): readonly string[] {
+  if (block.boundaryRoadEdgeIds) {
+    if (block.boundaryRoadEdgeIds.length === 0 ||
+      new Set(block.boundaryRoadEdgeIds).size !== block.boundaryRoadEdgeIds.length) {
+      throw new Error(`Invalid explicit road boundaries for ${block.id}`)
+    }
+    return block.boundaryRoadEdgeIds
+  }
+  return [
+    `edge-x-${block.column}-${block.row}`,
+    `edge-x-${block.column}-${block.row + 1}`,
+    `edge-z-${block.column}-${block.row}`,
+    `edge-z-${block.column + 1}-${block.row}`,
+  ]
 }
 
 function coordinateKey(x: number, z: number): string {
@@ -143,6 +187,7 @@ export function derivePedestrianNetwork(city: SpatialCity,
   const edgeIds = new Set<string>()
   const roadEdgeById = new Map(city.roads.edges.map((edge) => [edge.id, edge]))
   const roadNodeById = new Map(city.roads.nodes.map((node) => [node.id, node]))
+  const blockById = new Map(city.blocks.map((block) => [block.id, block]))
   const blocks = new Map<string, BlockWalkways>()
 
   function addNode(node: PedestrianNode): void {
@@ -170,13 +215,7 @@ export function derivePedestrianNetwork(city: SpatialCity,
 
   function safePolygonRing(block: SpatialCity['blocks'][number]): CityPointXZ[] {
     const footprint = block.footprintXZ!
-    const boundaryIds = [
-      `edge-x-${block.column}-${block.row}`,
-      `edge-x-${block.column}-${block.row + 1}`,
-      `edge-z-${block.column}-${block.row}`,
-      `edge-z-${block.column + 1}-${block.row}`,
-    ]
-    const boundaries = boundaryIds.map((id) => {
+    const boundaries = boundaryRoadIds(block).map((id) => {
       const road = roadEdgeById.get(id)
       if (!road) throw new Error(`Missing polygon boundary road ${id}`)
       const from = roadNodeById.get(road.from)!
@@ -209,9 +248,6 @@ export function derivePedestrianNetwork(city: SpatialCity,
 
   for (const block of city.blocks) {
     if (block.footprintXZ) {
-      if (block.isPlaza || block.isPark) {
-        throw new Error(`Polygon public block is not supported: ${block.id}`)
-      }
       const ring = safePolygonRing(block)
       const ringIds = ring.map((point, index) => {
         const id = `ped-${block.id}-polygon-${index}`
@@ -261,6 +297,66 @@ export function derivePedestrianNetwork(city: SpatialCity,
             stops[stop - 1].id, stops[stop].id, 'sidewalk')
         }
       })
+      if (block.isPlaza || block.isPark) {
+        const minX = Math.min(...block.footprintXZ.map((point) => point.x))
+        const maxX = Math.max(...block.footprintXZ.map((point) => point.x))
+        const minZ = Math.min(...block.footprintXZ.map((point) => point.z))
+        const maxZ = Math.max(...block.footprintXZ.map((point) => point.z))
+        const step = Math.max(1, Math.min(2.5, Math.min(maxX - minX,
+          maxZ - minZ) / 6))
+        const candidates: { point: CityPointXZ; ringIndex: number }[] = []
+        for (let z = minZ + step / 2; z < maxZ; z += step) {
+          for (let x = minX + step / 2; x < maxX; x += step) {
+            const point = { x, z }
+            if (!insidePolygon(point, block.footprintXZ) ||
+              distanceToPath(point, [...block.footprintXZ, block.footprintXZ[0]]) < 1.1 ||
+              block.isPlaza && Math.hypot(x - city.plaza.x,
+                z - city.plaza.z) < 5 ||
+              city.streetFeatures?.some((feature) =>
+                (feature.kind === 'tree' || feature.kind === 'planter' ||
+                  feature.kind === 'bench') &&
+                Math.hypot(x - feature.x, z - feature.z) < 2)) continue
+            const visible = ring.map((corner, index) => ({ index,
+              distance: Math.hypot(corner.x - x, corner.z - z) }))
+              .sort((a, b) => a.distance - b.distance || a.index - b.index)
+              .find(({ index }) => segmentInsidePolygon(point, ring[index], ring) &&
+                !crossesBuilding(point, ring[index], city.buildings))
+            if (visible) candidates.push({ point, ringIndex: visible.index })
+          }
+        }
+        if (candidates.length === 0) {
+          throw new Error(`Polygon public block has no legal activity position: ${block.id}`)
+        }
+        const selected: typeof candidates = []
+        const target = block.isPlaza ? 12 : 10
+        while (selected.length < target && candidates.length > 0) {
+          candidates.sort((a, b) => {
+            const score = (item: typeof a) => selected.length === 0
+              ? -Math.hypot(item.point.x - block.x, item.point.z - block.z)
+              : Math.min(...selected.map((other) =>
+                Math.hypot(item.point.x - other.point.x,
+                  item.point.z - other.point.z)))
+            return score(b) - score(a) || a.point.z - b.point.z ||
+              a.point.x - b.point.x
+          })
+          const chosen = candidates.shift()!
+          if (selected.length > 0 && selected.some((other) =>
+            Math.hypot(chosen.point.x - other.point.x,
+              chosen.point.z - other.point.z) < 2.4)) break
+          selected.push(chosen)
+        }
+        selected.forEach(({ point, ringIndex }, index) => {
+          const id = index === 0 ? `ped-place-${block.id}` :
+            `ped-place-${block.id}-${index}`
+          const kind = block.isPlaza ? 'plaza' : 'park'
+          addNode({ id, ...point, surfaceY: block.isPlaza ? 0.295 : 0.355,
+            kind: 'publicSpace' })
+          addEdge(`ped-public-${block.id}-polygon-${index}`,
+            ringIds[ringIndex], id, 'publicSpace')
+          anchors.push({ id: `anchor-${kind}-${block.id}${index === 0 ? '' :
+            `-${index}`}`, nodeId: id, kind, blockId: block.id })
+        })
+      }
       const west = Math.min(...ring.map((point) => point.x))
       const east = Math.max(...ring.map((point) => point.x))
       const north = Math.min(...ring.map((point) => point.z))
@@ -418,6 +514,7 @@ export function derivePedestrianNetwork(city: SpatialCity,
     b: string,
     road: RoadEdge,
     direction: 'x' | 'z',
+    useRoadGeometry = false,
   ): void {
     const from = nodeById.get(a)!
     const to = nodeById.get(b)!
@@ -425,7 +522,7 @@ export function derivePedestrianNetwork(city: SpatialCity,
     const roadEnd = roadNodeById.get(road.to)!
     let first: Pick<PedestrianNode, 'x' | 'z'>
     let second: Pick<PedestrianNode, 'x' | 'z'>
-    if (options.curbPlacement === 'endpointVector') {
+    if (options.curbPlacement === 'endpointVector' || useRoadGeometry) {
       const dx = to.x - from.x
       const dz = to.z - from.z
       const path = road.centerlineXZ ?? [roadStart, roadEnd]
@@ -473,10 +570,54 @@ export function derivePedestrianNetwork(city: SpatialCity,
     addEdge(`${id}-approach-b`, secondId, b, 'access')
   }
 
+  const explicitRoadIds = new Set(city.blocks.flatMap((block) =>
+    block.boundaryRoadEdgeIds ?? []))
+  if (explicitRoadIds.size > 0) {
+    const blocksByRoad = new Map<string, string[]>()
+    for (const block of city.blocks) {
+      for (const id of boundaryRoadIds(block)) {
+        const list = blocksByRoad.get(id) ?? []
+        list.push(block.id)
+        blocksByRoad.set(id, list)
+      }
+    }
+    for (const id of [...explicitRoadIds].sort()) {
+      const road = roadEdgeById.get(id)
+      if (!road) throw new Error(`Missing explicit crossing road ${id}`)
+      const blockIds = blocksByRoad.get(id) ?? []
+      if (blockIds.length > 2) {
+        throw new Error(`Road ${id} borders more than two blocks`)
+      }
+      if (blockIds.length < 2) continue
+      const start = roadNodeById.get(road.from)!
+      const end = roadNodeById.get(road.to)!
+      const path = road.centerlineXZ ?? [start, end]
+      const middle = path[Math.floor((path.length - 1) / 2)]
+      const next = path[Math.ceil((path.length - 1) / 2)]
+      const midpoint = { x: (middle.x + next.x) / 2,
+        z: (middle.z + next.z) / 2 }
+      const curbAnchor = (blockId: string): string => {
+        const candidates = anchors.filter((anchor) => anchor.blockId === blockId &&
+          anchor.kind === 'street').map((anchor) => ({
+          id: anchor.nodeId, node: nodeById.get(anchor.nodeId)!,
+        })).sort((a, b) => Math.hypot(a.node.x - midpoint.x,
+          a.node.z - midpoint.z) - Math.hypot(b.node.x - midpoint.x,
+          b.node.z - midpoint.z) || a.id.localeCompare(b.id))
+        if (!candidates[0]) throw new Error(`No pedestrian frontage for ${blockId}`)
+        return candidates[0].id
+      }
+      crossBlocks(`ped-cross-boundary-${id}`, curbAnchor(blockIds[0]),
+        curbAnchor(blockIds[1]), road, 'x', true)
+    }
+  }
+
   for (const block of city.blocks) {
     const current = blocks.get(block.id)!
-    const eastNeighbor = blocks.get(`block-${block.column + 1}-${block.row}`)
-    if (eastNeighbor) {
+    const eastId = `block-${block.column + 1}-${block.row}`
+    const eastNeighbor = blocks.get(eastId)
+    const eastBlock = blockById.get(eastId)
+    if (eastNeighbor && !block.boundaryRoadEdgeIds &&
+      !eastBlock?.boundaryRoadEdgeIds) {
       const roadId = `edge-z-${block.column + 1}-${block.row}`
       const road = roadEdgeById.get(roadId)
       if (!road) throw new Error(`Missing crossing road ${roadId}`)
@@ -488,8 +629,11 @@ export function derivePedestrianNetwork(city: SpatialCity,
         'x',
       )
     }
-    const southNeighbor = blocks.get(`block-${block.column}-${block.row + 1}`)
-    if (southNeighbor) {
+    const southId = `block-${block.column}-${block.row + 1}`
+    const southNeighbor = blocks.get(southId)
+    const southBlock = blockById.get(southId)
+    if (southNeighbor && !block.boundaryRoadEdgeIds &&
+      !southBlock?.boundaryRoadEdgeIds) {
       const roadId = `edge-x-${block.column}-${block.row + 1}`
       const road = roadEdgeById.get(roadId)
       if (!road) throw new Error(`Missing crossing road ${roadId}`)

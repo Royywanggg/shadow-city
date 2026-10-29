@@ -50,6 +50,8 @@ export interface CityBlock {
   isPark: boolean
   /** Optional buildable outline for non-rectangular dev blocks, in world metres. */
   footprintXZ?: readonly CityPointXZ[]
+  /** Explicit road boundaries for dev blocks whose topology is not grid-indexed. */
+  boundaryRoadEdgeIds?: readonly string[]
 }
 
 export interface Parcel {

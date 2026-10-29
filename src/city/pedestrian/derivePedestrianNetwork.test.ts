@@ -60,6 +60,85 @@ function distanceToRoad(x: number, z: number,
 }
 
 describe('derived pedestrian network', () => {
+  it('connects a polygon park across explicit non-grid road boundaries', () => {
+    const source = generateCity(HERO_SEED)
+    const parkId = 'block-2-4'
+    const cafeId = 'block-3-4'
+    const formerRoadId = 'edge-z-3-4'
+    const roadId = 'dev-road:park-cafe-frontage'
+    const renamed = (id: string) => id === formerRoadId ? roadId : id
+    const boundaries = (column: number, row: number) => [
+      `edge-x-${column}-${row}`, `edge-x-${column}-${row + 1}`,
+      `edge-z-${column}-${row}`, `edge-z-${column + 1}-${row}`,
+    ].map(renamed)
+    const removedParcels = new Set(source.parcels.filter((parcel) =>
+      parcel.blockId === parkId).map((parcel) => parcel.id))
+    const city = { ...source,
+      roads: { ...source.roads, edges: source.roads.edges.map((edge) =>
+        edge.id === formerRoadId ? { ...edge, id: roadId } : edge) },
+      blocks: source.blocks.map((block) => {
+        if (block.id !== parkId && block.id !== cafeId) return block
+        return { ...block, column: block.column + 40, row: block.row + 40,
+          isPark: block.id === parkId,
+          boundaryRoadEdgeIds: boundaries(block.column, block.row),
+          footprintXZ: [
+            { x: block.x - block.width / 2, z: block.z - block.depth / 2 },
+            { x: block.x + block.width / 2 - (block.id === parkId ? 2 : 0),
+              z: block.z - block.depth / 2 },
+            { x: block.x + block.width / 2, z: block.z + block.depth / 2 },
+            { x: block.x - block.width / 2, z: block.z + block.depth / 2 },
+          ] }
+      }),
+      parcels: source.parcels.filter((parcel) => !removedParcels.has(parcel.id)),
+      buildings: source.buildings.filter((building) =>
+        !removedParcels.has(building.parcelId)),
+    }
+    const graph = derivePedestrianNetwork(city,
+      { curbPlacement: 'endpointVector' })
+    const park = city.blocks.find((block) => block.id === parkId)!
+    const publicAnchors = graph.anchors.filter((anchor) =>
+      anchor.blockId === parkId && anchor.kind === 'park')
+    const nodes = new Map(graph.nodes.map((node) => [node.id, node]))
+    expect(publicAnchors.length).toBeGreaterThanOrEqual(3)
+    for (const anchor of publicAnchors) {
+      const node = nodes.get(anchor.nodeId)!
+      expect(node.kind).toBe('publicSpace')
+      expect(park.footprintXZ!.every((corner, index) => {
+        const next = park.footprintXZ![(index + 1) % park.footprintXZ!.length]
+        return (next.x - corner.x) * (node.z - corner.z) -
+          (next.z - corner.z) * (node.x - corner.x) >= -1e-6
+      })).toBe(true)
+    }
+    expect(graph.edges.some((edge) => edge.kind === 'crossing' &&
+      edge.sourceRoadEdgeId === roadId)).toBe(true)
+    expect(reachableNodeIds(graph.nodes, graph.edges).size).toBe(graph.nodes.length)
+    expect(generateCity(HERO_SEED).pedestrian).toEqual(source.pedestrian)
+  })
+
+  it('keeps a polygon plaza walkable around its central monument', () => {
+    const source = generateCity(HERO_SEED)
+    const plaza = source.blocks.find((block) => block.isPlaza)!
+    const city = { ...source, blocks: source.blocks.map((block) =>
+      block.id === plaza.id ? { ...block, footprintXZ: [
+        { x: block.x - block.width / 2, z: block.z - block.depth / 2 },
+        { x: block.x + block.width / 2, z: block.z - block.depth / 2 },
+        { x: block.x + block.width / 2, z: block.z + block.depth / 2 },
+        { x: block.x - block.width / 2, z: block.z + block.depth / 2 },
+      ] } : block) }
+    const graph = derivePedestrianNetwork(city,
+      { curbPlacement: 'endpointVector' })
+    const nodes = new Map(graph.nodes.map((node) => [node.id, node]))
+    const anchors = graph.anchors.filter((anchor) =>
+      anchor.blockId === plaza.id && anchor.kind === 'plaza')
+    expect(anchors.length).toBeGreaterThanOrEqual(3)
+    for (const anchor of anchors) {
+      const node = nodes.get(anchor.nodeId)!
+      expect(Math.hypot(node.x - city.plaza.x, node.z - city.plaza.z))
+        .toBeGreaterThanOrEqual(5)
+    }
+    expect(reachableNodeIds(graph.nodes, graph.edges).size).toBe(graph.nodes.length)
+  })
+
   it('connects polygon corridor entrances beside the curved dev road', () => {
     for (const seed of [HERO_SEED, 'twilight-alt-01', 'twilight-alt-02']) {
       const expanded = expandOriginalCity(generateCity(seed))
