@@ -6,6 +6,7 @@ import type {
   PedestrianNetwork,
   PedestrianNode,
   RoadEdge,
+  CityPointXZ,
 } from '../model'
 
 const SIDEWALK_Y = 0.24
@@ -33,6 +34,66 @@ interface BlockWalkways {
   at(x: number, z: number): string
 }
 
+function polygonArea(points: readonly CityPointXZ[]): number {
+  return points.reduce((sum, point, index) => {
+    const next = points[(index + 1) % points.length]
+    return sum + point.x * next.z - next.x * point.z
+  }, 0) / 2
+}
+
+function outerRing(footprint: readonly CityPointXZ[], offset: number): CityPointXZ[] {
+  const polygon = footprint.filter((point, index) =>
+    index === 0 || Math.hypot(point.x - footprint[index - 1].x,
+      point.z - footprint[index - 1].z) > 1e-4)
+  if (polygon.length < 3 || polygonArea(polygon) <= EPSILON) {
+    throw new Error('Polygon block footprint must be counterclockwise and nondegenerate')
+  }
+  return polygon.map((point, index) => {
+    const previous = polygon[(index - 1 + polygon.length) % polygon.length]
+    const next = polygon[(index + 1) % polygon.length]
+    const priorLength = Math.hypot(point.x - previous.x, point.z - previous.z)
+    const nextLength = Math.hypot(next.x - point.x, next.z - point.z)
+    const before = { x: (point.z - previous.z) / priorLength,
+      z: -(point.x - previous.x) / priorLength }
+    const after = { x: (next.z - point.z) / nextLength,
+      z: -(next.x - point.x) / nextLength }
+    const bisector = { x: before.x + after.x, z: before.z + after.z }
+    const projection = bisector.x * before.x + bisector.z * before.z
+    if (projection < 0.2) throw new Error('Polygon block has an unsafe corner')
+    return { x: point.x + offset * bisector.x / projection,
+      z: point.z + offset * bisector.z / projection }
+  })
+}
+
+function distanceToPath(point: CityPointXZ, path: readonly CityPointXZ[]): number {
+  return Math.min(...path.slice(1).map((end, index) => {
+    const start = path[index]
+    const dx = end.x - start.x
+    const dz = end.z - start.z
+    const t = Math.max(0, Math.min(1,
+      ((point.x - start.x) * dx + (point.z - start.z) * dz) /
+      (dx * dx + dz * dz || 1)))
+    return Math.hypot(point.x - start.x - dx * t,
+      point.z - start.z - dz * t)
+  }))
+}
+
+function southernRayHit(origin: CityPointXZ, polygon: readonly CityPointXZ[]):
+  { edgeIndex: number; t: number; point: CityPointXZ } {
+  const candidates = polygon.flatMap((a, edgeIndex) => {
+    const b = polygon[(edgeIndex + 1) % polygon.length]
+    const dx = b.x - a.x
+    if (Math.abs(dx) <= EPSILON) return []
+    const t = (origin.x - a.x) / dx
+    if (t < -EPSILON || t > 1 + EPSILON) return []
+    const z = a.z + (b.z - a.z) * t
+    return z > origin.z + EPSILON ? [{ edgeIndex, t,
+      point: { x: origin.x, z } }] : []
+  }).sort((a, b) => a.point.z - b.point.z)
+  if (!candidates[0]) throw new Error('Building entrance has no southern polygon sidewalk')
+  return candidates[0]
+}
+
 function sortedDistinct(values: readonly number[]): number[] {
   const sorted = [...values].sort((a, b) => a - b)
   return sorted.filter((value, index) => index === 0 || value - sorted[index - 1] > EPSILON)
@@ -58,6 +119,14 @@ function crossesBuilding(a: Pick<PedestrianNode, 'x' | 'z'>, b: Pick<PedestrianN
         if (a.x > minX && a.x < maxX && Math.max(a.z, b.z) > minZ && Math.min(a.z, b.z) < maxZ) return true
       } else if (Math.abs(a.z - b.z) < EPSILON) {
         if (a.z > minZ && a.z < maxZ && Math.max(a.x, b.x) > minX && Math.min(a.x, b.x) < maxX) return true
+      } else {
+        const tx = [(minX - a.x) / (b.x - a.x),
+          (maxX - a.x) / (b.x - a.x)].sort((left, right) => left - right)
+        const tz = [(minZ - a.z) / (b.z - a.z),
+          (maxZ - a.z) / (b.z - a.z)].sort((left, right) => left - right)
+        const enter = Math.max(0, tx[0], tz[0])
+        const leave = Math.min(1, tx[1], tz[1])
+        if (leave - enter > EPSILON) return true
       }
     }
   }
@@ -99,7 +168,112 @@ export function derivePedestrianNetwork(city: SpatialCity,
     edgeIds.add(id)
   }
 
+  function safePolygonRing(block: SpatialCity['blocks'][number]): CityPointXZ[] {
+    const footprint = block.footprintXZ!
+    const boundaryIds = [
+      `edge-x-${block.column}-${block.row}`,
+      `edge-x-${block.column}-${block.row + 1}`,
+      `edge-z-${block.column}-${block.row}`,
+      `edge-z-${block.column + 1}-${block.row}`,
+    ]
+    const boundaries = boundaryIds.map((id) => {
+      const road = roadEdgeById.get(id)
+      if (!road) throw new Error(`Missing polygon boundary road ${id}`)
+      const from = roadNodeById.get(road.from)!
+      const to = roadNodeById.get(road.to)!
+      return { road, path: road.centerlineXZ ?? [from, to] }
+    })
+    const safe = (ring: readonly CityPointXZ[]) => ring.every((from, index) => {
+      const to = ring[(index + 1) % ring.length]
+      const count = Math.max(1, Math.ceil(Math.hypot(to.x - from.x,
+        to.z - from.z) / 0.5))
+      return Array.from({ length: count + 1 }, (_, step) => {
+        const t = step / count
+        return { x: from.x + (to.x - from.x) * t,
+          z: from.z + (to.z - from.z) * t }
+      }).every((point) => boundaries.every(({ road, path }) =>
+        distanceToPath(point, path) >= road.width / 2 + 0.255))
+    })
+    const full = outerRing(footprint, RING_OFFSET)
+    if (safe(full)) return full
+    if (!safe(footprint)) throw new Error(`Polygon block lacks road clearance: ${block.id}`)
+    let lower = 0
+    let upper = RING_OFFSET
+    for (let iteration = 0; iteration < 24; iteration += 1) {
+      const middle = (lower + upper) / 2
+      if (safe(outerRing(footprint, middle))) lower = middle
+      else upper = middle
+    }
+    return outerRing(footprint, lower)
+  }
+
   for (const block of city.blocks) {
+    if (block.footprintXZ) {
+      if (block.isPlaza || block.isPark) {
+        throw new Error(`Polygon public block is not supported: ${block.id}`)
+      }
+      const ring = safePolygonRing(block)
+      const ringIds = ring.map((point, index) => {
+        const id = `ped-${block.id}-polygon-${index}`
+        addNode({ id, ...point, surfaceY: SIDEWALK_Y, kind: 'sidewalk' })
+        anchors.push({ id: `anchor-street-${block.id}-polygon-${index}`,
+          nodeId: id, kind: 'street', blockId: block.id })
+        return id
+      })
+      const blockParcels = city.parcels.filter((parcel) => parcel.blockId === block.id)
+      const parcelIds = new Set(blockParcels.map((parcel) => parcel.id))
+      const blockBuildings = city.buildings.filter((building) =>
+        parcelIds.has(building.parcelId))
+      const splits = new Map<number, { t: number; id: string }[]>()
+      for (const building of blockBuildings) {
+        const id = `ped-entrance-${building.id}`
+        addNode({ id, x: building.entrance.x, z: building.entrance.z,
+          surfaceY: SIDEWALK_Y, kind: 'entrance' })
+        const hit = southernRayHit(building.entrance, ring)
+        let sidewalkId = hit.t <= EPSILON ? ringIds[hit.edgeIndex] :
+          hit.t >= 1 - EPSILON ? ringIds[(hit.edgeIndex + 1) % ringIds.length] : null
+        if (!sidewalkId) {
+          sidewalkId = `ped-${block.id}-polygon-access-${building.id}`
+          addNode({ id: sidewalkId, ...hit.point,
+            surfaceY: SIDEWALK_Y, kind: 'sidewalk' })
+          const list = splits.get(hit.edgeIndex) ?? []
+          list.push({ t: hit.t, id: sidewalkId })
+          splits.set(hit.edgeIndex, list)
+        }
+        addEdge(`ped-access-${building.id}`, id, sidewalkId, 'access')
+        anchors.push({ id: `anchor-${building.id}`, nodeId: id, kind: 'building',
+          buildingId: building.id, blockId: block.id })
+        if (building.kind === 'civic' || building.kind === 'commercial' ||
+          building.kind === 'office') {
+          anchors.push({ id: `anchor-public-${building.id}-door`, nodeId: id,
+            kind: 'publicEntrance', buildingId: building.id, blockId: block.id })
+          anchors.push({ id: `anchor-public-${building.id}-walk`,
+            nodeId: sidewalkId, kind: 'publicEntrance', buildingId: building.id,
+            blockId: block.id })
+        }
+      }
+      ringIds.forEach((id, index) => {
+        const nextId = ringIds[(index + 1) % ringIds.length]
+        const stops = [{ t: 0, id }, ...(splits.get(index) ?? [])
+          .sort((a, b) => a.t - b.t), { t: 1, id: nextId }]
+        for (let stop = 1; stop < stops.length; stop += 1) {
+          addEdge(`ped-${block.id}-polygon-ring-${index}-${stop - 1}`,
+            stops[stop - 1].id, stops[stop].id, 'sidewalk')
+        }
+      })
+      const west = Math.min(...ring.map((point) => point.x))
+      const east = Math.max(...ring.map((point) => point.x))
+      const north = Math.min(...ring.map((point) => point.z))
+      const south = Math.max(...ring.map((point) => point.z))
+      blocks.set(block.id, { west, east, north, south,
+        at(x, z) {
+          const nearest = ring.map((point, index) => ({ index,
+            distance: Math.hypot(point.x - x, point.z - z) }))
+            .sort((a, b) => a.distance - b.distance || a.index - b.index)[0]
+          return ringIds[nearest.index]
+        } })
+      continue
+    }
     const west = block.x - block.width / 2 - RING_OFFSET
     const east = block.x + block.width / 2 + RING_OFFSET
     const north = block.z - block.depth / 2 - RING_OFFSET
@@ -254,26 +428,32 @@ export function derivePedestrianNetwork(city: SpatialCity,
     if (options.curbPlacement === 'endpointVector') {
       const dx = to.x - from.x
       const dz = to.z - from.z
-      const roadDx = roadEnd.x - roadStart.x
-      const roadDz = roadEnd.z - roadStart.z
-      const determinant = dx * roadDz - dz * roadDx
-      const roadLength = Math.hypot(roadDx, roadDz)
-      if (Math.abs(determinant) < EPSILON || roadLength < EPSILON) {
-        throw new Error(`Pedestrian crossing does not meet road ${road.id}`)
-      }
-      const startDx = roadStart.x - from.x
-      const startDz = roadStart.z - from.z
-      const centerFraction = (startDx * roadDz - startDz * roadDx) / determinant
-      const roadFraction = (startDx * dz - startDz * dx) / determinant
-      const halfFraction = road.width * roadLength / (2 * Math.abs(determinant))
-      if (centerFraction - halfFraction <= 0 || centerFraction + halfFraction >= 1 ||
-        roadFraction < -EPSILON || roadFraction > 1 + EPSILON) {
+      const path = road.centerlineXZ ?? [roadStart, roadEnd]
+      const candidates = path.slice(1).flatMap((roadPoint, index) => {
+        const previous = path[index]
+        const roadDx = roadPoint.x - previous.x
+        const roadDz = roadPoint.z - previous.z
+        const determinant = dx * roadDz - dz * roadDx
+        const roadLength = Math.hypot(roadDx, roadDz)
+        if (Math.abs(determinant) < EPSILON || roadLength < EPSILON) return []
+        const startDx = previous.x - from.x
+        const startDz = previous.z - from.z
+        const fraction = (startDx * roadDz - startDz * roadDx) / determinant
+        const roadFraction = (startDx * dz - startDz * dx) / determinant
+        const halfFraction = road.width * roadLength / (2 * Math.abs(determinant))
+        return roadFraction >= -EPSILON && roadFraction <= 1 + EPSILON &&
+          fraction - halfFraction > 0 && fraction + halfFraction < 1
+          ? [{ fraction, halfFraction }] : []
+      }).sort((a, b) => Math.abs(a.fraction - 0.5) -
+        Math.abs(b.fraction - 0.5))
+      const selected = candidates[0]
+      if (!selected) {
         throw new Error(`Pedestrian crossing lacks curb clearance at ${road.id}`)
       }
-      first = { x: from.x + dx * (centerFraction - halfFraction),
-        z: from.z + dz * (centerFraction - halfFraction) }
-      second = { x: from.x + dx * (centerFraction + halfFraction),
-        z: from.z + dz * (centerFraction + halfFraction) }
+      first = { x: from.x + dx * (selected.fraction - selected.halfFraction),
+        z: from.z + dz * (selected.fraction - selected.halfFraction) }
+      second = { x: from.x + dx * (selected.fraction + selected.halfFraction),
+        z: from.z + dz * (selected.fraction + selected.halfFraction) }
     } else {
       const center = direction === 'x' ? (roadStart.x + roadEnd.x) / 2 :
         (roadStart.z + roadEnd.z) / 2

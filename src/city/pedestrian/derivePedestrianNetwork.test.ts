@@ -2,6 +2,10 @@ import { describe, expect, it } from 'vitest'
 import { generateCity, HERO_SEED } from '../generation/generateCity'
 import { derivePedestrianNetwork } from './derivePedestrianNetwork'
 import type { Building, PedestrianNode } from '../model'
+import { expandOriginalCity } from '../../world/generation/expandOriginalCity'
+import { createDevOrganicLayout } from '../../world/generation/devOrganicLayout'
+import { deriveDevRoadCorridor } from '../../world/generation/devRoadCorridor'
+import { placeDevCorridorParcels } from '../../world/generation/devParcelPlacement'
 
 function reachableNodeIds(nodes: readonly PedestrianNode[], edges: readonly { from: string; to: string }[]): Set<string> {
   const adjacency = new Map(nodes.map((node) => [node.id, [] as string[]]))
@@ -43,7 +47,76 @@ function distanceToSegment(x: number, z: number, a: PedestrianNode, b: Pedestria
   return Math.hypot(x - a.x - t * dx, z - a.z - t * dz)
 }
 
+function distanceToRoad(x: number, z: number,
+  path: readonly Readonly<{ x: number; z: number }>[]): number {
+  return Math.min(...path.slice(1).map((b, index) => {
+    const a = path[index]
+    const dx = b.x - a.x
+    const dz = b.z - a.z
+    const t = Math.max(0, Math.min(1,
+      ((x - a.x) * dx + (z - a.z) * dz) / (dx * dx + dz * dz)))
+    return Math.hypot(x - a.x - t * dx, z - a.z - t * dz)
+  }))
+}
+
 describe('derived pedestrian network', () => {
+  it('connects polygon corridor entrances beside the curved dev road', () => {
+    for (const seed of [HERO_SEED, 'twilight-alt-01', 'twilight-alt-02']) {
+      const expanded = expandOriginalCity(generateCity(seed))
+      const layout = createDevOrganicLayout(expanded)
+      const corridor = deriveDevRoadCorridor(layout)
+      const placed = placeDevCorridorParcels(corridor)
+      const graph = derivePedestrianNetwork(placed,
+        { curbPlacement: 'endpointVector' })
+      const reached = reachableNodeIds(graph.nodes, graph.edges)
+      expect(reached.size).toBe(graph.nodes.length)
+      const nodes = new Map(graph.nodes.map((node) => [node.id, node]))
+      const roadNodes = new Map(placed.roads.nodes.map((node) => [node.id, node]))
+      const roads = new Map(placed.roads.edges.map((edge) => [edge.id, edge]))
+      const polygonBlockIds = new Set(placed.blocks.filter((block) =>
+        block.footprintXZ).map((block) => block.id))
+      expect([...polygonBlockIds].sort()).toEqual([
+        'block-6-4', 'block-6-5', 'block-7-4', 'block-7-5'])
+      for (const block of placed.blocks.filter((item) => polygonBlockIds.has(item.id))) {
+        const boundaryIds = [`edge-x-${block.column}-${block.row}`,
+          `edge-x-${block.column}-${block.row + 1}`,
+          `edge-z-${block.column}-${block.row}`,
+          `edge-z-${block.column + 1}-${block.row}`]
+        const samples = graph.nodes.filter((item) =>
+          item.id.startsWith(`ped-${block.id}-polygon-`)).map((node) =>
+          ({ x: node.x, z: node.z }))
+        for (const edge of graph.edges.filter((item) =>
+          item.id.startsWith(`ped-${block.id}-polygon-ring-`))) {
+          const a = nodes.get(edge.from)!
+          const b = nodes.get(edge.to)!
+          for (const t of [0.25, 0.5, 0.75]) samples.push({
+            x: a.x + (b.x - a.x) * t, z: a.z + (b.z - a.z) * t })
+        }
+        for (const node of samples) {
+          for (const roadId of boundaryIds) {
+            const road = roads.get(roadId)!
+            const path = road.centerlineXZ ??
+              [roadNodes.get(road.from)!, roadNodes.get(road.to)!]
+            expect(distanceToRoad(node.x, node.z, path),
+              `${seed} ${block.id} ${roadId} ${node.x},${node.z}`)
+              .toBeGreaterThanOrEqual(road.width / 2 + 0.249)
+          }
+        }
+      }
+      for (const building of placed.buildings.filter((building) =>
+        placed.parcels.some((parcel) => parcel.id === building.parcelId &&
+          polygonBlockIds.has(parcel.blockId)))) {
+        const entrance = nodes.get(`ped-entrance-${building.id}`)!
+        expect(entrance).toBeDefined()
+        expect(reached.has(entrance.id)).toBe(true)
+        const access = graph.edges.find((edge) =>
+          edge.id === `ped-access-${building.id}`)!
+        expect(access).toBeDefined()
+        expect(passesThroughGroundMass(entrance, nodes.get(access.to)!,
+          placed.buildings)).toBe(false)
+      }
+    }
+  })
   it('places diagonal crossing curbs on the actual approach through the road', () => {
     const city: Parameters<typeof derivePedestrianNetwork>[0] = {
       roads: { nodes: [{ id: 'left', x: 8, z: -10 },
