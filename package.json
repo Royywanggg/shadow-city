@@ -25,7 +25,8 @@
     "assets:bake-impostors": "node scripts/bake-character-impostors.mjs",
     "assets:verify-characters": "python3 scripts/verify-character-animation-assets.py",
     "visual:characters": "node scripts/character-city-check.mjs",
-    "visual:life": "node scripts/life-browser-check.mjs"
+    "visual:life": "node scripts/life-browser-check.mjs",
+    "visual:twilight": "node scripts/twilight-dev-check.mjs"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.9",
