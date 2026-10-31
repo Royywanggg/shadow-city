@@ -6,6 +6,6 @@ export function rearHighlandFrontZmm(xMm: number): number {
 }
 
 export function rearHighlandBackZmm(xMm: number): number {
-  return Math.round(-137_700 +
+  return Math.round(-135_500 +
     850 * Math.sin((xMm - 36_000) / 13_500 + 0.4))
 }

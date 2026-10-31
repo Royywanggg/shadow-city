@@ -6,6 +6,8 @@ import { rearHighlandFrontZmm } from '../terrain/devHighlandContour'
 export const DEV_TERRACE_BLOCK_PREFIX = 'block-dev-terrace-'
 export const DEV_TERRACE_BUILDING_PREFIX = 'building-parcel-dev-terrace-'
 export const DEV_TERRACE_SITES = [
+  { x: -58, width: 12 }, { x: -40, width: 12 },
+  { x: -23, width: 12 },
   { x: -4, width: 14 }, { x: 16, width: 14 },
   { x: 40, width: 8 }, { x: 54, width: 12 },
   { x: 70, width: 12 },
@@ -18,8 +20,10 @@ export function addDevTerraceNeighborhood(city: CityModel): CityModel {
   const buildings: Building[] = []
   for (const [index, site] of DEV_TERRACE_SITES.entries()) {
     const { x, width } = site
-    const z = rearHighlandFrontZmm(x * 1000) / 1000 - 16.5
-    const depth = 8.5
+    const west = x < -10
+    const z = rearHighlandFrontZmm(x * 1000) / 1000 -
+      (west ? 15.5 : 16.5)
+    const depth = west ? 6.5 : 8.5
     const blockId = `${DEV_TERRACE_BLOCK_PREFIX}${index}`
     const parcelId = `parcel-dev-terrace-${index}`
     const block: CityBlock = { id: blockId, column: 90 + index, row: -2,

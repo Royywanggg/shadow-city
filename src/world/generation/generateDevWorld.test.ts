@@ -33,8 +33,9 @@ describe('isolated Twilight terrain world', () => {
       !building.id.startsWith(DEV_TERRACE_BUILDING_PREFIX))
     expect(originalDevBuildings.map((building) => building.id)).toEqual(
       devSource.baseCity?.buildings.map((building) => building.id))
+    expect(DEV_TERRACE_SITES).toHaveLength(8)
     expect(dev.baseCity!.buildings.filter((building) =>
-      building.id.startsWith(DEV_TERRACE_BUILDING_PREFIX))).toHaveLength(DEV_TERRACE_SITES.length)
+      building.id.startsWith(DEV_TERRACE_BUILDING_PREFIX))).toHaveLength(8)
     for (const building of originalDevBuildings) {
       const original = originalBuildings.get(building.id)!
       if (compactDevBuildings.has(building.id)) {
@@ -54,7 +55,7 @@ describe('isolated Twilight terrain world', () => {
       }
     }
     expect(dev.baseCity?.buildings.length).toBeLessThan(mainBefore.baseCity!.buildings.length)
-    expect(dev.config.generatorVersion).toBe('twilight-dev-v12')
+    expect(dev.config.generatorVersion).toBe('twilight-dev-v13')
     expect(mainAfter.config.generatorVersion).toBe('heritage-extension-v6')
     expect(worldFingerprintV5(dev, DEFAULT_SIMULATION_CONFIG_V5))
       .not.toBe(worldFingerprintV5(mainAfter, DEFAULT_SIMULATION_CONFIG_V5))
@@ -70,6 +71,11 @@ describe('isolated Twilight terrain world', () => {
     const world = generateDevWorld(HERO_SEED)
     const terrain = world.terrain!
     const city = world.baseCity!
+    const patch = terrain.nonWalkableEscarpment.patches[0]
+    expect(patch.frontLine.at(-1)!.x - patch.frontLine[0].x)
+      .toBeGreaterThan(160_000)
+    expect(terrain.terraceAccess!.trail.at(-1)!.x -
+      terrain.terraceAccess!.trail[0].x).toBe(152_000)
     for (const id of HIGHLAND_CLOSED_ROAD_IDS) {
       expect(city.roads.edges.some((edge) => edge.id === id)).toBe(false)
       expect(terrain.roadProfiles.some((profile) => profile.edgeId === id)).toBe(false)
@@ -99,7 +105,7 @@ describe('isolated Twilight terrain world', () => {
     expect(visited.size).toBe(city.roads.nodes.length)
     const index = createNavigationIndexV2(world)
     const route = findRouteV2(index, 'ped-entrance-building-block-4-0-0-0',
-      'ped-block-2--1-3-0')
+      'ped-block--1--1-3-0')
     expect(route.status).toBe('ok')
     if (route.status === 'ok') {
       for (const step of route.steps) {
@@ -114,7 +120,7 @@ describe('isolated Twilight terrain world', () => {
         populationSize: 24 })
       const initial = createInitialStateV5(environment)
       const start = index.nodeById.get('ped-entrance-building-block-4-0-0-0')!
-      const end = index.nodeById.get('ped-block-2--1-3-0')!
+      const end = index.nodeById.get('ped-block--1--1-3-0')!
       let citizen: CitizenStateV5 = { ...initial.citizens[0], position: start.position,
         surfaceId: start.surfaceId, placeId: null, currentNodeId: start.id,
         destinationNodeId: end.id, activity: 'travelling' as const,
@@ -138,7 +144,7 @@ describe('isolated Twilight terrain world', () => {
       const world = generateDevWorld(seed)
       const index = createNavigationIndexV2(world)
       expect(findRouteV2(index, 'ped-entrance-building-block-4-0-0-0',
-        'ped-block-2--1-3-0').status).toBe('ok')
+        'ped-block--1--1-3-0').status).toBe('ok')
       expect(findRouteV2(index, 'ped-entrance-building-block-4-0-0-0',
         `interior:${DEV_TERRACE_BUILDING_PREFIX}0:slot:0`).status).toBe('ok')
       expect(world.terrain!.nonWalkableEscarpment.patches).toHaveLength(1)
@@ -302,13 +308,13 @@ describe('isolated Twilight terrain world', () => {
     const nodes = new Map(city.roads.nodes.map((node) => [node.id, node]))
     const profiles = new Map(world.terrain!.roadProfiles.map((profile) =>
       [profile.edgeId, profile]))
-    const west = nodes.get('node-3-0')!
+    const west = nodes.get('node-1-0')!
     const east = nodes.get('node-7-0')!
-    expect(nodes.get('node-4-0')!.z).toBeLessThan(west.z - 2)
-    expect(nodes.get('node-5-0')!.z).toBeLessThan(west.z - 3)
-    expect(nodes.get('node-6-0')!.z).toBeLessThan(west.z - 1)
+    expect(nodes.get('node-3-0')!.z).toBeLessThan(west.z - 2)
+    expect(nodes.get('node-4-0')!.z).toBeLessThan(west.z - 4)
+    expect(nodes.get('node-5-0')!.z).toBeLessThan(west.z - 2.8)
     expect(east.z).toBe(west.z)
-    for (const column of [3, 4, 5, 6]) {
+    for (const column of [1, 2, 3, 4, 5, 6]) {
       const id = `edge-x-${column}-0`
       const road = city.roads.edges.find((edge) => edge.id === id)!
       const path = road.centerlineXZ!

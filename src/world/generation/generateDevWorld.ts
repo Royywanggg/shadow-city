@@ -256,14 +256,20 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
   const terraceConnectorId = 'terrain:terrace-stair'
   const footId = 'terrain:terrace-foot'
   const trailNodeId = (index: number) => `terrain:terrace-trail:${index}`
+  const trailStep = 8
+  const trailEdgeCount = (access.trail.length - 1) / trailStep
+  if (!Number.isInteger(trailEdgeCount) ||
+    access.stairTrailIndex % trailStep !== 0) {
+    throw new Error('Terrace trail must align with its navigation nodes')
+  }
   const crossingNode = nodeById.get(access.crossingNodeId)
   if (!crossingNode || crossingNode.surfaceId !== 'ground') {
     throw new Error('Missing terrace crossing node in integrated navigation')
   }
   const terraceNodes: NavNodeV2[] = [
     { id: footId, position: access.foot, surfaceId: 'ground' },
-    ...Array.from({ length: 13 }, (_, index) => ({
-      id: trailNodeId(index), position: access.trail[index * 8],
+    ...Array.from({ length: trailEdgeCount + 1 }, (_, index) => ({
+      id: trailNodeId(index), position: access.trail[index * trailStep],
       surfaceId: terraceSurfaceId,
     })),
   ]
@@ -274,12 +280,13 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
     surfaceId: 'ground', connectorId: null, kind: 'crossing',
     lengthMm: lengthMm(crossingPath), accessId: null, direction: 'both' },
   { id: stairEdgeId, fromNodeId: footId,
-    toNodeId: trailNodeId(access.stairTrailIndex / 8),
+    toNodeId: trailNodeId(access.stairTrailIndex / trailStep),
     path: access.stair, surfaceId: null, connectorId: terraceConnectorId,
     kind: 'stair', lengthMm: lengthMm(access.stair), accessId: null,
     direction: 'both' },
-  ...Array.from({ length: 12 }, (_, index): NavEdgeV2 => {
-    const path = access.trail.slice(index * 8, index * 8 + 9)
+  ...Array.from({ length: trailEdgeCount }, (_, index): NavEdgeV2 => {
+    const path = access.trail.slice(index * trailStep,
+      index * trailStep + trailStep + 1)
     return { id: `terrain:terrace-trail-edge:${index}`,
       fromNodeId: trailNodeId(index), toNodeId: trailNodeId(index + 1),
       path, surfaceId: terraceSurfaceId, connectorId: null,
@@ -296,7 +303,9 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
       Math.abs(b.position.x - block.x * 1_000) ||
       b.position.z - a.position.z || a.id.localeCompare(b.id))[0]
     if (!source) throw new Error(`Missing terrace sidewalk for ${blockId}`)
-    const trailIndex = Math.round((block.x * 1_000 - access.trail[0].x) / 8_000)
+    const trailIndex = Math.max(0, Math.min(trailEdgeCount,
+      Math.round((block.x * 1_000 - access.trail[0].x) /
+        (trailStep * 1_000))))
     const destination = terraceNodes.find((node) =>
       node.id === trailNodeId(trailIndex))!
     const count = Math.max(1, Math.ceil(Math.hypot(
@@ -357,7 +366,7 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
   const upperConnectorId = 'terrain:upper-road-ramp'
   const upperRampEdgeId = 'terrain:upper-road-pedestrian-ramp'
   navEdges.push({ id: upperRampEdgeId,
-    fromNodeId: rampStart.id, toNodeId: trailNodeId(12), path: rampPath,
+    fromNodeId: rampStart.id, toNodeId: trailNodeId(trailEdgeCount), path: rampPath,
     surfaceId: null, connectorId: upperConnectorId, kind: 'ramp',
     lengthMm: lengthMm(rampPath), accessId: null, direction: 'both' })
   const usedNodeIds = new Set(navEdges.flatMap((edge) => [edge.fromNodeId, edge.toNodeId]))
@@ -410,12 +419,12 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
           interactionZoneId: terraceSurfaceId, elevationMm: GROUND_Y_MM,
           elevationMode: 'terrain' as const,
           polygonXZ: [
-            ...Array.from({ length: 53 }, (_, index) => {
-              const x = -14_000 + index * 2_000
+            ...Array.from({ length: 81 }, (_, index) => {
+              const x = access.trail[0].x - 4_000 + index * 2_000
               return { x, z: rearHighlandFrontZmm(x) - 6_500 }
             }),
-            ...Array.from({ length: 53 }, (_, index) => {
-              const x = 90_000 - index * 2_000
+            ...Array.from({ length: 81 }, (_, index) => {
+              const x = access.trail.at(-1)!.x + 4_000 - index * 2_000
               return { x, z: rearHighlandFrontZmm(x) - 23_500 }
             }),
           ], blockedPolygonsXZ: city.buildings
@@ -461,7 +470,7 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
           edge.id.startsWith('ped-access-') ? 1_200 : 900 })) } }
   return {
     ...integrated,
-    config: { ...integrated.config, generatorVersion: 'twilight-dev-v12' },
+    config: { ...integrated.config, generatorVersion: 'twilight-dev-v13' },
     baseCity: city,
     roadNodes: city.roads.nodes.map((node) => ({ id: node.id,
       position: { x: Math.round(node.x * 1000), z: Math.round(node.z * 1000) } })),
@@ -477,11 +486,12 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
     places: [...integrated.places, {
       id: terracePlaceId, name: 'North Terrace Walk', kind: 'park',
       districtId: 'block-3--1', surfaceIds: [terraceSurfaceId],
-      accessNodeIds: [trailNodeId(access.stairTrailIndex / 8)], activityTags: ['leisure'],
+      accessNodeIds: [trailNodeId(access.stairTrailIndex / trailStep)],
+      activityTags: ['leisure'],
       openingHours: [{ openMinute: 0, closeMinute: 1440 }],
       capacity: 6, attractiveness: 0.78, typicalVisitTicks: [18, 55],
       slotNodeIds: Array.from({ length: 6 }, (_, index) =>
-        trailNodeId(index + 6)),
+        trailNodeId(2 + index * 3)),
     }],
   }
 }
