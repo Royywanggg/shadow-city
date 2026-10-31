@@ -13,23 +13,25 @@ export function createEscarpmentFaceGeometry(terrain: DevTerrainV1): BufferGeome
   const lower = new Color('#43545b')
   const middle = new Color('#596b6d')
   const upper = new Color('#7c8983')
+  const crest = new Color('#536c60')
+  const bands = [[0, lower], [3_000, middle], [6_500, upper],
+    [9_000, crest]] as const
   for (const patch of terrain.nonWalkableEscarpment.patches) {
     // The ground sampler, blocked polygon and visible rock all use the same
     // front contour. The continuous terrace is kept clear of through roads.
     for (const front of patch.frontLine) {
-      for (const [inward, tone] of [[0, lower], [1_200, middle],
-        [3_000, upper]] as const) {
+      for (const [inward, tone] of bands) {
         const z = front.z - inward
         positions.push(front.x / 1000,
           heightAtMm(terrain, front.x, z) / 1000 + 0.08, z / 1000)
         colors.push(tone.r, tone.g, tone.b)
       }
     }
-    const start = positions.length / 3 - patch.frontLine.length * 3
+    const start = positions.length / 3 - patch.frontLine.length * bands.length
     for (let segment = 0; segment < patch.frontLine.length - 1; segment += 1) {
-      for (let band = 0; band < 2; band += 1) {
-        const a = start + segment * 3 + band
-        const b = a + 3
+      for (let band = 0; band < bands.length - 1; band += 1) {
+        const a = start + segment * bands.length + band
+        const b = a + bands.length
         indices.push(a, b, a + 1, a + 1, b, b + 1)
       }
     }
@@ -59,16 +61,14 @@ function EscarpmentTrees({ terrain, city }: { terrain: DevTerrainV1; city: CityM
     const minX = patch.frontLine[0].x + 1_800
     const maxX = patch.frontLine.at(-1)!.x - 1_800
     if (minX >= maxX) return []
-    const count = Math.max(7, Math.round((maxX - minX) / 3_000))
+    const count = Math.max(7, Math.round((maxX - minX) / 3_800))
     return Array.from({ length: count }, (_, index): LandscapeTree => {
       const jitter = Math.sin((patchIndex + 1) * 19 + index * 7.3) * 0.28
       const tx = (index + 0.5 + jitter) / count
       const tz = (Math.sin((patchIndex + 1) * 13 + index * 11.7) + 1) / 2
       const xMm = Math.round(minX + (maxX - minX) * tx)
-      const { backZ, frontZ } = escarpmentZBoundsAtMm(patch, xMm)
-      const minZ = backZ + 4_500
-      const maxZ = frontZ - 7_000
-      const zMm = Math.round(minZ + (maxZ - minZ) * tz)
+      const { frontZ } = escarpmentZBoundsAtMm(patch, xMm)
+      const zMm = Math.round(frontZ - 4_000 - 2_500 * tz)
       return { x: xMm / 1000, z: zMm / 1000,
         y: heightAtMm(terrain, xMm, zMm) / 1000,
         height: 2.1 + (index % 3) * 0.42,
