@@ -10,6 +10,7 @@ import { deriveDevRoadCorridor } from './devRoadCorridor'
 import { placeDevCorridorParcels } from './devParcelPlacement'
 import { applyDevValleyPlan } from './devValleyPlan'
 import { applyDevHighlandPlan } from './devHighlandPlan'
+import { applyDevRidgeFrontage } from './devRidgeFrontage'
 
 const GROUND_Y_MM = 250
 const BRIDGE_SIDEWALK_OFFSET_MM = 180
@@ -122,7 +123,8 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
   const expandedCity = expandOriginalCity(generateCity(seed))
   const organicCity = createDevOrganicLayout(expandedCity)
   const curvedCity = applyDevValleyPlan(deriveDevRoadCorridor(organicCity))
-  const baseCity = applyDevHighlandPlan(placeDevCorridorParcels(curvedCity))
+  const baseCity = applyDevHighlandPlan(
+    applyDevRidgeFrontage(placeDevCorridorParcels(curvedCity)))
   const integrated = generateIntegratedWorld(seed, {
     baseCity,
     openChannelBlockIds: [...DEV_OPEN_CHANNEL_BLOCK_IDS, ...DEV_ESCARPMENT_BLOCK_IDS],
@@ -274,7 +276,7 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
   })
   return {
     ...integrated,
-    config: { ...integrated.config, generatorVersion: 'twilight-dev-v7' },
+    config: { ...integrated.config, generatorVersion: 'twilight-dev-v8' },
     baseCity: city,
     roadNodes: city.roads.nodes.map((node) => ({ id: node.id,
       position: { x: Math.round(node.x * 1000), z: Math.round(node.z * 1000) } })),

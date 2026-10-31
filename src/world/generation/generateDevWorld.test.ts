@@ -48,7 +48,7 @@ describe('isolated Twilight terrain world', () => {
       }
     }
     expect(dev.baseCity?.buildings.length).toBeLessThan(mainBefore.baseCity!.buildings.length)
-    expect(dev.config.generatorVersion).toBe('twilight-dev-v7')
+    expect(dev.config.generatorVersion).toBe('twilight-dev-v8')
     expect(mainAfter.config.generatorVersion).toBe('heritage-extension-v6')
     expect(worldFingerprintV5(dev, DEFAULT_SIMULATION_CONFIG_V5))
       .not.toBe(worldFingerprintV5(mainAfter, DEFAULT_SIMULATION_CONFIG_V5))
@@ -134,6 +134,46 @@ describe('isolated Twilight terrain world', () => {
       expect(findRouteV2(index, 'ped-entrance-building-block-4-0-0-0',
         'ped-block-3--1-3-0').status).toBe('ok')
       expect(world.terrain!.nonWalkableEscarpment.patches).toHaveLength(1)
+    }
+  })
+
+  it('keeps the rear frontage road and its sidewalk parcels on one curve', () => {
+    const world = generateDevWorld(HERO_SEED)
+    const city = world.baseCity!
+    const nodes = new Map(city.roads.nodes.map((node) => [node.id, node]))
+    const profiles = new Map(world.terrain!.roadProfiles.map((profile) =>
+      [profile.edgeId, profile]))
+    const west = nodes.get('node-4-0')!
+    const east = nodes.get('node-7-0')!
+    expect(nodes.get('node-5-0')!.z).toBeLessThan(west.z - 3)
+    expect(nodes.get('node-6-0')!.z).toBeLessThan(west.z - 3)
+    expect(east.z).toBe(west.z)
+    for (const column of [4, 5, 6]) {
+      const id = `edge-x-${column}-0`
+      const road = city.roads.edges.find((edge) => edge.id === id)!
+      const path = road.centerlineXZ!
+      const profile = profiles.get(id)!
+      const block = city.blocks.find((item) => item.id === `block-${column}-0`)!
+      expect(path.length).toBeGreaterThan(10)
+      expect(path[0]).toEqual({ x: nodes.get(road.from)!.x,
+        z: nodes.get(road.from)!.z })
+      expect(path.at(-1)).toEqual({ x: nodes.get(road.to)!.x,
+        z: nodes.get(road.to)!.z })
+      expect(profile.path).toHaveLength(path.length)
+      profile.path.forEach((point, index) => {
+        expect(Math.abs(point.x - path[index].x * 1000)).toBeLessThanOrEqual(1)
+        expect(Math.abs(point.z - path[index].z * 1000)).toBeLessThanOrEqual(1)
+      })
+      const northBoundary = block.footprintXZ!.slice(0, -2)
+      expect(northBoundary.length).toBeGreaterThan(5)
+      for (const point of northBoundary) {
+        const right = path.findIndex((sample) => sample.x >= point.x)
+        expect(right).toBeGreaterThan(0)
+        const a = path[right - 1]
+        const b = path[right]
+        const roadZ = a.z + (b.z - a.z) * (point.x - a.x) / (b.x - a.x)
+        expect(point.z - roadZ).toBeCloseTo(road.width / 2 + 1.25, 5)
+      }
     }
   })
 

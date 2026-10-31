@@ -104,7 +104,11 @@ export function generateIntegratedWorld(seed = HERO_SEED,
       !openBlockBounds.some((block) => Math.abs(feature.x - block.x) < block.width / 2 &&
         Math.abs(feature.z - block.z) < block.depth / 2)),
   }
-  retainedCity.pedestrian = derivePedestrianNetwork(retainedCity,
+  // The dev terrain reserves these blocks for impassable land and water. They
+  // must not contribute provisional sidewalk rings or crossings that are
+  // removed only after the world graph has been constructed.
+  retainedCity.pedestrian = derivePedestrianNetwork({ ...retainedCity,
+    blocks: retainedCity.blocks.filter((block) => !openBlocks.has(block.id)) },
     options.baseCity ? { curbPlacement: 'endpointVector' } : undefined)
   const config: WorldConfigV2 = { ...INTEGRATED_WORLD_CONFIG_V2, seed }
   const builder = new WorldBuilder()
