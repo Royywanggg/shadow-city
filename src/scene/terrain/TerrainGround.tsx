@@ -373,7 +373,7 @@ export function TerrainGround({ terrain, city }: { terrain: DevTerrainV1;
     </mesh>}
     <TerrainBankRocks terrain={terrain} />
     <TerrainValleyTrees terrain={terrain} city={city} />
-    <TerrainEscarpment terrain={terrain} />
+    <TerrainEscarpment terrain={terrain} city={city} />
     <TerrainTerraceAccess terrain={terrain} />
   </>
 }

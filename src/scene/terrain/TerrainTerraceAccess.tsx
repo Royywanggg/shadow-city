@@ -38,6 +38,24 @@ export function TerrainTerraceAccess({ terrain }: { terrain: DevTerrainV1 }) {
   const access = terrain.terraceAccess
   const trail = useMemo(() => access ? pathRibbon(access.trail, 2.4) : null,
     [access])
+  const walkways = useMemo(() => {
+    if (!access || access.walkways.length === 0) return null
+    const paths = access.walkways.map((walkway) =>
+      pathRibbon(walkway.path, walkway.widthMm / 1_000))
+    const positions: number[] = []
+    const indices: number[] = []
+    for (const path of paths) {
+      const offset = positions.length / 3
+      positions.push(...Array.from(path.getAttribute('position').array))
+      indices.push(...Array.from(path.getIndex()!.array, (index) => index + offset))
+      path.dispose()
+    }
+    const geometry = new BufferGeometry()
+    geometry.setAttribute('position', new Float32BufferAttribute(positions, 3))
+    geometry.setIndex(indices)
+    geometry.computeVertexNormals()
+    return geometry
+  }, [access])
   const foot = useMemo(() => access ? pathRibbon(access.crossing, 2.2) : null,
     [access])
   const stairTreads = useMemo((): BoxInstance[] => access ?
@@ -69,13 +87,17 @@ export function TerrainTerraceAccess({ terrain }: { terrain: DevTerrainV1 }) {
   }) : [], [access])
   useEffect(() => () => {
     trail?.dispose()
+    walkways?.dispose()
     foot?.dispose()
     handrails.forEach((rail) => rail.dispose())
-  }, [trail, foot, handrails])
+  }, [trail, walkways, foot, handrails])
   if (!access) return null
   return <>
     {trail && <mesh geometry={trail} receiveShadow>
       <meshStandardMaterial color="#4c6067" roughness={0.94} side={2} />
+    </mesh>}
+    {walkways && <mesh geometry={walkways} receiveShadow>
+      <meshStandardMaterial color="#71858a" roughness={0.92} side={2} />
     </mesh>}
     {foot && <mesh geometry={foot} receiveShadow>
       <meshStandardMaterial color="#849395" roughness={0.91} side={2} />

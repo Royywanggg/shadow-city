@@ -11,7 +11,6 @@ import { bearingFromOffset, clampPitch, MAX_PITCH_DEG, MIN_PITCH_DEG, normalizeB
 
 const HOME_POSITION: CameraTarget = [245, 195, 245]
 const HOME_TARGET: CameraTarget = [15, 0, 0]
-const TERRAIN_HOME_POSITION: CameraTarget = [-188, 168, 188]
 const TOUCH_MAPPING = { ONE: TOUCH.PAN, TWO: TOUCH.DOLLY_PAN }
 
 export function WorldCameraRig({ controller, world }: { controller: CameraController; world: WorldModelV2 }) {
@@ -26,8 +25,7 @@ export function WorldCameraRig({ controller, world }: { controller: CameraContro
     Math.min(minimum, height), 0) ?? 0, [world.terrain])
   const diagnosticStreetPitch = new URLSearchParams(window.location.search)
     .get('cameraDiagnostic') === 'street'
-  const homePosition = terrainDev ? TERRAIN_HOME_POSITION :
-    integrated ? INITIAL_CAMERA_POSITION : HOME_POSITION
+  const homePosition = integrated ? INITIAL_CAMERA_POSITION : HOME_POSITION
   const homeTarget = integrated ? INITIAL_CAMERA_TARGET : HOME_TARGET
   const half = world.config.extentMm / 2000
   const baseZoom = integrated ? Math.min(size.width / (world.baseCity!.size * 1.53),

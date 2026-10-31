@@ -1,7 +1,9 @@
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
 import { BufferGeometry, Color, Float32BufferAttribute, Object3D, type InstancedMesh } from 'three'
 import type { DevTerrainV1 } from '../../world/terrain/devTerrain'
+import type { CityModel } from '../../city/model'
 import { escarpmentZBoundsAtMm, heightAtMm } from '../../world/terrain/devTerrain'
+import { DEV_UPPER_ROAD_EDGE_ID } from '../../world/generation/devUpperRoadPlan'
 import { InstancedBoxes, type BoxInstance } from '../InstancedBoxes'
 
 export function createEscarpmentFaceGeometry(terrain: DevTerrainV1): BufferGeometry {
@@ -48,9 +50,12 @@ interface LandscapeTree {
   readonly color: string
 }
 
-function EscarpmentTrees({ terrain }: { terrain: DevTerrainV1 }) {
+function EscarpmentTrees({ terrain, city }: { terrain: DevTerrainV1; city: CityModel }) {
   const canopyRef = useRef<InstancedMesh>(null)
-  const trees = useMemo(() => terrain.nonWalkableEscarpment.patches.flatMap((patch, patchIndex) => {
+  const trees = useMemo(() => {
+    const upperRoad = terrain.roadProfiles.find((profile) =>
+      profile.edgeId === DEV_UPPER_ROAD_EDGE_ID)
+    return terrain.nonWalkableEscarpment.patches.flatMap((patch, patchIndex) => {
     const minX = patch.frontLine[0].x + 1_800
     const maxX = patch.frontLine.at(-1)!.x - 1_800
     if (minX >= maxX) return []
@@ -68,11 +73,21 @@ function EscarpmentTrees({ terrain }: { terrain: DevTerrainV1 }) {
         y: heightAtMm(terrain, xMm, zMm) / 1000,
         height: 2.1 + (index % 3) * 0.42,
         color: index % 2 ? '#476359' : '#38564f' }
-    }).filter((tree) => !terrain.terraceAccess ||
-      [...terrain.terraceAccess.stair, ...terrain.terraceAccess.trail]
-        .every((point) => Math.hypot(tree.x * 1000 - point.x,
-          tree.z * 1000 - point.z) > 3_500))
-  }), [terrain])
+    }).filter((tree) => {
+      const clearPath = !terrain.terraceAccess ||
+        [...terrain.terraceAccess.stair, ...terrain.terraceAccess.trail]
+          .every((point) => Math.hypot(tree.x * 1000 - point.x,
+            tree.z * 1000 - point.z) > 3_500)
+      const clearBuildings = city.buildings.every((building) =>
+        building.masses.filter((mass) => mass.baseY < 2).every((mass) =>
+          Math.abs(tree.x - building.x - mass.offsetX) > mass.width / 2 + 1.8 ||
+          Math.abs(tree.z - building.z - mass.offsetZ) > mass.depth / 2 + 1.8))
+      const clearRoad = !upperRoad || upperRoad.path.every((point) =>
+        Math.hypot(tree.x * 1000 - point.x, tree.z * 1000 - point.z) > 6_000)
+      return clearPath && clearBuildings && clearRoad
+    })
+    })
+  }, [terrain, city])
   const trunks: BoxInstance[] = useMemo(() => trees.map((tree) => ({
     position: [tree.x, tree.y + tree.height * 0.34, tree.z],
     scale: [0.22, tree.height * 0.68, 0.22], color: '#46504a',
@@ -104,7 +119,8 @@ function EscarpmentTrees({ terrain }: { terrain: DevTerrainV1 }) {
   </>
 }
 
-export function TerrainEscarpment({ terrain }: { terrain: DevTerrainV1 }) {
+export function TerrainEscarpment({ terrain, city }: { terrain: DevTerrainV1;
+  city: CityModel }) {
   const faces = useMemo(() => createEscarpmentFaceGeometry(terrain), [terrain])
   useEffect(() => () => faces.dispose(), [faces])
   if (terrain.nonWalkableEscarpment.patches.length === 0) return null
@@ -112,6 +128,6 @@ export function TerrainEscarpment({ terrain }: { terrain: DevTerrainV1 }) {
     <mesh geometry={faces} castShadow receiveShadow>
       <meshStandardMaterial vertexColors roughness={0.98} flatShading side={2} />
     </mesh>
-    <EscarpmentTrees terrain={terrain} />
+    <EscarpmentTrees terrain={terrain} city={city} />
   </>
 }

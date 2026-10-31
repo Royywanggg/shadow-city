@@ -8,6 +8,7 @@ import { InstancedBoxes, type BoxInstance } from '../InstancedBoxes'
 import { surfaceTextures } from '../SurfaceTextures'
 import { junctionTrimKey, planCurvedJunctions, trimRoadPath,
   type JunctionPlan } from './roadJunctions'
+import { DEV_UPPER_ROAD_EDGE_ID } from '../../world/generation/devUpperRoadPlan'
 
 type RoadProfile = DevTerrainV1['roadProfiles'][number]
 
@@ -246,7 +247,8 @@ export function TerrainRoads({ city, terrain }: { city: CityModel; terrain: DevT
           })
         }
       }
-      if (kinds.get(profile.edgeId) === 'avenue') {
+      if (kinds.get(profile.edgeId) === 'avenue' ||
+        profile.edgeId === DEV_UPPER_ROAD_EDGE_ID) {
         const startClear = Math.max(...[-1, 1].map((side) =>
           plan.trimsMm.get(junctionTrimKey(profile.edgeId, true, side)) ?? 0))
         const endClear = Math.max(...[-1, 1].map((side) =>
@@ -270,7 +272,28 @@ export function TerrainRoads({ city, terrain }: { city: CityModel; terrain: DevT
         underdecks.push({ path: profile.path.slice(startIndex, endIndex + 1),
           width: width + 3.3, sideOffset: 0, lift: -0.48 })
         const point = profile.path[Math.floor((startIndex + endIndex) / 2)]
-        if (point) {
+        if (profile.edgeId === DEV_UPPER_ROAD_EDGE_ID) {
+          let nextSupportMm = 17_000
+          let distanceMm = 0
+          for (let index = startIndex + 1; index < endIndex; index += 1) {
+            const before = profile.path[index - 1]
+            const at = profile.path[index]
+            distanceMm += Math.hypot(at.x - before.x, at.z - before.z)
+            if (distanceMm < nextSupportMm) continue
+            nextSupportMm += 16_000
+            const [dx, dz] = tangent(profile.path, index)
+            for (const side of [-1, 1]) {
+              const x = Math.round(at.x - dz * side * (width / 2 + 0.55) * 1_000)
+              const z = Math.round(at.z + dx * side * (width / 2 + 0.55) * 1_000)
+              const ground = heightAtMm(terrain, x, z)
+              const gap = (at.y - ground) / 1_000
+              if (gap < 1.8) continue
+              piers.push({ position: [x / 1_000,
+                (at.y + ground) / 2_000 - 0.22, z / 1_000],
+              scale: [0.75, gap - 0.45, 0.75], color: '#536979' })
+            }
+          }
+        } else if (point) {
           const ground = heightAtMm(terrain, point.x, point.z)
           const gap = (point.y - ground) / 1000
           if (gap > 1.7) piers.push({ position: [point.x / 1000,
