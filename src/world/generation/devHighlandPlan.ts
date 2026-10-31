@@ -1,10 +1,10 @@
 import type { CityModel } from '../../city/model'
 
 export const HIGHLAND_CLOSED_ROAD_IDS = [
-  'edge-z-5--1', 'edge-z-6--1',
+  'edge-z-4--1', 'edge-z-5--1', 'edge-z-6--1',
 ] as const
 
-/** The dev highland replaces two empty through-block roads with a single landform. */
+/** The dev highland replaces the through-block roads with one landform. */
 export function applyDevHighlandPlan(city: CityModel): CityModel {
   const closed = new Set<string>(HIGHLAND_CLOSED_ROAD_IDS)
   for (const id of closed) {

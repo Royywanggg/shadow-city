@@ -80,7 +80,7 @@ export const DEV_OPEN_CHANNEL_BLOCK_IDS = [
   'block-0-4', 'block-0-5', 'block-0-6', 'block--1-6',
 ] as const
 export const DEV_ESCARPMENT_BLOCK_IDS = [
-  'block-4--1', 'block-5--1', 'block-6--1',
+  'block-3--1', 'block-4--1', 'block-5--1', 'block-6--1',
 ] as const
 
 const STEP_MM = 2_000
@@ -308,7 +308,7 @@ export function createDevTerrainV1(city: CityModel, seed: string): DevTerrainV1 
     if (cleared.some((block) => !block)) throw new Error('Missing north terrace block')
     // The unbuilt rear blocks share a single ridge. Roads around its east and
     // west ends retain the north-south connection through the original city.
-    const x0 = 34_000
+    const x0 = -17_000
     const x1 = 94_000
     const samples = Math.max(6, Math.ceil((x1 - x0) / 1_200))
     const backLine = Array.from({ length: samples + 1 }, (_, index) => {

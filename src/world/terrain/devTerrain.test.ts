@@ -14,7 +14,7 @@ describe('curved dev escarpment', () => {
     const patches = terrain.nonWalkableEscarpment.patches
     expect(patches).toHaveLength(1)
     expect(patches[0].frontLine.at(-1)!.x - patches[0].frontLine[0].x)
-      .toBeGreaterThan(55_000)
+      .toBeGreaterThan(105_000)
     const frontHeights = patches.flatMap((patch) => patch.frontLine.map((point) => point.z))
     expect(Math.max(...frontHeights) - Math.min(...frontHeights)).toBeGreaterThan(2_000)
     for (const patch of patches) {
@@ -47,12 +47,18 @@ describe('curved dev escarpment', () => {
   })
 
   it('keeps every road centreline outside the curved impassable patches', () => {
-    const terrain = ridgeTerrain()
+    const world = generateDevWorld(HERO_SEED)
+    const terrain = world.terrain!
+    const roadWidths = new Map(world.baseCity!.roads.edges.map((edge) =>
+      [edge.id, edge.width]))
     for (const profile of terrain.roadProfiles) for (const point of profile.path) {
       for (const patch of terrain.nonWalkableEscarpment.patches) {
         if (point.x < patch.frontLine[0].x || point.x > patch.frontLine.at(-1)!.x) continue
         const { backZ, frontZ } = escarpmentZBoundsAtMm(patch, point.x)
-        expect(point.z < backZ || point.z > frontZ).toBe(true)
+        const pavementClearanceMm = ((roadWidths.get(profile.edgeId) ?? 0) / 2 +
+          1.675 + 0.25) * 1000
+        expect(point.z < backZ - pavementClearanceMm ||
+          point.z > frontZ + pavementClearanceMm).toBe(true)
       }
     }
   })

@@ -1,8 +1,8 @@
 import type { CityModel, CityPointXZ, RoadEdge, RoadNode } from '../../city/model'
 import { reprojectRoadFeature } from './devRoadCorridor'
 
-const FRONTAGE_COLUMNS = [4, 5, 6] as const
-const NODE_START = 'node-4-0'
+const FRONTAGE_COLUMNS = [3, 4, 5, 6] as const
+const NODE_START = 'node-3-0'
 const NODE_END = 'node-7-0'
 const BOW_M = 5
 const SAMPLE_STEP_M = 1.25
@@ -44,7 +44,7 @@ export function applyDevRidgeFrontage(city: CityModel): CityModel {
   if (!west || !east || Math.abs(west.z - east.z) > 0.001) {
     throw new Error('Dev ridge frontage needs a level east-west road')
   }
-  const changedNodeIds = new Set(['node-5-0', 'node-6-0'])
+  const changedNodeIds = new Set(['node-4-0', 'node-5-0', 'node-6-0'])
   const nodes = city.roads.nodes.map((node) => changedNodeIds.has(node.id)
     ? { ...node, z: zAlongRidge(node.x, west, east) } : node)
   const after = new Map(nodes.map((node) => [node.id, node]))

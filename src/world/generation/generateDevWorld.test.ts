@@ -48,7 +48,7 @@ describe('isolated Twilight terrain world', () => {
       }
     }
     expect(dev.baseCity?.buildings.length).toBeLessThan(mainBefore.baseCity!.buildings.length)
-    expect(dev.config.generatorVersion).toBe('twilight-dev-v8')
+    expect(dev.config.generatorVersion).toBe('twilight-dev-v9')
     expect(mainAfter.config.generatorVersion).toBe('heritage-extension-v6')
     expect(worldFingerprintV5(dev, DEFAULT_SIMULATION_CONFIG_V5))
       .not.toBe(worldFingerprintV5(mainAfter, DEFAULT_SIMULATION_CONFIG_V5))
@@ -93,7 +93,7 @@ describe('isolated Twilight terrain world', () => {
     expect(visited.size).toBe(city.roads.nodes.length)
     const index = createNavigationIndexV2(world)
     const route = findRouteV2(index, 'ped-entrance-building-block-4-0-0-0',
-      'ped-block-3--1-3-0')
+      'ped-block-2--1-3-0')
     expect(route.status).toBe('ok')
     if (route.status === 'ok') {
       for (const step of route.steps) {
@@ -108,7 +108,7 @@ describe('isolated Twilight terrain world', () => {
         populationSize: 24 })
       const initial = createInitialStateV5(environment)
       const start = index.nodeById.get('ped-entrance-building-block-4-0-0-0')!
-      const end = index.nodeById.get('ped-block-3--1-3-0')!
+      const end = index.nodeById.get('ped-block-2--1-3-0')!
       let citizen: CitizenStateV5 = { ...initial.citizens[0], position: start.position,
         surfaceId: start.surfaceId, placeId: null, currentNodeId: start.id,
         destinationNodeId: end.id, activity: 'travelling' as const,
@@ -132,7 +132,7 @@ describe('isolated Twilight terrain world', () => {
       const world = generateDevWorld(seed)
       const index = createNavigationIndexV2(world)
       expect(findRouteV2(index, 'ped-entrance-building-block-4-0-0-0',
-        'ped-block-3--1-3-0').status).toBe('ok')
+        'ped-block-2--1-3-0').status).toBe('ok')
       expect(world.terrain!.nonWalkableEscarpment.patches).toHaveLength(1)
     }
   })
@@ -143,12 +143,13 @@ describe('isolated Twilight terrain world', () => {
     const nodes = new Map(city.roads.nodes.map((node) => [node.id, node]))
     const profiles = new Map(world.terrain!.roadProfiles.map((profile) =>
       [profile.edgeId, profile]))
-    const west = nodes.get('node-4-0')!
+    const west = nodes.get('node-3-0')!
     const east = nodes.get('node-7-0')!
+    expect(nodes.get('node-4-0')!.z).toBeLessThan(west.z - 2)
     expect(nodes.get('node-5-0')!.z).toBeLessThan(west.z - 3)
-    expect(nodes.get('node-6-0')!.z).toBeLessThan(west.z - 3)
+    expect(nodes.get('node-6-0')!.z).toBeLessThan(west.z - 1)
     expect(east.z).toBe(west.z)
-    for (const column of [4, 5, 6]) {
+    for (const column of [3, 4, 5, 6]) {
       const id = `edge-x-${column}-0`
       const road = city.roads.edges.find((edge) => edge.id === id)!
       const path = road.centerlineXZ!
