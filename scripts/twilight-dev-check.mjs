@@ -111,6 +111,14 @@ try {
   })
   await dev.waitForTimeout(950)
   await capture(dev, 'dev-terrace-close-1440x900')
+  await dev.evaluate(() => {
+    const profile = window.__shadowCityV06.getWorld().terrain.roadProfiles
+      .find((item) => item.edgeId === 'edge-x-5-0')
+    const mid = profile.path[Math.floor(profile.path.length / 2)]
+    window.__shadowCityV06.inspectAtWorld(mid.x / 1000, mid.y / 1000, mid.z / 1000)
+  })
+  await dev.waitForTimeout(950)
+  await capture(dev, 'dev-ridge-frontage-close-1440x900')
   await dev.getByRole('button', { name: 'RESET VIEW' }).click()
   await dev.waitForTimeout(450)
   for (const bearing of [0, 90, 180, 270]) {
