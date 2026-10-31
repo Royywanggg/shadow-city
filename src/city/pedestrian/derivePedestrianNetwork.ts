@@ -657,8 +657,8 @@ export function derivePedestrianNetwork(city: SpatialCity,
       !eastBlock?.boundaryRoadEdgeIds) {
       const roadId = `edge-z-${block.column + 1}-${block.row}`
       const road = roadEdgeById.get(roadId)
-      if (!road) throw new Error(`Missing crossing road ${roadId}`)
-      crossBlocks(
+      // A removed road has no carriageway or crossing between these blocks.
+      if (road) crossBlocks(
         `ped-cross-east-${block.id}`,
         current.at(current.east, current.north),
         eastNeighbor.at(eastNeighbor.west, eastNeighbor.north),
@@ -673,8 +673,7 @@ export function derivePedestrianNetwork(city: SpatialCity,
       !southBlock?.boundaryRoadEdgeIds) {
       const roadId = `edge-x-${block.column}-${block.row + 1}`
       const road = roadEdgeById.get(roadId)
-      if (!road) throw new Error(`Missing crossing road ${roadId}`)
-      crossBlocks(
+      if (road) crossBlocks(
         `ped-cross-south-${block.id}`,
         current.at(current.west, current.south),
         southNeighbor.at(southNeighbor.west, southNeighbor.north),

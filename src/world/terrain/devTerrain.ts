@@ -302,15 +302,14 @@ export function createDevTerrainV1(city: CityModel, seed: string): DevTerrainV1 
   const channelLine = createDevValleyChannel(city)
   const openChannelBlockIds = [...DEV_OPEN_CHANNEL_BLOCK_IDS]
   const open = new Set<string>([...openChannelBlockIds, ...DEV_ESCARPMENT_BLOCK_IDS])
-  const patches = city.blocks.filter((block) =>
-    DEV_ESCARPMENT_BLOCK_IDS.some((id) => id === block.id)).map((block) => {
-    const insetMm = 3_800
-    const x0 = Math.round((block.x - block.width / 2) * 1000) + insetMm
-    // The western ridge reaches the former straight road corridor. The dev road
-    // network must route around it; the original integrated city is untouched.
-    const x1 = block.id === 'block-4--1'
-      ? Math.round((block.x + block.width / 2) * 1000)
-      : Math.round((block.x + block.width / 2) * 1000) - insetMm
+  const patches = (() => {
+    const cleared = DEV_ESCARPMENT_BLOCK_IDS.map((id) =>
+      city.blocks.find((block) => block.id === id))
+    if (cleared.some((block) => !block)) throw new Error('Missing north terrace block')
+    // The unbuilt rear blocks share a single ridge. Roads around its east and
+    // west ends retain the north-south connection through the original city.
+    const x0 = 34_000
+    const x1 = 94_000
     const samples = Math.max(6, Math.ceil((x1 - x0) / 1_200))
     const backLine = Array.from({ length: samples + 1 }, (_, index) => {
       const x = Math.round(x0 + (x1 - x0) * index / samples)
@@ -323,9 +322,10 @@ export function createDevTerrainV1(city: CityModel, seed: string): DevTerrainV1 
         2_200 * Math.sin((x - 36_000) / 10_500) +
         650 * Math.sin((x - 36_000) / 3_900)) }
     })
-    return { blockId: block.id, backLine, frontLine,
+    return [{ blockId: 'dev-north-terrace', backLine, frontLine,
       polygonXZ: [...backLine, ...[...frontLine].reverse()], riseMm: 8_000 }
-  })
+    ]
+  })()
   const halfMm = Math.round(city.size * 500)
   const width = Math.round(halfMm * 2 / STEP_MM) + 1
   const depth = width

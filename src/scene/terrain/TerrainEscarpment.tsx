@@ -13,7 +13,7 @@ export function createEscarpmentFaceGeometry(terrain: DevTerrainV1): BufferGeome
   const upper = new Color('#7c8983')
   for (const patch of terrain.nonWalkableEscarpment.patches) {
     // The ground sampler, blocked polygon and visible rock all use the same
-    // front contour. Roads pass through the gaps between the three patches.
+    // front contour. The continuous terrace is kept clear of through roads.
     for (const front of patch.frontLine) {
       for (const [inward, tone] of [[0, lower], [1_200, middle],
         [3_000, upper]] as const) {
@@ -54,8 +54,10 @@ function EscarpmentTrees({ terrain }: { terrain: DevTerrainV1 }) {
     const minX = patch.frontLine[0].x + 1_800
     const maxX = patch.frontLine.at(-1)!.x - 1_800
     if (minX >= maxX) return []
-    return Array.from({ length: 7 }, (_, index): LandscapeTree => {
-      const tx = (Math.sin((patchIndex + 1) * 19 + index * 7.3) + 1) / 2
+    const count = Math.max(7, Math.round((maxX - minX) / 3_000))
+    return Array.from({ length: count }, (_, index): LandscapeTree => {
+      const jitter = Math.sin((patchIndex + 1) * 19 + index * 7.3) * 0.28
+      const tx = (index + 0.5 + jitter) / count
       const tz = (Math.sin((patchIndex + 1) * 13 + index * 11.7) + 1) / 2
       const xMm = Math.round(minX + (maxX - minX) * tx)
       const { backZ, frontZ } = escarpmentZBoundsAtMm(patch, xMm)

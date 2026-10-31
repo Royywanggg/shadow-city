@@ -1,24 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import { createEscarpmentFaceGeometry } from '../../scene/terrain/TerrainEscarpment'
 import { HERO_SEED } from '../../city/generation/generateCity'
-import { deriveDevRidgeRoad } from '../generation/devRidgeRoad'
 import { generateDevWorld } from '../generation/generateDevWorld'
-import { generateIntegratedWorld } from '../generation/generateIntegratedWorld'
-import { createDevTerrainV1, DEV_ESCARPMENT_BLOCK_IDS, DEV_OPEN_CHANNEL_BLOCK_IDS,
-  channelCenterXAtMm, escarpmentZBoundsAtMm, heightAtMm } from './devTerrain'
+import { channelCenterXAtMm, escarpmentZBoundsAtMm, heightAtMm } from './devTerrain'
 
 function ridgeTerrain(seed = HERO_SEED) {
-  const world = generateIntegratedWorld(seed, { openChannelBlockIds:
-    [...DEV_OPEN_CHANNEL_BLOCK_IDS, ...DEV_ESCARPMENT_BLOCK_IDS] })
-  const city = world.baseCity!
-  return deriveDevRidgeRoad(city, createDevTerrainV1(city, seed)).terrain
+  return generateDevWorld(seed).terrain!
 }
 
 describe('curved dev escarpment', () => {
   it('uses the same curved contour for terrain, blocked space and rock faces', () => {
     const terrain = ridgeTerrain()
     const patches = terrain.nonWalkableEscarpment.patches
-    expect(patches).toHaveLength(3)
+    expect(patches).toHaveLength(1)
+    expect(patches[0].frontLine.at(-1)!.x - patches[0].frontLine[0].x)
+      .toBeGreaterThan(55_000)
     const frontHeights = patches.flatMap((patch) => patch.frontLine.map((point) => point.z))
     expect(Math.max(...frontHeights) - Math.min(...frontHeights)).toBeGreaterThan(2_000)
     for (const patch of patches) {

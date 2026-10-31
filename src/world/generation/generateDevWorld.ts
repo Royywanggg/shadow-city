@@ -4,12 +4,12 @@ import { createDevTerrainV1, DEV_OPEN_CHANNEL_BLOCK_IDS, heightAtMm,
   DEV_ESCARPMENT_BLOCK_IDS, buildingPadElevationMm,
   roadBendMm, type DevRoadProfileV1, type DevTerrainV1 } from '../terrain/devTerrain'
 import { generateIntegratedWorld } from './generateIntegratedWorld'
-import { deriveDevRidgeRoad, ridgePedestrianLinks, RIDGE_ROAD_ID } from './devRidgeRoad'
 import { expandOriginalCity } from './expandOriginalCity'
 import { createDevOrganicLayout } from './devOrganicLayout'
 import { deriveDevRoadCorridor } from './devRoadCorridor'
 import { placeDevCorridorParcels } from './devParcelPlacement'
 import { applyDevValleyPlan } from './devValleyPlan'
+import { applyDevHighlandPlan } from './devHighlandPlan'
 
 const GROUND_Y_MM = 250
 const BRIDGE_SIDEWALK_OFFSET_MM = 180
@@ -122,14 +122,13 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
   const expandedCity = expandOriginalCity(generateCity(seed))
   const organicCity = createDevOrganicLayout(expandedCity)
   const curvedCity = applyDevValleyPlan(deriveDevRoadCorridor(organicCity))
-  const baseCity = placeDevCorridorParcels(curvedCity)
+  const baseCity = applyDevHighlandPlan(placeDevCorridorParcels(curvedCity))
   const integrated = generateIntegratedWorld(seed, {
     baseCity,
     openChannelBlockIds: [...DEV_OPEN_CHANNEL_BLOCK_IDS, ...DEV_ESCARPMENT_BLOCK_IDS],
   })
-  const sourceCity = integrated.baseCity!
-  const sourceTerrain = createDevTerrainV1(sourceCity, seed)
-  const { city, terrain } = deriveDevRidgeRoad(sourceCity, sourceTerrain)
+  const city = integrated.baseCity!
+  const terrain = createDevTerrainV1(city, seed)
   const buildingPad = new Map(city.buildings.map((building) => [building.id,
     buildingPadElevationMm(terrain, building.id)]))
   const buildingEntry = new Map(terrain.buildingPads.map((pad) => [pad.buildingId, pad]))
@@ -231,13 +230,8 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
   const bridgeLinks = bridgeProfiles.map((profile) =>
     bridgePedestrianLinks(profile, navNodes, terrain))
   navEdges.push(...bridgeLinks.flatMap((link) => link.edges))
-  const ridgeRoad = city.roads.edges.find((edge) => edge.id === RIDGE_ROAD_ID)!
-  const ridgeLinks = ridgePedestrianLinks(terrain, navNodes,
-    Math.round(ridgeRoad.width * 1000))
-  navEdges.push(...ridgeLinks.edges)
   const usedNodeIds = new Set(navEdges.flatMap((edge) => [edge.fromNodeId, edge.toNodeId]))
-  const reachableNavNodes = [...navNodes, ...bridgeLinks.flatMap((link) => link.nodes),
-    ...ridgeLinks.nodes]
+  const reachableNavNodes = [...navNodes, ...bridgeLinks.flatMap((link) => link.nodes)]
     .filter((node) => usedNodeIds.has(node.id))
   const surfaces = integrated.surfaces.map((surface) => surface.id === 'ground'
     ? { ...surface, elevationMode: 'terrain' as const,
@@ -280,7 +274,7 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
   })
   return {
     ...integrated,
-    config: { ...integrated.config, generatorVersion: 'twilight-dev-v6' },
+    config: { ...integrated.config, generatorVersion: 'twilight-dev-v7' },
     baseCity: city,
     roadNodes: city.roads.nodes.map((node) => ({ id: node.id,
       position: { x: Math.round(node.x * 1000), z: Math.round(node.z * 1000) } })),
