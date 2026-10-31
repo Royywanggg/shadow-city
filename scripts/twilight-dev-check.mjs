@@ -146,6 +146,24 @@ try {
   })
   await dev.waitForTimeout(950)
   await capture(dev, 'dev-upper-neighborhood-close-1440x900')
+  await dev.evaluate(() => {
+    const world = window.__shadowCityV06.getWorld()
+    const home = world.baseCity.buildings.find((item) =>
+      item.id === 'building-parcel-dev-terrace-0')
+    const pad = world.terrain.buildingPads.find((item) =>
+      item.buildingId === home.id)
+    window.__shadowCityV06.inspectAtWorld(home.x, pad.elevationMm / 1000, home.z)
+  })
+  await dev.waitForTimeout(950)
+  await capture(dev, 'dev-west-highland-close-1440x900')
+  await dev.evaluate(() => {
+    const profile = window.__shadowCityV06.getWorld().terrain.roadProfiles
+      .find((item) => item.edgeId === 'edge-x-2-0')
+    const mid = profile.path[Math.floor(profile.path.length / 2)]
+    window.__shadowCityV06.inspectAtWorld(mid.x / 1000, mid.y / 1000, mid.z / 1000)
+  })
+  await dev.waitForTimeout(950)
+  await capture(dev, 'dev-west-foothill-road-close-1440x900')
   await dev.getByRole('button', { name: 'RESET VIEW' }).click()
   await dev.waitForTimeout(450)
   for (const bearing of [0, 90, 180, 270]) {
