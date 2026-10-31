@@ -104,13 +104,13 @@ try {
   await dev.waitForTimeout(950)
   await capture(dev, 'dev-outfall-close-1440x900')
   await dev.evaluate(() => {
-    const profile = window.__shadowCityV06.getWorld().terrain.roadProfiles
-      .find((item) => item.edgeId === 'dev-road:ridge-link')
-    const mid = profile.path[Math.floor(profile.path.length / 2)]
-    window.__shadowCityV06.inspectAtWorld(mid.x / 1000, mid.y / 1000, mid.z / 1000)
+    const terrain = window.__shadowCityV06.getWorld().terrain
+    const patch = terrain.nonWalkableEscarpment.patches[0]
+    const front = patch.frontLine[Math.floor(patch.frontLine.length / 2)]
+    window.__shadowCityV06.inspectAtWorld(front.x / 1000, 8, front.z / 1000)
   })
   await dev.waitForTimeout(950)
-  await capture(dev, 'dev-ridge-road-close-1440x900')
+  await capture(dev, 'dev-terrace-close-1440x900')
   await dev.getByRole('button', { name: 'RESET VIEW' }).click()
   await dev.waitForTimeout(450)
   for (const bearing of [0, 90, 180, 270]) {
