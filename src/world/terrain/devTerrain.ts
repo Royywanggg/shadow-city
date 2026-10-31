@@ -55,6 +55,16 @@ export interface DevRoadProfileV1 {
   readonly culvertSpan?: Readonly<{ startIndex: number; endIndex: number }>
 }
 
+export interface DevTerraceAccessV1 {
+  readonly crossingNodeId: string
+  readonly foot: WorldPointMm
+  readonly crossingSouth: WorldPointMm
+  readonly crossing: readonly WorldPointMm[]
+  readonly frontZmm: number
+  readonly stair: readonly WorldPointMm[]
+  readonly trail: readonly WorldPointMm[]
+}
+
 export interface DevTerrainV1 {
   readonly version: 'twilight-terrain-v1'
   readonly seed: string
@@ -62,6 +72,7 @@ export interface DevTerrainV1 {
   readonly blockPads: readonly DevBlockPadV1[]
   readonly buildingPads: readonly DevBuildingPadV1[]
   readonly roadProfiles: readonly DevRoadProfileV1[]
+  readonly terraceAccess?: DevTerraceAccessV1
   readonly openChannelBlockIds: readonly string[]
   readonly nonWalkableEscarpment: Readonly<{
     patches: readonly DevEscarpmentPatchV1[]
@@ -89,6 +100,8 @@ const CHANNEL_HALF_WIDTH_MM = 3_000
 const CHANNEL_BANK_WIDTH_MM = 6_000
 const CHANNEL_DEPTH_MM = 8_000
 const CHANNEL_FULL_DEPTH_Z_MM = 40_000
+const TERRACE_STAIR_X_MM = 0
+const TERRACE_STAIR_FRONT_RUN_MM = 17_000
 const BRIDGE_EDGE_IDS = new Set(['edge-x-0-5', 'edge-x-0-6'])
 const CULVERT_EDGE_IDS = new Set(['edge-z-0-6', 'edge-z--1-6'])
 /** Deliberate contour bends; endpoints and tangents remain aligned with the original graph. */
@@ -184,8 +197,12 @@ function patchHeightMm(patches: readonly DevEscarpmentPatchV1[], xMm: number,
     // these narrow open blocks read as separate conical mounds.
     const xBlend = smoothstep((xMm - minX) / 2_000) *
       smoothstep((maxX - xMm) / 2_000)
+    const stairCut = 1 - smoothstep((Math.abs(xMm - TERRACE_STAIR_X_MM) - 2_400) / 3_200)
+    const frontRunMm = 2_400 + stairCut *
+      (TERRACE_STAIR_FRONT_RUN_MM - 2_400)
     const zBlend = smoothstep((zMm - backZ) / 3_000) *
-      smoothstep((frontZ - zMm) / 2_400)
+      ((1 - stairCut) * smoothstep((frontZ - zMm) / frontRunMm) +
+        stairCut * terraceRamp((frontZ - zMm) / frontRunMm))
     return Math.round(patch.riseMm * xBlend * zBlend)
   }
   return 0
@@ -298,6 +315,57 @@ function buildRoadProfiles(city: CityModel, terrain: DevTerrainV1): DevRoadProfi
   })
 }
 
+function buildTerraceAccess(city: CityModel,
+  terrain: DevTerrainV1): DevTerraceAccessV1 | undefined {
+  const patch = terrain.nonWalkableEscarpment.patches[0]
+  const road = terrain.roadProfiles.find((profile) =>
+    profile.edgeId === 'edge-x-3-0')
+  if (!patch || !road) return undefined
+  const roadSamples = road.path
+  const right = roadSamples.findIndex((point) => point.x >= TERRACE_STAIR_X_MM)
+  if (right < 1) return undefined
+  const before = roadSamples[right - 1]
+  const after = roadSamples[right]
+  const t = (TERRACE_STAIR_X_MM - before.x) / (after.x - before.x)
+  const roadZmm = Math.round(before.z + (after.z - before.z) * t)
+  const southNode = city.pedestrian.nodes.filter((node) =>
+    node.id.startsWith('ped-block-3-0-polygon-') &&
+    Math.abs(node.x * 1000 - TERRACE_STAIR_X_MM) < 6_000 &&
+    node.z * 1000 > roadZmm).sort((a, b) =>
+    Math.hypot(a.x * 1000, a.z * 1000 - roadZmm - 4_000) -
+    Math.hypot(b.x * 1000, b.z * 1000 - roadZmm - 4_000) ||
+    a.id.localeCompare(b.id))[0]
+  if (!southNode) return undefined
+  const onGround = (x: number, z: number): WorldPointMm =>
+    ({ x, y: 250 + heightAtMm(terrain, x, z), z })
+  const frontZmm = Math.round(escarpmentZBoundsAtMm(patch, TERRACE_STAIR_X_MM).frontZ)
+  const foot = onGround(TERRACE_STAIR_X_MM, roadZmm - 6_200)
+  if (foot.z <= frontZmm + 1_500) throw new Error('Terrace stair foot overlaps cliff')
+  const crossingSouth = onGround(Math.round(southNode.x * 1000),
+    Math.round(southNode.z * 1000))
+  const crossingCount = Math.ceil(Math.hypot(foot.x - crossingSouth.x,
+    foot.z - crossingSouth.z) / 500)
+  const crossing = Array.from({ length: crossingCount + 1 }, (_, index) => {
+    const t = index / crossingCount
+    return onGround(Math.round(crossingSouth.x + (foot.x - crossingSouth.x) * t),
+      Math.round(crossingSouth.z + (foot.z - crossingSouth.z) * t))
+  })
+  const topZmm = frontZmm - TERRACE_STAIR_FRONT_RUN_MM - 1_200
+  const count = Math.ceil((foot.z - topZmm) / 320)
+  const stair = Array.from({ length: count + 1 }, (_, index) =>
+    onGround(TERRACE_STAIR_X_MM,
+      Math.round(foot.z + (topZmm - foot.z) * index / count)))
+  const trail = Array.from({ length: 37 }, (_, index) => {
+    const x = index * 2_000
+    const z = Math.round(escarpmentZBoundsAtMm(patch, x).frontZ) -
+      TERRACE_STAIR_FRONT_RUN_MM - 1_200
+    return onGround(x, z)
+  })
+  stair[stair.length - 1] = trail[0]
+  return { crossingNodeId: southNode.id, crossingSouth, crossing, foot,
+    frontZmm, stair, trail }
+}
+
 export function createDevTerrainV1(city: CityModel, seed: string): DevTerrainV1 {
   const channelLine = createDevValleyChannel(city)
   const openChannelBlockIds = [...DEV_OPEN_CHANNEL_BLOCK_IDS]
@@ -406,5 +474,6 @@ export function createDevTerrainV1(city: CityModel, seed: string): DevTerrainV1 
       entryKind, entryStair }
   })
   const initial: DevTerrainV1 = { ...sampler, blockPads, buildingPads }
-  return { ...initial, roadProfiles: buildRoadProfiles(city, initial) }
+  const withRoads = { ...initial, roadProfiles: buildRoadProfiles(city, initial) }
+  return { ...withRoads, terraceAccess: buildTerraceAccess(city, withRoads) }
 }

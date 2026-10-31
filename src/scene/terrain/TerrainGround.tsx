@@ -4,6 +4,7 @@ import type { DevTerrainV1 } from '../../world/terrain/devTerrain'
 import type { CityModel } from '../../city/model'
 import { channelCenterXAtMm, heightAtMm } from '../../world/terrain/devTerrain'
 import { TerrainEscarpment } from './TerrainEscarpment'
+import { TerrainTerraceAccess } from './TerrainTerraceAccess'
 import { TerrainValleyTrees } from './TerrainValleyTrees'
 import { InstancedBoxes, type BoxInstance } from '../InstancedBoxes'
 
@@ -373,5 +374,6 @@ export function TerrainGround({ terrain, city }: { terrain: DevTerrainV1;
     <TerrainBankRocks terrain={terrain} />
     <TerrainValleyTrees terrain={terrain} city={city} />
     <TerrainEscarpment terrain={terrain} />
+    <TerrainTerraceAccess terrain={terrain} />
   </>
 }

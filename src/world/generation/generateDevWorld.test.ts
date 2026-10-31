@@ -48,7 +48,7 @@ describe('isolated Twilight terrain world', () => {
       }
     }
     expect(dev.baseCity?.buildings.length).toBeLessThan(mainBefore.baseCity!.buildings.length)
-    expect(dev.config.generatorVersion).toBe('twilight-dev-v9')
+    expect(dev.config.generatorVersion).toBe('twilight-dev-v10')
     expect(mainAfter.config.generatorVersion).toBe('heritage-extension-v6')
     expect(worldFingerprintV5(dev, DEFAULT_SIMULATION_CONFIG_V5))
       .not.toBe(worldFingerprintV5(mainAfter, DEFAULT_SIMULATION_CONFIG_V5))
@@ -135,6 +135,62 @@ describe('isolated Twilight terrain world', () => {
         'ped-block-2--1-3-0').status).toBe('ok')
       expect(world.terrain!.nonWalkableEscarpment.patches).toHaveLength(1)
     }
+  })
+
+  it('connects the street to distinct walkable terrace slots without a teleport', () => {
+    const world = generateDevWorld(HERO_SEED)
+    const access = world.terrain!.terraceAccess!
+    const index = createNavigationIndexV2(world)
+    const park = world.places.find((place) => place.id === 'public:dev-north-terrace')!
+    expect(park.slotNodeIds).toHaveLength(6)
+    expect(new Set(park.slotNodeIds).size).toBe(6)
+    expect(world.connectors.find((connector) =>
+      connector.id === 'terrain:terrace-stair')?.edgeIds)
+      .toEqual(['terrain:terrace-stair-edge'])
+    expect(index.nodeById.get(access.crossingNodeId)?.position).toEqual(
+      access.crossingSouth)
+    expect(Math.max(...access.stair.slice(1).map((point, index) =>
+      point.y - access.stair[index].y))).toBeLessThanOrEqual(200)
+    const route = findRouteV2(index, 'ped-entrance-building-block-4-0-0-0',
+      park.slotNodeIds.at(-1)!)
+    expect(route.status).toBe('ok')
+    if (route.status !== 'ok') return
+    expect(route.steps.map((step) => step.edgeId)).toContain(
+      'terrain:terrace-stair-edge')
+    for (const step of route.steps) {
+      const edge = index.edgeById.get(step.edgeId)!
+      if (edge.surfaceId !== 'ground' &&
+        edge.surfaceId !== 'terrain:terrace-top' &&
+        edge.connectorId !== 'terrain:terrace-stair') continue
+      const surfaceId = edge.connectorId ? `connector:${edge.connectorId}` :
+        edge.surfaceId!
+      for (let i = 1; i < edge.path.length; i += 1) {
+        expect(hasClearSurfaceSegment(world, surfaceId,
+          edge.path[i - 1], edge.path[i])).toBe(true)
+      }
+    }
+    const environment = createEnvironmentV5(world, { ...DEFAULT_SIMULATION_CONFIG_V5,
+      populationSize: 24 })
+    const initial = createInitialStateV5(environment)
+    const start = index.nodeById.get('ped-entrance-building-block-4-0-0-0')!
+    const end = index.nodeById.get(park.slotNodeIds.at(-1)!)!
+    let citizen: CitizenStateV5 = { ...initial.citizens[0],
+      position: start.position, surfaceId: start.surfaceId, placeId: null,
+      currentNodeId: start.id, destinationNodeId: end.id,
+      activity: 'travelling', route: route.steps, routeIndex: 0,
+      distanceOnEdgeMm: 0 }
+    const elevations: number[] = []
+    for (let tick = 0; tick < 120 && citizen.routeIndex < citizen.route.length;
+      tick += 1) {
+      const movement = moveCitizenOneTick(citizen, environment.profiles[0], index,
+        new Map(), 6)
+      expect(movement.blocked).toBeNull()
+      elevations.push(...movement.trace.map((point) => point.position.y))
+      citizen = movement.citizen
+    }
+    expect(citizen.position).toEqual(end.position)
+    expect(citizen.surfaceId).toBe('terrain:terrace-top')
+    expect(Math.max(...elevations) - Math.min(...elevations)).toBeGreaterThan(8_000)
   })
 
   it('keeps the rear frontage road and its sidewalk parcels on one curve', () => {

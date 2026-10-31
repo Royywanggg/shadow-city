@@ -232,8 +232,45 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
   const bridgeLinks = bridgeProfiles.map((profile) =>
     bridgePedestrianLinks(profile, navNodes, terrain))
   navEdges.push(...bridgeLinks.flatMap((link) => link.edges))
+  const access = terrain.terraceAccess
+  if (!access) throw new Error('Dev terrace access was not generated')
+  const terraceSurfaceId = 'terrain:terrace-top'
+  const terracePlaceId = 'public:dev-north-terrace'
+  const terraceConnectorId = 'terrain:terrace-stair'
+  const footId = 'terrain:terrace-foot'
+  const trailNodeId = (index: number) => `terrain:terrace-trail:${index}`
+  const crossingNode = nodeById.get(access.crossingNodeId)
+  if (!crossingNode || crossingNode.surfaceId !== 'ground') {
+    throw new Error('Missing terrace crossing node in integrated navigation')
+  }
+  const terraceNodes: NavNodeV2[] = [
+    { id: footId, position: access.foot, surfaceId: 'ground' },
+    ...Array.from({ length: 7 }, (_, index) => ({
+      id: trailNodeId(index), position: access.trail[index * 6],
+      surfaceId: terraceSurfaceId,
+    })),
+  ]
+  const crossingPath = access.crossing
+  const stairEdgeId = 'terrain:terrace-stair-edge'
+  navEdges.push({ id: 'terrain:terrace-crossing',
+    fromNodeId: crossingNode.id, toNodeId: footId, path: crossingPath,
+    surfaceId: 'ground', connectorId: null, kind: 'crossing',
+    lengthMm: lengthMm(crossingPath), accessId: null, direction: 'both' },
+  { id: stairEdgeId, fromNodeId: footId, toNodeId: trailNodeId(0),
+    path: access.stair, surfaceId: null, connectorId: terraceConnectorId,
+    kind: 'stair', lengthMm: lengthMm(access.stair), accessId: null,
+    direction: 'both' },
+  ...Array.from({ length: 6 }, (_, index): NavEdgeV2 => {
+    const path = access.trail.slice(index * 6, index * 6 + 7)
+    return { id: `terrain:terrace-trail-edge:${index}`,
+      fromNodeId: trailNodeId(index), toNodeId: trailNodeId(index + 1),
+      path, surfaceId: terraceSurfaceId, connectorId: null,
+      kind: 'walk', lengthMm: lengthMm(path), accessId: null,
+      direction: 'both' }
+  }))
   const usedNodeIds = new Set(navEdges.flatMap((edge) => [edge.fromNodeId, edge.toNodeId]))
-  const reachableNavNodes = [...navNodes, ...bridgeLinks.flatMap((link) => link.nodes)]
+  const reachableNavNodes = [...navNodes, ...bridgeLinks.flatMap((link) => link.nodes),
+    ...terraceNodes]
     .filter((node) => usedNodeIds.has(node.id))
   const surfaces = integrated.surfaces.map((surface) => surface.id === 'ground'
     ? { ...surface, elevationMode: 'terrain' as const,
@@ -266,7 +303,26 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
             { x: profile.path[0].x + 6_000, z: profile.path.at(-1)!.z + 500 },
             { x: profile.path[0].x - 6_000, z: profile.path.at(-1)!.z + 500 },
           ], blockedPolygonsXZ: [], clearanceMm: 20_000, indoor: false,
-        })))
+        })), {
+          id: `connector:${terraceConnectorId}`, levelId: 'L0', placeId: null,
+          interactionZoneId: `connector:${terraceConnectorId}`,
+          elevationMm: GROUND_Y_MM, elevationMode: 'terrain' as const,
+          polygonXZ: [
+            { x: -1_500, z: access.stair[0].z + 300 },
+            { x: 1_500, z: access.stair[0].z + 300 },
+            { x: 1_500, z: access.stair.at(-1)!.z - 300 },
+            { x: -1_500, z: access.stair.at(-1)!.z - 300 },
+          ], blockedPolygonsXZ: [], clearanceMm: 5_000, indoor: false,
+        }, {
+          id: terraceSurfaceId, levelId: 'L0', placeId: terracePlaceId,
+          interactionZoneId: terraceSurfaceId, elevationMm: GROUND_Y_MM,
+          elevationMode: 'terrain' as const,
+          polygonXZ: [
+            ...access.trail.map((point) => ({ x: point.x, z: point.z + 1_500 })),
+            ...[...access.trail].reverse().map((point) =>
+              ({ x: point.x, z: point.z - 1_500 })),
+          ], blockedPolygonsXZ: [], clearanceMm: 10_000, indoor: false,
+        })
   const resources = integrated.resources.map((resource) => {
     const shift = resource.surfaceId === 'ground'
       ? heightAtMm(terrain, resource.position.x, resource.position.z)
@@ -276,12 +332,24 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
   })
   return {
     ...integrated,
-    config: { ...integrated.config, generatorVersion: 'twilight-dev-v9' },
+    config: { ...integrated.config, generatorVersion: 'twilight-dev-v10' },
     baseCity: city,
     roadNodes: city.roads.nodes.map((node) => ({ id: node.id,
       position: { x: Math.round(node.x * 1000), z: Math.round(node.z * 1000) } })),
     roadEdges: city.roads.edges.map((edge) => ({ id: edge.id, from: edge.from,
       to: edge.to, widthMm: Math.round(edge.width * 1000) })),
     terrain, surfaces, navNodes: reachableNavNodes, navEdges, resources,
+    connectors: [...integrated.connectors, { id: terraceConnectorId,
+      kind: 'stair', lowerSurfaceId: 'ground', upperSurfaceId: terraceSurfaceId,
+      edgeIds: [stairEdgeId], capacity: 12 }],
+    places: [...integrated.places, {
+      id: terracePlaceId, name: 'North Terrace Walk', kind: 'park',
+      districtId: 'block-3--1', surfaceIds: [terraceSurfaceId],
+      accessNodeIds: [trailNodeId(0)], activityTags: ['leisure'],
+      openingHours: [{ openMinute: 0, closeMinute: 1440 }],
+      capacity: 6, attractiveness: 0.78, typicalVisitTicks: [18, 55],
+      slotNodeIds: Array.from({ length: 6 }, (_, index) =>
+        trailNodeId(index + 1)),
+    }],
   }
 }

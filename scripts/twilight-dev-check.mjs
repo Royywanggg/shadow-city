@@ -112,6 +112,15 @@ try {
   await dev.waitForTimeout(950)
   await capture(dev, 'dev-terrace-close-1440x900')
   await dev.evaluate(() => {
+    const stair = window.__shadowCityV06.getWorld().terrain.terraceAccess?.stair
+    if (!stair) return
+    const middle = stair[Math.floor(stair.length / 2)]
+    window.__shadowCityV06.inspectAtWorld(middle.x / 1000,
+      middle.y / 1000, middle.z / 1000)
+  })
+  await dev.waitForTimeout(950)
+  await capture(dev, 'dev-terrace-access-close-1440x900')
+  await dev.evaluate(() => {
     const profile = window.__shadowCityV06.getWorld().terrain.roadProfiles
       .find((item) => item.edgeId === 'edge-x-5-0')
     const mid = profile.path[Math.floor(profile.path.length / 2)]

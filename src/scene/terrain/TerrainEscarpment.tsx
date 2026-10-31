@@ -68,7 +68,10 @@ function EscarpmentTrees({ terrain }: { terrain: DevTerrainV1 }) {
         y: heightAtMm(terrain, xMm, zMm) / 1000,
         height: 2.1 + (index % 3) * 0.42,
         color: index % 2 ? '#476359' : '#38564f' }
-    })
+    }).filter((tree) => !terrain.terraceAccess ||
+      [...terrain.terraceAccess.stair, ...terrain.terraceAccess.trail]
+        .every((point) => Math.hypot(tree.x * 1000 - point.x,
+          tree.z * 1000 - point.z) > 3_500))
   }), [terrain])
   const trunks: BoxInstance[] = useMemo(() => trees.map((tree) => ({
     position: [tree.x, tree.y + tree.height * 0.34, tree.z],
