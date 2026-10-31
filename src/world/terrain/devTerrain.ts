@@ -202,13 +202,13 @@ function patchHeightMm(patches: readonly DevEscarpmentPatchV1[], xMm: number,
     if (xMm < minX || xMm > maxX) continue
     const { backZ, frontZ } = escarpmentZBoundsAtMm(patch, xMm)
     if (zMm < backZ || zMm > frontZ) continue
-    // Short rock faces meet a broad flat terrace. Long taper distances made
-    // these narrow open blocks read as separate conical mounds.
+    // A broad rocky shoulder meets the upper shelf without a vertical wall.
+    // The stair uses a longer cut through the same continuous landform.
     const xBlend = smoothstep((xMm - minX) / 2_000) *
       smoothstep((maxX - xMm) / 2_000)
     const stairCut = 1 - smoothstep((Math.abs(xMm - TERRACE_STAIR_X_MM) - 2_400) / 3_200)
-    const frontRunMm = 2_400 + stairCut *
-      (TERRACE_STAIR_FRONT_RUN_MM - 2_400)
+    const frontRunMm = 9_000 + stairCut *
+      (TERRACE_STAIR_FRONT_RUN_MM - 9_000)
     const zBlend = smoothstep((zMm - backZ) / 3_000) *
       ((1 - stairCut) * smoothstep((frontZ - zMm) / frontRunMm) +
         stairCut * terraceRamp((frontZ - zMm) / frontRunMm))
@@ -301,11 +301,30 @@ function buildRoadProfiles(city: CityModel, terrain: DevTerrainV1): DevRoadProfi
       const total = lengths.at(-1)!
       const startY = path[0].y
       const endY = path.at(-1)!.y
-      const deck = path.map((point, index) => {
+      const halfFootprintMm = (edge.width / 2 + 1.8) * 1_000
+      const deckY = path.map((point, index) => {
         const t = lengths[index] / total
-        return { ...point, y: Math.max(point.y, Math.round(startY +
-          (endY - startY) * t + 550 * Math.sin(Math.PI * t))) }
+        const before = path[Math.max(0, index - 1)]
+        const after = path[Math.min(path.length - 1, index + 1)]
+        const dx = after.x - before.x
+        const dz = after.z - before.z
+        const span = Math.hypot(dx, dz) || 1
+        const flank = [-1, 1].map((side) => heightAtMm(terrain,
+          Math.round(point.x - dz / span * halfFootprintMm * side),
+          Math.round(point.z + dx / span * halfFootprintMm * side)))
+        return Math.max(point.y, ROAD_TOP_MM + Math.max(...flank),
+          Math.round(startY + (endY - startY) * t + 550 * Math.sin(Math.PI * t)))
       })
+      const maxGrade = 0.095
+      for (let index = deckY.length - 2; index >= 0; index -= 1) {
+        const step = (lengths[index + 1] - lengths[index]) * maxGrade
+        deckY[index] = Math.max(deckY[index], Math.ceil(deckY[index + 1] - step))
+      }
+      for (let index = 1; index < deckY.length; index += 1) {
+        const step = (lengths[index] - lengths[index - 1]) * maxGrade
+        deckY[index] = Math.max(deckY[index], Math.ceil(deckY[index - 1] - step))
+      }
+      const deck = path.map((point, index) => ({ ...point, y: deckY[index] }))
       return { edgeId: edge.id, path: deck, bridge: true,
         bridgeSpan: { startIndex: 0, endIndex: deck.length - 1 } }
     }

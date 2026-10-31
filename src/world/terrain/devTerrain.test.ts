@@ -35,6 +35,10 @@ describe('curved dev escarpment', () => {
         .toBeLessThan(2_000)
       expect(heightAtMm(terrain, x, Math.round(frontZ - 5_100)) -
         heightAtMm(terrain, x, Math.round(frontZ))).toBeGreaterThan(4_000)
+      expect(heightAtMm(terrain, x, Math.round(frontZ - 2_500)) -
+        heightAtMm(terrain, x, Math.round(frontZ))).toBeLessThan(3_000)
+      expect(heightAtMm(terrain, x, Math.round(frontZ - 9_000)) -
+        heightAtMm(terrain, x, Math.round(frontZ))).toBeGreaterThan(6_000)
     }
     const geometry = createEscarpmentFaceGeometry(terrain)
     const vertices = geometry.getAttribute('position')

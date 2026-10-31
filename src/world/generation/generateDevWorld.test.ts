@@ -54,7 +54,7 @@ describe('isolated Twilight terrain world', () => {
       }
     }
     expect(dev.baseCity?.buildings.length).toBeLessThan(mainBefore.baseCity!.buildings.length)
-    expect(dev.config.generatorVersion).toBe('twilight-dev-v11')
+    expect(dev.config.generatorVersion).toBe('twilight-dev-v12')
     expect(mainAfter.config.generatorVersion).toBe('heritage-extension-v6')
     expect(worldFingerprintV5(dev, DEFAULT_SIMULATION_CONFIG_V5))
       .not.toBe(worldFingerprintV5(mainAfter, DEFAULT_SIMULATION_CONFIG_V5))
@@ -200,6 +200,25 @@ describe('isolated Twilight terrain world', () => {
       profile.edgeId === DEV_UPPER_ROAD_EDGE_ID)!
     const upperWidthMm = world.roadEdges.find((edge) =>
       edge.id === DEV_UPPER_ROAD_EDGE_ID)!.widthMm
+    for (const endpoint of [upper.path[0], upper.path.at(-1)!]) {
+      expect(endpoint.y - heightAtMm(terrain, endpoint.x, endpoint.z))
+        .toBeLessThan(1_000)
+    }
+    const flankMm = upperWidthMm / 2 + 1_800
+    for (let index = 0; index < upper.path.length; index += 1) {
+      const point = upper.path[index]
+      const before = upper.path[Math.max(0, index - 1)]
+      const after = upper.path[Math.min(upper.path.length - 1, index + 1)]
+      const dx = after.x - before.x
+      const dz = after.z - before.z
+      const length = Math.hypot(dx, dz)
+      for (const side of [-1, 0, 1]) {
+        const x = Math.round(point.x - dz / length * flankMm * side)
+        const z = Math.round(point.z + dx / length * flankMm * side)
+        expect(point.y - heightAtMm(terrain, x, z),
+          `Upper road ${index} side ${side} is buried`).toBeGreaterThanOrEqual(70)
+      }
+    }
     for (const point of upper.path) for (const building of world.baseCity!.buildings) {
       for (const mass of building.masses.filter((item) => item.baseY < 2)) {
         const dx = Math.max(0, Math.abs(point.x -
