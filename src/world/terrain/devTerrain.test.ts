@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createEscarpmentFaceGeometry } from '../../scene/terrain/TerrainEscarpment'
 import { HERO_SEED } from '../../city/generation/generateCity'
 import { generateDevWorld } from '../generation/generateDevWorld'
+import { DEV_UPPER_ROAD_EDGE_ID } from '../generation/devUpperRoadPlan'
 import { channelCenterXAtMm, escarpmentZBoundsAtMm, heightAtMm } from './devTerrain'
 
 function ridgeTerrain(seed = HERO_SEED) {
@@ -46,21 +47,39 @@ describe('curved dev escarpment', () => {
     geometry.dispose()
   })
 
-  it('keeps every road centreline outside the curved impassable patches', () => {
+  it('keeps ground roads outside the cliff and carries the upper road across it', () => {
     const world = generateDevWorld(HERO_SEED)
     const terrain = world.terrain!
     const roadWidths = new Map(world.baseCity!.roads.edges.map((edge) =>
       [edge.id, edge.width]))
-    for (const profile of terrain.roadProfiles) for (const point of profile.path) {
+    for (const profile of terrain.roadProfiles.filter((item) =>
+      item.edgeId !== DEV_UPPER_ROAD_EDGE_ID)) for (const point of profile.path) {
       for (const patch of terrain.nonWalkableEscarpment.patches) {
         if (point.x < patch.frontLine[0].x || point.x > patch.frontLine.at(-1)!.x) continue
         const { backZ, frontZ } = escarpmentZBoundsAtMm(patch, point.x)
         const pavementClearanceMm = ((roadWidths.get(profile.edgeId) ?? 0) / 2 +
           1.675 + 0.25) * 1000
         expect(point.z < backZ - pavementClearanceMm ||
-          point.z > frontZ + pavementClearanceMm).toBe(true)
+          point.z > frontZ + pavementClearanceMm,
+        `${profile.edgeId} at ${point.x},${point.z} inside ${backZ},${frontZ}`)
+          .toBe(true)
       }
     }
+    const upper = terrain.roadProfiles.find((item) =>
+      item.edgeId === DEV_UPPER_ROAD_EDGE_ID)!
+    expect(upper.bridgeSpan).toEqual({ startIndex: 0,
+      endIndex: upper.path.length - 1 })
+    const clearance = upper.path.map((point) => point.y -
+      heightAtMm(terrain, point.x, point.z))
+    expect(Math.min(...clearance)).toBeGreaterThan(0)
+    expect(Math.max(...clearance)).toBeGreaterThan(2_000)
+    expect(upper.path.some((point) => terrain.nonWalkableEscarpment.patches
+      .some((patch) => {
+        if (point.x < patch.frontLine[0].x ||
+          point.x > patch.frontLine.at(-1)!.x) return false
+        const { backZ, frontZ } = escarpmentZBoundsAtMm(patch, point.x)
+        return point.z > backZ && point.z < frontZ
+      }))).toBe(true)
   })
 
   it('starts the full-depth water upstream of both bridge decks without cutting the avenue', () => {

@@ -1,6 +1,8 @@
 import type { CityModel } from '../../city/model'
 import type { GroundPointMm, WorldPointMm } from '../model'
 import { createDevValleyChannel } from '../generation/devValleyPlan'
+import { rearHighlandBackZmm, rearHighlandFrontZmm } from './devHighlandContour'
+import { DEV_UPPER_ROAD_EDGE_ID } from '../generation/devUpperRoadPlan'
 
 export interface DevTerrainGridV1 {
   readonly originXmm: number
@@ -62,7 +64,14 @@ export interface DevTerraceAccessV1 {
   readonly crossing: readonly WorldPointMm[]
   readonly frontZmm: number
   readonly stair: readonly WorldPointMm[]
+  readonly stairTrailIndex: number
   readonly trail: readonly WorldPointMm[]
+  /** Visible paving copied from the matching static navigation edges. */
+  readonly walkways: readonly Readonly<{
+    edgeId: string
+    path: readonly WorldPointMm[]
+    widthMm: number
+  }>[]
 }
 
 export interface DevTerrainV1 {
@@ -100,7 +109,7 @@ const CHANNEL_HALF_WIDTH_MM = 3_000
 const CHANNEL_BANK_WIDTH_MM = 6_000
 const CHANNEL_DEPTH_MM = 8_000
 const CHANNEL_FULL_DEPTH_Z_MM = 40_000
-const TERRACE_STAIR_X_MM = 0
+const TERRACE_STAIR_X_MM = 30_000
 const TERRACE_STAIR_FRONT_RUN_MM = 17_000
 const BRIDGE_EDGE_IDS = new Set(['edge-x-0-5', 'edge-x-0-6'])
 const CULVERT_EDGE_IDS = new Set(['edge-z-0-6', 'edge-z--1-6'])
@@ -282,6 +291,24 @@ function buildRoadProfiles(city: CityModel, terrain: DevTerrainV1): DevRoadProfi
         point.x === path[index].x && point.z === path[index].z))) {
       throw new Error(`Road centreline does not match its graph edge ${edge.id}`)
     }
+    if (edge.id === DEV_UPPER_ROAD_EDGE_ID) {
+      const lengths = path.map((point, index) => index === 0 ? 0 :
+        Math.hypot(point.x - path[index - 1].x,
+          point.z - path[index - 1].z))
+      for (let index = 1; index < lengths.length; index += 1) {
+        lengths[index] += lengths[index - 1]
+      }
+      const total = lengths.at(-1)!
+      const startY = path[0].y
+      const endY = path.at(-1)!.y
+      const deck = path.map((point, index) => {
+        const t = lengths[index] / total
+        return { ...point, y: Math.max(point.y, Math.round(startY +
+          (endY - startY) * t + 550 * Math.sin(Math.PI * t))) }
+      })
+      return { edgeId: edge.id, path: deck, bridge: true,
+        bridgeSpan: { startIndex: 0, endIndex: deck.length - 1 } }
+    }
     if (CULVERT_EDGE_IDS.has(edge.id)) {
       const flooded = path.map((point, index) => ({ point, index }))
         .filter(({ point }) => point.y < ROAD_TOP_MM - 250)
@@ -319,7 +346,7 @@ function buildTerraceAccess(city: CityModel,
   terrain: DevTerrainV1): DevTerraceAccessV1 | undefined {
   const patch = terrain.nonWalkableEscarpment.patches[0]
   const road = terrain.roadProfiles.find((profile) =>
-    profile.edgeId === 'edge-x-3-0')
+    profile.edgeId === 'edge-x-4-0')
   if (!patch || !road) return undefined
   const roadSamples = road.path
   const right = roadSamples.findIndex((point) => point.x >= TERRACE_STAIR_X_MM)
@@ -329,11 +356,13 @@ function buildTerraceAccess(city: CityModel,
   const t = (TERRACE_STAIR_X_MM - before.x) / (after.x - before.x)
   const roadZmm = Math.round(before.z + (after.z - before.z) * t)
   const southNode = city.pedestrian.nodes.filter((node) =>
-    node.id.startsWith('ped-block-3-0-polygon-') &&
+    node.id.startsWith('ped-block-4-0-polygon-') &&
     Math.abs(node.x * 1000 - TERRACE_STAIR_X_MM) < 6_000 &&
     node.z * 1000 > roadZmm).sort((a, b) =>
-    Math.hypot(a.x * 1000, a.z * 1000 - roadZmm - 4_000) -
-    Math.hypot(b.x * 1000, b.z * 1000 - roadZmm - 4_000) ||
+    Math.hypot(a.x * 1000 - TERRACE_STAIR_X_MM,
+      a.z * 1000 - roadZmm - 4_000) -
+    Math.hypot(b.x * 1000 - TERRACE_STAIR_X_MM,
+      b.z * 1000 - roadZmm - 4_000) ||
     a.id.localeCompare(b.id))[0]
   if (!southNode) return undefined
   const onGround = (x: number, z: number): WorldPointMm =>
@@ -355,15 +384,19 @@ function buildTerraceAccess(city: CityModel,
   const stair = Array.from({ length: count + 1 }, (_, index) =>
     onGround(TERRACE_STAIR_X_MM,
       Math.round(foot.z + (topZmm - foot.z) * index / count)))
-  const trail = Array.from({ length: 37 }, (_, index) => {
-    const x = index * 2_000
+  const trailStartXmm = -10_000
+  const stairTrailIndex = (TERRACE_STAIR_X_MM - trailStartXmm) / 1_000
+  const trail = Array.from({ length: 97 }, (_, index) => {
+    const x = trailStartXmm + index * 1_000
+    const stairCut = 1 - smoothstep((Math.abs(x - TERRACE_STAIR_X_MM) -
+      2_400) / 3_200)
     const z = Math.round(escarpmentZBoundsAtMm(patch, x).frontZ) -
-      TERRACE_STAIR_FRONT_RUN_MM - 1_200
+      Math.round(8_500 + stairCut * 9_700)
     return onGround(x, z)
   })
-  stair[stair.length - 1] = trail[0]
+  stair[stair.length - 1] = trail[stairTrailIndex]
   return { crossingNodeId: southNode.id, crossingSouth, crossing, foot,
-    frontZmm, stair, trail }
+    frontZmm, stair, stairTrailIndex, trail, walkways: [] }
 }
 
 export function createDevTerrainV1(city: CityModel, seed: string): DevTerrainV1 {
@@ -381,14 +414,11 @@ export function createDevTerrainV1(city: CityModel, seed: string): DevTerrainV1 
     const samples = Math.max(6, Math.ceil((x1 - x0) / 1_200))
     const backLine = Array.from({ length: samples + 1 }, (_, index) => {
       const x = Math.round(x0 + (x1 - x0) * index / samples)
-      return { x, z: Math.round(-137_700 +
-        850 * Math.sin((x - 36_000) / 13_500 + 0.4)) }
+      return { x, z: rearHighlandBackZmm(x) }
     })
     const frontLine = Array.from({ length: samples + 1 }, (_, index) => {
       const x = Math.round(x0 + (x1 - x0) * index / samples)
-      return { x, z: Math.round(-112_000 +
-        2_200 * Math.sin((x - 36_000) / 10_500) +
-        650 * Math.sin((x - 36_000) / 3_900)) }
+      return { x, z: rearHighlandFrontZmm(x) }
     })
     return [{ blockId: 'dev-north-terrace', backLine, frontLine,
       polygonXZ: [...backLine, ...[...frontLine].reverse()], riseMm: 8_000 }

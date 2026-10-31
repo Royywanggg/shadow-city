@@ -154,8 +154,7 @@ function sortedDistinct(values: readonly number[]): number[] {
 
 function boundaryRoadIds(block: CityModel['blocks'][number]): readonly string[] {
   if (block.boundaryRoadEdgeIds) {
-    if (block.boundaryRoadEdgeIds.length === 0 ||
-      new Set(block.boundaryRoadEdgeIds).size !== block.boundaryRoadEdgeIds.length) {
+    if (new Set(block.boundaryRoadEdgeIds).size !== block.boundaryRoadEdgeIds.length) {
       throw new Error(`Invalid explicit road boundaries for ${block.id}`)
     }
     return block.boundaryRoadEdgeIds

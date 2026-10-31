@@ -9,6 +9,8 @@ import { createNavigationIndexV2, findRouteV2 } from '../navigation/routeV2'
 import { blockPadElevationMm, DEV_ESCARPMENT_BLOCK_IDS, DEV_OPEN_CHANNEL_BLOCK_IDS,
   heightAtMm, roadBendMm } from '../terrain/devTerrain'
 import { HIGHLAND_CLOSED_ROAD_IDS } from './devHighlandPlan'
+import { DEV_UPPER_ROAD_EDGE_ID } from './devUpperRoadPlan'
+import { DEV_TERRACE_BUILDING_PREFIX, DEV_TERRACE_SITES } from './devTerraceNeighborhood'
 import { generateDevWorld } from './generateDevWorld'
 import { generateIntegratedWorld } from './generateIntegratedWorld'
 
@@ -27,9 +29,13 @@ describe('isolated Twilight terrain world', () => {
     expect(dev.baseCity?.plaza).toEqual(mainBefore.baseCity?.plaza)
     const originalBuildings = new Map(devSource.baseCity!.buildings.map((building) =>
       [building.id, building]))
-    expect(dev.baseCity?.buildings.map((building) => building.id)).toEqual(
+    const originalDevBuildings = dev.baseCity!.buildings.filter((building) =>
+      !building.id.startsWith(DEV_TERRACE_BUILDING_PREFIX))
+    expect(originalDevBuildings.map((building) => building.id)).toEqual(
       devSource.baseCity?.buildings.map((building) => building.id))
-    for (const building of dev.baseCity!.buildings) {
+    expect(dev.baseCity!.buildings.filter((building) =>
+      building.id.startsWith(DEV_TERRACE_BUILDING_PREFIX))).toHaveLength(DEV_TERRACE_SITES.length)
+    for (const building of originalDevBuildings) {
       const original = originalBuildings.get(building.id)!
       if (compactDevBuildings.has(building.id)) {
         expect(building.width).toBeLessThan(original.width)
@@ -48,7 +54,7 @@ describe('isolated Twilight terrain world', () => {
       }
     }
     expect(dev.baseCity?.buildings.length).toBeLessThan(mainBefore.baseCity!.buildings.length)
-    expect(dev.config.generatorVersion).toBe('twilight-dev-v10')
+    expect(dev.config.generatorVersion).toBe('twilight-dev-v11')
     expect(mainAfter.config.generatorVersion).toBe('heritage-extension-v6')
     expect(worldFingerprintV5(dev, DEFAULT_SIMULATION_CONFIG_V5))
       .not.toBe(worldFingerprintV5(mainAfter, DEFAULT_SIMULATION_CONFIG_V5))
@@ -133,8 +139,86 @@ describe('isolated Twilight terrain world', () => {
       const index = createNavigationIndexV2(world)
       expect(findRouteV2(index, 'ped-entrance-building-block-4-0-0-0',
         'ped-block-2--1-3-0').status).toBe('ok')
+      expect(findRouteV2(index, 'ped-entrance-building-block-4-0-0-0',
+        `interior:${DEV_TERRACE_BUILDING_PREFIX}0:slot:0`).status).toBe('ok')
       expect(world.terrain!.nonWalkableEscarpment.patches).toHaveLength(1)
     }
+  })
+
+  it('connects every upper-shelf home to real terrain paths and interior places', () => {
+    const world = generateDevWorld(HERO_SEED)
+    const index = createNavigationIndexV2(world)
+    const homes = world.baseCity!.buildings.filter((building) =>
+      building.id.startsWith(DEV_TERRACE_BUILDING_PREFIX))
+    expect(homes).toHaveLength(DEV_TERRACE_SITES.length)
+    expect(world.terrain!.terraceAccess!.walkways.length).toBeGreaterThan(DEV_TERRACE_SITES.length)
+    for (const walkway of world.terrain!.terraceAccess!.walkways) {
+      expect(index.edgeById.get(walkway.edgeId)?.path).toEqual(walkway.path)
+    }
+    const from = 'ped-entrance-building-block-4-0-0-0'
+    for (const building of homes) {
+      const entry = `ped-entrance-${building.id}`
+      const place = world.places.find((item) => item.id === `building:${building.id}`)
+      expect(place?.accessNodeIds).toContain(`interior:${building.id}:entry`)
+      expect(place?.surfaceIds).toContain(`interior:${building.id}`)
+      expect(index.nodeById.get(entry)?.surfaceId).toBe('terrain:terrace-top')
+      const route = findRouteV2(index, from, place!.slotNodeIds[0])
+      expect(route.status).toBe('ok')
+      if (route.status !== 'ok') continue
+      expect(route.steps.some((step) => step.edgeId === 'terrain:terrace-stair-edge' ||
+        step.edgeId === 'terrain:upper-road-pedestrian-ramp')).toBe(true)
+      for (const step of route.steps) {
+        const edge = index.edgeById.get(step.edgeId)!
+        if (edge.surfaceId !== 'terrain:terrace-top') continue
+        for (let part = 1; part < edge.path.length; part += 1) {
+          expect(hasClearSurfaceSegment(world, edge.surfaceId,
+            edge.path[part - 1], edge.path[part])).toBe(true)
+        }
+      }
+    }
+    expect(worldFingerprintV5(generateDevWorld(HERO_SEED),
+      DEFAULT_SIMULATION_CONFIG_V5)).toBe(worldFingerprintV5(world,
+      DEFAULT_SIMULATION_CONFIG_V5))
+  })
+
+  it('keeps upper homes grounded and the stair clear beneath the graded road', () => {
+    const world = generateDevWorld(HERO_SEED)
+    const terrain = world.terrain!
+    for (const building of world.baseCity!.buildings.filter((item) =>
+      item.id.startsWith(DEV_TERRACE_BUILDING_PREFIX))) {
+      const pad = terrain.buildingPads.find((item) =>
+        item.buildingId === building.id)!
+      const footprints = building.masses.filter((mass) => mass.baseY < 2)
+      const heights = footprints.flatMap((mass) => [-1, 1].flatMap((sx) =>
+        [-1, 1].map((sz) => heightAtMm(terrain,
+          Math.round((building.x + mass.offsetX + sx * mass.width / 2) * 1_000),
+          Math.round((building.z + mass.offsetZ + sz * mass.depth / 2) * 1_000)))))
+      expect(pad.elevationMm - Math.min(...heights), building.id)
+        .toBeLessThan(1_200)
+    }
+    const upper = terrain.roadProfiles.find((profile) =>
+      profile.edgeId === DEV_UPPER_ROAD_EDGE_ID)!
+    const upperWidthMm = world.roadEdges.find((edge) =>
+      edge.id === DEV_UPPER_ROAD_EDGE_ID)!.widthMm
+    for (const point of upper.path) for (const building of world.baseCity!.buildings) {
+      for (const mass of building.masses.filter((item) => item.baseY < 2)) {
+        const dx = Math.max(0, Math.abs(point.x -
+          Math.round((building.x + mass.offsetX) * 1_000)) - mass.width * 500)
+        const dz = Math.max(0, Math.abs(point.z -
+          Math.round((building.z + mass.offsetZ) * 1_000)) - mass.depth * 500)
+        expect(Math.hypot(dx, dz), building.id)
+          .toBeGreaterThan(upperWidthMm / 2 + 1_950)
+      }
+    }
+    const crossing = terrain.terraceAccess!.stair.flatMap((stair) => {
+      const nearest = [...upper.path].sort((a, b) =>
+        Math.hypot(a.x - stair.x, a.z - stair.z) -
+        Math.hypot(b.x - stair.x, b.z - stair.z))[0]
+      return Math.hypot(nearest.x - stair.x, nearest.z - stair.z) < 4_875
+        ? [nearest.y - stair.y] : []
+    })
+    expect(crossing.length).toBeGreaterThan(0)
+    expect(Math.min(...crossing)).toBeGreaterThan(2_600)
   })
 
   it('connects the street to distinct walkable terrace slots without a teleport', () => {
@@ -263,7 +347,8 @@ describe('isolated Twilight terrain world', () => {
     const terrain = world.terrain!
     const nodes = new Map(world.roadNodes.map((node) => [node.id, node.position]))
     const edges = new Map(world.roadEdges.map((edge) => [edge.id, edge]))
-    expect(terrain.roadProfiles.filter((profile) => profile.bridge).map((profile) =>
+    expect(terrain.roadProfiles.filter((profile) => profile.bridge &&
+      profile.edgeId !== DEV_UPPER_ROAD_EDGE_ID).map((profile) =>
       profile.edgeId).sort()).toEqual(['edge-x-0-5', 'edge-x-0-6'])
     for (const profile of terrain.roadProfiles) {
       const road = edges.get(profile.edgeId)!
@@ -272,7 +357,8 @@ describe('isolated Twilight terrain world', () => {
       expect(profile.path.at(-1)!.x).toBe(nodes.get(road.to)!.x)
       expect(profile.path.at(-1)!.z).toBe(nodes.get(road.to)!.z)
     }
-    for (const profile of terrain.roadProfiles.filter((item) => item.bridge)) {
+    for (const profile of terrain.roadProfiles.filter((item) => item.bridge &&
+      item.edgeId !== DEV_UPPER_ROAD_EDGE_ID)) {
       const { startIndex, endIndex } = profile.bridgeSpan!
       expect(startIndex).toBe(0)
       expect(endIndex).toBe(profile.path.length - 1)
@@ -348,7 +434,8 @@ describe('isolated Twilight terrain world', () => {
       expect(stair.foot.z + 150).toBeLessThanOrEqual(lane.position.z)
       expect(foot.position).toEqual({ ...stair.foot,
         y: 250 + heightAtMm(terrain, stair.foot.x, stair.foot.z) })
-      expect(hasClearSurfaceSegment(world, 'ground', foot.position, foot.position)).toBe(true)
+      expect(hasClearSurfaceSegment(world, foot.surfaceId,
+        foot.position, foot.position)).toBe(true)
       expect(access.path[0]).toEqual(foot.position)
       expect(access.path.at(-1)).toEqual(lane.position)
       expect(portal.kind).toBe('stair')
@@ -371,7 +458,8 @@ describe('isolated Twilight terrain world', () => {
     const world = generateDevWorld(HERO_SEED)
     const terrain = world.terrain!
     const index = createNavigationIndexV2(world)
-    for (const road of terrain.roadProfiles.filter((profile) => profile.bridge)) {
+    for (const road of terrain.roadProfiles.filter((profile) => profile.bridge &&
+      profile.edgeId !== DEV_UPPER_ROAD_EDGE_ID)) {
       const surfaceId = `terrain-bridge:${road.edgeId}`
       expect(index.surfaceById.has(surfaceId)).toBe(true)
       const sidewalks = world.navEdges.filter((edge) => edge.surfaceId === surfaceId)
@@ -449,7 +537,8 @@ describe('isolated Twilight terrain world', () => {
     expect(outlet.x).toBe(world.bounds.minX)
     expect(outlet.z).toBeLessThan(100_000)
     expect(heightAtMm(terrain, outlet.x, outlet.z)).toBeLessThan(-6_000)
-    expect(terrain.roadProfiles.filter((profile) => profile.bridge)).toHaveLength(2)
+    expect(terrain.roadProfiles.filter((profile) => profile.bridge &&
+      profile.edgeId !== DEV_UPPER_ROAD_EDGE_ID)).toHaveLength(2)
     const culverts = terrain.roadProfiles.filter((profile) => profile.culvertSpan)
     expect(culverts.map((profile) => profile.edgeId).sort())
       .toEqual(['edge-z--1-6', 'edge-z-0-6'])
@@ -477,6 +566,7 @@ describe('isolated Twilight terrain world', () => {
     const roadOffenders = world.terrain!.roadProfiles
       .flatMap((profile) => profile.path.slice(1).map((point, index) => ({
         id: profile.edgeId, grade: grade(profile.path[index], point),
+        from: profile.path[index], to: point,
       })).filter((item) => item.grade > 0.1))
       .sort((a, b) => b.grade - a.grade)
     const walkOffenders = world.navEdges.filter((edge) => edge.surfaceId === 'ground' ||
