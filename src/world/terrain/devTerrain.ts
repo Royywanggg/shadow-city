@@ -66,6 +66,15 @@ export interface DevChannelWidthSampleV1 {
   readonly bankWidthMm: number
 }
 
+export interface DevWestBankShoulderV1 {
+  readonly roadCenterline: readonly GroundPointMm[]
+  readonly westBoundaryXmm: number
+  readonly startZmm: number
+  readonly fullRiseZmm: number
+  readonly endZmm: number
+  readonly riseMm: number
+}
+
 export interface DevTerraceAccessV1 {
   readonly crossingNodeId: string
   readonly foot: WorldPointMm
@@ -105,6 +114,7 @@ export interface DevTerrainV1 {
     widthProfile: readonly DevChannelWidthSampleV1[]
     depthMm: number
   }>
+  readonly westBankShoulder?: DevWestBankShoulderV1
 }
 
 export const DEV_OPEN_CHANNEL_BLOCK_IDS = [
@@ -271,9 +281,30 @@ function patchHeightMm(patches: readonly DevEscarpmentPatchV1[], xMm: number,
   return 0
 }
 
+function westBankShoulderHeightMm(shoulder: DevWestBankShoulderV1 | undefined,
+  channel: readonly GroundPointMm[], widths: readonly DevChannelWidthSampleV1[],
+  xMm: number, zMm: number): number {
+  if (!shoulder || zMm < shoulder.startZmm || zMm > shoulder.endZmm) return 0
+  const roadX = channelXAt(shoulder.roadCenterline, zMm)
+  const { halfWidthMm, bankWidthMm } = widthsAtProfile(widths, zMm)
+  const outerBankX = channelXAt(channel, zMm) -
+    halfWidthMm - bankWidthMm
+  const riseAlong = terraceRamp((zMm - shoulder.startZmm) /
+    (shoulder.fullRiseZmm - shoulder.startZmm)) *
+    terraceRamp((shoulder.endZmm - zMm) /
+      (shoulder.endZmm - shoulder.fullRiseZmm))
+  const riseAcross = terraceRamp((xMm - shoulder.westBoundaryXmm) /
+    (roadX - shoulder.westBoundaryXmm))
+  const fadeStart = roadX + 2_800
+  const fadeEnd = Math.max(fadeStart + 2_000, outerBankX - 500)
+  const waterFade = 1 - smoothstep((xMm - fadeStart) / (fadeEnd - fadeStart))
+  return Math.round(shoulder.riseMm * riseAlong * riseAcross * waterFade)
+}
+
 function rawHeightMm(xMm: number, zMm: number,
   patches: readonly DevEscarpmentPatchV1[], channel: readonly GroundPointMm[],
-  widths: readonly DevChannelWidthSampleV1[]): number {
+  widths: readonly DevChannelWidthSampleV1[],
+  westBankShoulder?: DevWestBankShoulderV1): number {
   const northRise = 10_000 * terraceRamp((-zMm - 22_000) / 128_000)
   const channelAlong = smoothstep((zMm - channel[0].z) /
     (CHANNEL_FULL_DEPTH_Z_MM - channel[0].z)) *
@@ -283,7 +314,8 @@ function rawHeightMm(xMm: number, zMm: number,
   const { halfWidthMm, bankWidthMm } = widthsAtProfile(widths, zMm)
   const channelAcross = 1 - smoothstep((distance - halfWidthMm) / bankWidthMm)
   return Math.round(northRise - CHANNEL_DEPTH_MM * channelAlong * channelAcross +
-    patchHeightMm(patches, xMm, zMm))
+    patchHeightMm(patches, xMm, zMm) +
+    westBankShoulderHeightMm(westBankShoulder, channel, widths, xMm, zMm))
 }
 
 /** Shared authoritative terrain sampler for rendering and simulation. */
@@ -497,6 +529,14 @@ function buildTerraceAccess(city: CityModel,
 export function createDevTerrainV1(city: CityModel, seed: string,
   worldBounds?: WorldModelV2['bounds']): DevTerrainV1 {
   const channelLine = createDevValleyChannel(city)
+  const westBankRoad = city.roads.edges.find((road) => road.id === 'edge-z-0-7')
+  const westBankShoulder: DevWestBankShoulderV1 | undefined =
+    westBankRoad?.centerlineXZ ? {
+      roadCenterline: westBankRoad.centerlineXZ.map((point) => ({
+        x: Math.round(point.x * 1_000), z: Math.round(point.z * 1_000) })),
+      westBoundaryXmm: -142_000, startZmm: 105_000,
+      fullRiseZmm: 125_000, endZmm: 145_000, riseMm: 1_500,
+    } : undefined
   const openChannelBlockIds = [...DEV_OPEN_CHANNEL_BLOCK_IDS]
   const open = new Set<string>([...openChannelBlockIds, ...DEV_ESCARPMENT_BLOCK_IDS])
   const patches = (() => {
@@ -537,14 +577,16 @@ export function createDevTerrainV1(city: CityModel, seed: string,
     heightsMm: Array.from({ length: width * depth }, (_, index) =>
       rawHeightMm(minXmm + index % width * STEP_MM,
         minZmm + Math.floor(index / width) * STEP_MM,
-        patches, channelLine, CHANNEL_WIDTH_PROFILE)) }
+        patches, channelLine, CHANNEL_WIDTH_PROFILE,
+        westBankShoulder)) }
   const sampler: DevTerrainV1 = { version: 'twilight-terrain-v1', seed, grid,
     blockPads: [], buildingPads: [], roadProfiles: [], openChannelBlockIds,
     nonWalkableEscarpment: { patches },
     channel: { centerline: channelLine, fullDepthZmm: CHANNEL_FULL_DEPTH_Z_MM,
       halfWidthMm: CHANNEL_HALF_WIDTH_MM,
       bankWidthMm: CHANNEL_BANK_WIDTH_MM,
-      widthProfile: CHANNEL_WIDTH_PROFILE, depthMm: CHANNEL_DEPTH_MM } }
+      widthProfile: CHANNEL_WIDTH_PROFILE, depthMm: CHANNEL_DEPTH_MM },
+    westBankShoulder }
   const blockPads = city.blocks.filter((block) => !open.has(block.id)).map((block) => {
     const centerXmm = Math.round(block.x * 1000)
     const centerZmm = Math.round(block.z * 1000)
