@@ -41,6 +41,7 @@ function makeGround(terrain: DevTerrainV1): BufferGeometry {
   const high = new Color('#687773')
   const valley = new Color('#56745e')
   const color = new Color()
+  const outletZ = terrain.channel.centerline.at(-1)!.z
   for (let z = 0; z < grid.depth; z += 1) {
     for (let x = 0; x < grid.width; x += 1) {
       const xMm = grid.originXmm + x * grid.stepMm
@@ -51,7 +52,8 @@ function makeGround(terrain: DevTerrainV1): BufferGeometry {
       color.copy(t < 0.36 ? low : middle).lerp(t < 0.36 ? middle : high,
         t < 0.36 ? t / 0.36 : (t - 0.36) / 0.64)
       const along = Math.max(0, Math.min(1, (zMm - 28_000) / 14_000)) *
-        Math.max(0, Math.min(1, (101_000 - zMm) / 14_000))
+        (outletZ >= 150_000 ? 1 :
+          Math.max(0, Math.min(1, (outletZ + 8_000 - zMm) / 14_000)))
       const across = Math.max(0, Math.min(1,
         (22_000 - Math.abs(xMm - channelCenterXAtMm(terrain, zMm))) / 15_000))
       color.lerp(valley, along * across * 0.58)
@@ -92,9 +94,19 @@ function makeSkirt(terrain: DevTerrainV1): BufferGeometry {
   const maxX = (grid.originXmm + (grid.width - 1) * grid.stepMm) / 1000
   const maxZ = (grid.originZmm + (grid.depth - 1) * grid.stepMm) / 1000
   const step = grid.stepMm / 1000
+  const outlet = terrain.channel.centerline.at(-1)!
+  const southOpening = outlet.z / 1000 >= maxZ - 0.5
+  const openingLeft = outlet.x / 1000 - terrain.channel.halfWidthMm / 1000 * 0.78
+  const openingRight = outlet.x / 1000 + terrain.channel.halfWidthMm / 1000 * 0.78
   for (let x = minX; x < maxX - 0.001; x += step) {
     addWall(x, minZ, Math.min(maxX, x + step), minZ)
-    addWall(Math.min(maxX, x + step), maxZ, x, maxZ)
+    const next = Math.min(maxX, x + step)
+    if (!southOpening || next <= openingLeft || x >= openingRight) {
+      addWall(next, maxZ, x, maxZ)
+    } else {
+      if (x < openingLeft) addWall(openingLeft, maxZ, x, maxZ)
+      if (next > openingRight) addWall(next, maxZ, openingRight, maxZ)
+    }
   }
   for (let z = minZ; z < maxZ - 0.001; z += step) {
     addWall(minX, Math.min(maxZ, z + step), minX, z)
@@ -124,8 +136,8 @@ function sampleChannel(terrain: DevTerrainV1): { x: number; z: number }[] {
         z: Math.round(from.z + (to.z - from.z) * t) }
     })
   })
-  // Keep the terminal cross-section inside the diorama wall. The water and
-  // banks meet the recessed outfall instead of producing an exterior wedge.
+  // A west-facing outlet stops inside the wall; the south-facing outlet
+  // reaches the open aperture at the grid edge.
   const mouthX = terrain.grid.originXmm + 800
   const firstOutside = points.findIndex((point) => point.x < mouthX)
   if (firstOutside < 1) return points
@@ -157,7 +169,7 @@ function makeChannel(terrain: DevTerrainV1): BufferGeometry {
   const positions: number[] = []
   const colors: number[] = []
   const indices: number[] = []
-  const width = terrain.channel.halfWidthMm / 1000 * 0.8
+  const width = terrain.channel.halfWidthMm / 1000 * 0.86
   const stream = new Color('#468a96')
   const mouth = new Color('#10262e')
   const tone = new Color()
@@ -173,7 +185,7 @@ function makeChannel(terrain: DevTerrainV1): BufferGeometry {
     const nz = crossZ * width
     const variation = 1 + (denseValley && point.z <= 81_000 ? 0.015 : 0.08) *
       Math.sin(index * 0.82)
-    const y = -terrain.channel.depthMm / 1000 + 0.38
+    const y = -terrain.channel.depthMm / 1000 + 0.65
     positions.push(Math.max(minX, point.x / 1000 + nx * variation), y,
       point.z / 1000 + nz * variation,
       Math.max(minX, point.x / 1000 - nx * variation), y,
@@ -322,12 +334,18 @@ export function TerrainGround({ terrain, city }: { terrain: DevTerrainV1;
   const banks = useMemo(() => makeRockBanks(terrain), [terrain])
   const outfall = useMemo(() => {
     const outlet = terrain.channel.centerline.at(-1)!
-    const x = terrain.grid.originXmm / 1000 + 0.07
-    const z = outlet.z / 1000
+    const southOpening = outlet.z >= terrain.grid.originZmm +
+      (terrain.grid.depth - 1) * terrain.grid.stepMm - 500
+    const x = southOpening ? outlet.x / 1000 : terrain.grid.originXmm / 1000 + 0.07
+    const z = southOpening ? outlet.z / 1000 - 0.07 : outlet.z / 1000
     const base = skirtBase(terrain)
-    const top = Math.max(0.6, heightAtMm(terrain, outlet.x, outlet.z - 10_000) / 1000,
-      heightAtMm(terrain, outlet.x, outlet.z + 10_000) / 1000)
-    const river = -terrain.channel.depthMm / 1000 + 0.38
+    const top = Math.max(0.6, southOpening
+      ? heightAtMm(terrain, outlet.x - 10_000, outlet.z) / 1000
+      : heightAtMm(terrain, outlet.x, outlet.z - 10_000) / 1000,
+    southOpening
+      ? heightAtMm(terrain, outlet.x + 10_000, outlet.z) / 1000
+      : heightAtMm(terrain, outlet.x, outlet.z + 10_000) / 1000)
+    const river = -terrain.channel.depthMm / 1000 + 0.65
     const portalBottom = river - 1.15
     const portalTop = river + 1.15
     const portalHalfWidth = terrain.channel.halfWidthMm / 1000 * 0.78
@@ -336,19 +354,25 @@ export function TerrainGround({ terrain, city }: { terrain: DevTerrainV1;
     const wingWidth = wallHalfWidth - portalHalfWidth
     const wallColor = '#273844'
     const wings: BoxInstance[] = [-1, 1].map((side) => ({
-      position: [x, (top + base) / 2,
-        z + side * (portalHalfWidth + wingWidth / 2)],
-      scale: [0.18, top - base, wingWidth], color: wallColor,
+      position: [x + (southOpening ? side * (portalHalfWidth + wingWidth / 2) : 0),
+        (top + base) / 2,
+        z + (southOpening ? 0 : side * (portalHalfWidth + wingWidth / 2))],
+      scale: southOpening ? [wingWidth, top - base, 0.18] :
+        [0.18, top - base, wingWidth], color: wallColor,
     }))
     const lintel: BoxInstance = { position: [x, (top + portalTop) / 2, z],
-      scale: [0.18, top - portalTop, portalHalfWidth * 2], color: wallColor }
+      scale: southOpening ? [portalHalfWidth * 2, top - portalTop, 0.18] :
+        [0.18, top - portalTop, portalHalfWidth * 2], color: wallColor }
     const sill: BoxInstance = { position: [x, (portalBottom + base) / 2, z],
-      scale: [0.18, portalBottom - base, portalHalfWidth * 2], color: wallColor }
-    const darkOpening: BoxInstance = { position: [x + 0.13,
-      (portalTop + portalBottom) / 2, z],
-      scale: [0.08, portalTop - portalBottom, portalHalfWidth * 2],
+      scale: southOpening ? [portalHalfWidth * 2, portalBottom - base, 0.18] :
+        [0.18, portalBottom - base, portalHalfWidth * 2], color: wallColor }
+    const darkOpening: BoxInstance = { position: [x + (southOpening ? 0 : 0.13),
+      (portalTop + portalBottom) / 2, z + (southOpening ? 0.13 : 0)],
+      scale: southOpening ? [portalHalfWidth * 2, portalTop - portalBottom, 0.08] :
+        [0.08, portalTop - portalBottom, portalHalfWidth * 2],
       color: '#0c2027' }
-    return [...wings, lintel, sill, darkOpening]
+    return southOpening ? [...wings, lintel, sill] :
+      [...wings, lintel, sill, darkOpening]
   }, [terrain])
   useEffect(() => () => {
     ground.dispose()
@@ -366,7 +390,7 @@ export function TerrainGround({ terrain, city }: { terrain: DevTerrainV1;
     <InstancedBoxes items={outfall} receiveShadow roughness={0.9} />
     <mesh geometry={channel} receiveShadow>
       <meshStandardMaterial vertexColors roughness={0.3} metalness={0.12}
-        emissive="#132d34" emissiveIntensity={0.12} side={2} />
+        emissive="#245b65" emissiveIntensity={0.35} side={2} />
     </mesh>
     {terrain.channel.centerline.length <= 10 && <mesh geometry={banks} castShadow receiveShadow>
       <meshStandardMaterial vertexColors roughness={0.98} flatShading side={2} />
