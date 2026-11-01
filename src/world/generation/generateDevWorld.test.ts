@@ -18,6 +18,7 @@ describe('isolated Twilight terrain world', () => {
   it('keeps the original city core and main generator unchanged', () => {
     const compactDevBuildings = new Set([
       'building-block-3-4-0-0', 'building-block-3-5-1-0',
+      'building-block--1-7-1-0',
     ])
     const mainBefore = generateIntegratedWorld(HERO_SEED)
     const dev = generateDevWorld(HERO_SEED)
@@ -31,8 +32,10 @@ describe('isolated Twilight terrain world', () => {
       [building.id, building]))
     const originalDevBuildings = dev.baseCity!.buildings.filter((building) =>
       !building.id.startsWith(DEV_TERRACE_BUILDING_PREFIX))
-    expect(originalDevBuildings.map((building) => building.id)).toEqual(
-      devSource.baseCity?.buildings.map((building) => building.id))
+    expect(originalDevBuildings.map((building) => building.id).sort()).toEqual(
+      devSource.baseCity!.buildings.filter((building) =>
+        building.id !== 'building-block--1-7-0-0')
+        .map((building) => building.id).sort())
     expect(DEV_TERRACE_SITES).toHaveLength(11)
     expect(dev.baseCity!.buildings.filter((building) =>
       building.id.startsWith(DEV_TERRACE_BUILDING_PREFIX))).toHaveLength(11)
@@ -46,7 +49,11 @@ describe('isolated Twilight terrain world', () => {
         expect(building.masses).toEqual(original.masses)
         expect(building.windows).toEqual(original.windows)
       }
-      expect(building.kind).toBe(original.kind)
+      if (building.id === 'building-block--1-7-1-0') {
+        expect(building.kind).toBe('residential')
+      } else {
+        expect(building.kind).toBe(original.kind)
+      }
       if (!compactDevBuildings.has(building.id)) {
         expect(building.entrance.x - building.x).toBeCloseTo(
           original.entrance.x - original.x, 6)
@@ -55,7 +62,7 @@ describe('isolated Twilight terrain world', () => {
       }
     }
     expect(dev.baseCity?.buildings.length).toBeLessThan(mainBefore.baseCity!.buildings.length)
-    expect(dev.config.generatorVersion).toBe('twilight-dev-v15')
+    expect(dev.config.generatorVersion).toBe('twilight-dev-v18')
     expect(mainAfter.config.generatorVersion).toBe('heritage-extension-v6')
     expect(worldFingerprintV5(dev, DEFAULT_SIMULATION_CONFIG_V5))
       .not.toBe(worldFingerprintV5(mainAfter, DEFAULT_SIMULATION_CONFIG_V5))
@@ -552,18 +559,26 @@ describe('isolated Twilight terrain world', () => {
     }
   })
 
-  it('carries the channel to the west edge beneath two continuous road culverts', () => {
+  it('carries the channel through the inhabited bank to the south edge', () => {
     const world = generateDevWorld(HERO_SEED)
     const terrain = world.terrain!
     const outlet = terrain.channel.centerline.at(-1)!
-    expect(outlet.x).toBe(world.bounds.minX)
-    expect(outlet.z).toBeLessThan(100_000)
+    expect(outlet.x).toBeGreaterThan(world.bounds.minX)
+    expect(outlet.z).toBe(world.bounds.maxZ)
     expect(heightAtMm(terrain, outlet.x, outlet.z)).toBeLessThan(-6_000)
+    const bank = world.baseCity!.blocks.find((block) => block.id === 'block--1-7')!
+    expect(bank.footprintXZ?.length).toBeGreaterThan(20)
+    expect(world.baseCity!.buildings.filter((building) =>
+      building.parcelId.startsWith('block--1-7-'))).toHaveLength(1)
+    const route = findRouteV2(createNavigationIndexV2(world),
+      'ped-entrance-building-block--1-7-1-0',
+      'ped-entrance-building-block-0-7-0-0')
+    expect(route.status).toBe('ok')
     expect(terrain.roadProfiles.filter((profile) => profile.bridge &&
       profile.edgeId !== DEV_UPPER_ROAD_EDGE_ID)).toHaveLength(2)
     const culverts = terrain.roadProfiles.filter((profile) => profile.culvertSpan)
     expect(culverts.map((profile) => profile.edgeId).sort())
-      .toEqual(['edge-z--1-6', 'edge-z-0-6'])
+      .toEqual(['edge-x--1-7', 'edge-x--1-8', 'edge-z-0-6'])
     const index = createNavigationIndexV2(world)
     for (const culvert of culverts) {
       expect(culvert.bridge).toBe(false)

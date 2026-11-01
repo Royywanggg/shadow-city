@@ -83,8 +83,10 @@ export function applyDevValleyPlan(city: CityModel): CityModel {
 const BASE_CHANNEL: readonly GroundPointMm[] = [
   { x: -88_000, z: 33_000 }, { x: -88_000, z: 51_000 },
   { x: -87_000, z: 76_000 }, { x: -88_000, z: 81_000 },
-  { x: -88_000, z: 84_000 }, { x: -110_000, z: 87_000 },
-  { x: -150_000, z: 93_000 },
+  { x: -88_000, z: 84_000 }, { x: -105_000, z: 90_000 },
+  { x: -115_000, z: 100_000 }, { x: -124_000, z: 112_000 },
+  { x: -132_000, z: 128_000 }, { x: -134_000, z: 144_000 },
+  { x: -134_000, z: 150_000 },
 ]
 
 function baseChannelX(zMm: number): number {

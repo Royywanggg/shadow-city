@@ -114,7 +114,9 @@ const CHANNEL_FULL_DEPTH_Z_MM = 40_000
 const TERRACE_STAIR_X_MM = 30_000
 const TERRACE_STAIR_FRONT_RUN_MM = 17_000
 const BRIDGE_EDGE_IDS = new Set(['edge-x-0-5', 'edge-x-0-6'])
-const CULVERT_EDGE_IDS = new Set(['edge-z-0-6', 'edge-z--1-6'])
+const CULVERT_EDGE_IDS = new Set([
+  'edge-z-0-6', 'edge-x--1-7', 'edge-x--1-8',
+])
 /** Deliberate contour bends; endpoints and tangents remain aligned with the original graph. */
 const ROAD_BENDS_MM = new Map<string, number>([
   ['edge-x-0-5', -900],
@@ -148,7 +150,7 @@ function terraceRamp(value: number): number {
   return (t - edge / 2) / (1 - edge)
 }
 
-function channelXAt(points: readonly GroundPointMm[], zMm: number): number {
+export function channelXAt(points: readonly GroundPointMm[], zMm: number): number {
   if (zMm <= points[0].z) return points[0].x
   for (let index = 1; index < points.length; index += 1) {
     const previous = points[index - 1]
@@ -224,7 +226,8 @@ function rawHeightMm(xMm: number, zMm: number,
   const northRise = 10_000 * terraceRamp((-zMm - 22_000) / 128_000)
   const channelAlong = smoothstep((zMm - channel[0].z) /
     (CHANNEL_FULL_DEPTH_Z_MM - channel[0].z)) *
-    (1 - smoothstep((zMm - 93_000) / 7_000))
+    (channel.at(-1)!.z >= 150_000 ? 1 :
+      1 - smoothstep((zMm - channel.at(-1)!.z) / 7_000))
   const distance = Math.abs(xMm - channelXAt(channel, zMm))
   const channelAcross = 1 - smoothstep((distance - CHANNEL_HALF_WIDTH_MM) /
     CHANNEL_BANK_WIDTH_MM)
@@ -340,7 +343,7 @@ function buildRoadProfiles(city: CityModel, terrain: DevTerrainV1): DevRoadProfi
       const end = path[endIndex]
       const deckPath = path.map((point, index) => {
         if (index < startIndex || index > endIndex) return point
-        const t = (point.z - start.z) / (end.z - start.z)
+        const t = (index - startIndex) / (endIndex - startIndex)
         return { ...point, y: Math.round(start.y + (end.y - start.y) * t) +
           Math.round(90 * Math.sin(Math.PI * t)) }
       })

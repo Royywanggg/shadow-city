@@ -183,8 +183,10 @@ export function createBuilding(
   column: number,
   row: number,
   random: () => number,
+  kindOverride?: BuildingKind,
 ): Building {
-  const kind = chooseKind(random, district, column, row)
+  const sampledKind = chooseKind(random, district, column, row)
+  const kind = kindOverride ?? sampledKind
   const plazaEdge = Math.abs(column - 3) + Math.abs(row - 3) === 1
   const frontageSetback = plazaEdge && kind !== 'civic' ? 1.15 : 0
   const insetX = between(random, 0.72, 1.5) + frontageSetback

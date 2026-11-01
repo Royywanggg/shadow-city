@@ -9,6 +9,7 @@ import { createDevOrganicLayout } from './devOrganicLayout'
 import { deriveDevRoadCorridor } from './devRoadCorridor'
 import { placeDevCorridorParcels } from './devParcelPlacement'
 import { applyDevValleyPlan } from './devValleyPlan'
+import { applyDevForegroundValley } from './devForegroundValley'
 import { applyDevHighlandPlan } from './devHighlandPlan'
 import { applyDevRidgeFrontage } from './devRidgeFrontage'
 import { applyDevUpperRoadPlan } from './devUpperRoadPlan'
@@ -128,9 +129,9 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
   const expandedCity = expandOriginalCity(generateCity(seed))
   const organicCity = createDevOrganicLayout(expandedCity)
   const curvedCity = applyDevValleyPlan(deriveDevRoadCorridor(organicCity))
-  const baseCity = addDevTerraceNeighborhood(applyDevUpperRoadPlan(
+  const baseCity = applyDevForegroundValley(addDevTerraceNeighborhood(applyDevUpperRoadPlan(
     applyDevHighlandPlan(applyDevRidgeFrontage(
-      placeDevCorridorParcels(curvedCity)))))
+      placeDevCorridorParcels(curvedCity))))))
   const integrated = generateIntegratedWorld(seed, {
     baseCity,
     openChannelBlockIds: [...DEV_OPEN_CHANNEL_BLOCK_IDS, ...DEV_ESCARPMENT_BLOCK_IDS],
@@ -401,12 +402,16 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
           id: `terrain-culvert:${profile.edgeId}`, levelId: 'L0', placeId: null,
           interactionZoneId: `terrain-culvert:${profile.edgeId}`,
           elevationMm: GROUND_Y_MM,
-          polygonXZ: [
-            { x: profile.path[0].x - 6_000, z: profile.path[0].z - 500 },
-            { x: profile.path[0].x + 6_000, z: profile.path[0].z - 500 },
-            { x: profile.path[0].x + 6_000, z: profile.path.at(-1)!.z + 500 },
-            { x: profile.path[0].x - 6_000, z: profile.path.at(-1)!.z + 500 },
-          ], blockedPolygonsXZ: [], clearanceMm: 20_000, indoor: false,
+          polygonXZ: (() => {
+            const xs = profile.path.map((point) => point.x)
+            const zs = profile.path.map((point) => point.z)
+            const minX = Math.min(...xs) - 6_000
+            const maxX = Math.max(...xs) + 6_000
+            const minZ = Math.min(...zs) - 6_000
+            const maxZ = Math.max(...zs) + 6_000
+            return [{ x: minX, z: minZ }, { x: maxX, z: minZ },
+              { x: maxX, z: maxZ }, { x: minX, z: maxZ }]
+          })(), blockedPolygonsXZ: [], clearanceMm: 20_000, indoor: false,
         })), {
           id: `connector:${terraceConnectorId}`, levelId: 'L0', placeId: null,
           interactionZoneId: `connector:${terraceConnectorId}`,
@@ -475,7 +480,7 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
           edge.id.startsWith('ped-access-') ? 1_200 : 900 })) } }
   return {
     ...integrated,
-    config: { ...integrated.config, generatorVersion: 'twilight-dev-v15' },
+    config: { ...integrated.config, generatorVersion: 'twilight-dev-v18' },
     baseCity: city,
     roadNodes: city.roads.nodes.map((node) => ({ id: node.id,
       position: { x: Math.round(node.x * 1000), z: Math.round(node.z * 1000) } })),
