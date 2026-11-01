@@ -146,6 +146,38 @@ try {
   })
   await dev.waitForTimeout(950)
   await capture(dev, 'dev-upper-road-close-1440x900')
+  for (const [fraction, name] of [
+    [0.5, 'dev-upper-contour-close-1440x900'],
+    [0.04, 'dev-upper-contour-junction-close-1440x900'],
+  ]) {
+    const found = await dev.evaluate((at) => {
+      const profile = window.__shadowCityV06.getWorld().terrain.roadProfiles
+        .find((item) => item.edgeId === 'edge-dev-upper-contour')
+      if (!profile) return false
+      const point = profile.path[Math.floor((profile.path.length - 1) * at)]
+      window.__shadowCityV06.inspectAtWorld(point.x / 1000,
+        point.y / 1000, point.z / 1000)
+      return true
+    }, fraction)
+    if (!found) continue
+    await dev.waitForTimeout(950)
+    await capture(dev, name)
+  }
+  const stairRoad = await dev.evaluate(() => {
+    const profile = window.__shadowCityV06.getWorld().terrain.roadProfiles
+      .find((item) => item.edgeId === 'edge-dev-upper-contour')
+    if (!profile) return false
+    const point = profile.path.reduce((nearest, candidate) =>
+      Math.abs(candidate.x - 30_000) < Math.abs(nearest.x - 30_000)
+        ? candidate : nearest)
+    window.__shadowCityV06.inspectAtWorld(point.x / 1000,
+      point.y / 1000, point.z / 1000)
+    return true
+  })
+  if (stairRoad) {
+    await dev.waitForTimeout(950)
+    await capture(dev, 'dev-upper-contour-stair-close-1440x900')
+  }
   await dev.evaluate(() => {
     const world = window.__shadowCityV06.getWorld()
     const home = world.baseCity.buildings.find((item) =>

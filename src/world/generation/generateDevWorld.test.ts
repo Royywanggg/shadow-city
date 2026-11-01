@@ -10,7 +10,8 @@ import { blockPadElevationMm, channelXAt, DEV_ESCARPMENT_BLOCK_IDS, DEV_OPEN_CHA
   heightAtMm, roadBendMm } from '../terrain/devTerrain'
 import { FOREGROUND_RIVER_CLOSED_ROAD_ID } from './devForegroundValley'
 import { HIGHLAND_CLOSED_ROAD_IDS } from './devHighlandPlan'
-import { DEV_UPPER_ROAD_EDGE_ID } from './devUpperRoadPlan'
+import { DEV_UPPER_CONTOUR_ROAD_EDGE_ID, DEV_UPPER_ROAD_EDGE_ID } from
+  './devUpperRoadPlan'
 import { DEV_TERRACE_BUILDING_PREFIX, DEV_TERRACE_SITES } from './devTerraceNeighborhood'
 import { generateDevWorld } from './generateDevWorld'
 import { generateIntegratedWorld } from './generateIntegratedWorld'
@@ -64,7 +65,7 @@ describe('isolated Twilight terrain world', () => {
       }
     }
     expect(dev.baseCity?.buildings.length).toBeLessThan(mainBefore.baseCity!.buildings.length)
-    expect(dev.config.generatorVersion).toBe('twilight-dev-v21')
+    expect(dev.config.generatorVersion).toBe('twilight-dev-v22')
     expect(mainAfter.config.generatorVersion).toBe('heritage-extension-v6')
     expect(worldFingerprintV5(dev, DEFAULT_SIMULATION_CONFIG_V5))
       .not.toBe(worldFingerprintV5(mainAfter, DEFAULT_SIMULATION_CONFIG_V5))
@@ -254,6 +255,41 @@ describe('isolated Twilight terrain world', () => {
     })
     expect(crossing.length).toBeGreaterThan(0)
     expect(Math.min(...crossing)).toBeGreaterThan(2_600)
+  })
+
+  it('keeps the contour street clear of homes and its sidewalk connected', () => {
+    for (const seed of [HERO_SEED, 'twilight-alt-01', 'twilight-alt-02']) {
+      const world = generateDevWorld(seed)
+      const city = world.baseCity!
+      const road = city.roads.edges.find((edge) =>
+        edge.id === DEV_UPPER_CONTOUR_ROAD_EDGE_ID)!
+      const profile = world.terrain!.roadProfiles.find((item) =>
+        item.edgeId === road.id)!
+      expect(profile.bridge).toBe(false)
+      const houses = city.buildings.filter((building) =>
+        building.id.startsWith(DEV_TERRACE_BUILDING_PREFIX))
+      expect(houses).toHaveLength(DEV_TERRACE_SITES.length)
+      for (const building of houses) for (const point of profile.path) {
+        const dx = Math.max(0, Math.abs(point.x / 1000 - building.x) -
+          building.width / 2)
+        const dz = Math.max(0, Math.abs(point.z / 1000 - building.z) -
+          building.depth / 2)
+        expect(Math.hypot(dx, dz), building.id).toBeGreaterThan(
+          road.width / 2 + 0.2)
+      }
+      const walk = world.navEdges.filter((edge) =>
+        edge.id.startsWith('terrain:upper-contour-walk-edge:') ||
+        edge.id === 'terrain:upper-contour-transfer' ||
+        edge.id === 'terrain:upper-contour-stair-landing')
+      expect(walk).toHaveLength(55)
+      for (const edge of walk) for (let i = 1; i < edge.path.length; i += 1) {
+        expect(hasClearSurfaceSegment(world, edge.surfaceId!,
+          edge.path[i - 1], edge.path[i]), edge.id).toBe(true)
+      }
+      const route = findRouteV2(createNavigationIndexV2(world),
+        'terrain:terrace-trail:27', 'terrain:upper-contour-walk:53')
+      expect(route.status).toBe('ok')
+    }
   })
 
   it('connects the street to distinct walkable terrace slots without a teleport', () => {

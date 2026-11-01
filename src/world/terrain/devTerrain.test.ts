@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { createEscarpmentFaceGeometry } from '../../scene/terrain/TerrainEscarpment'
 import { HERO_SEED } from '../../city/generation/generateCity'
 import { generateDevWorld } from '../generation/generateDevWorld'
-import { DEV_UPPER_ROAD_EDGE_ID } from '../generation/devUpperRoadPlan'
+import { DEV_UPPER_CONTOUR_ROAD_EDGE_ID, DEV_UPPER_ROAD_EDGE_ID } from
+  '../generation/devUpperRoadPlan'
 import { channelCenterXAtMm, escarpmentZBoundsAtMm, heightAtMm } from './devTerrain'
 
 function ridgeTerrain(seed = HERO_SEED) {
@@ -57,7 +58,8 @@ describe('curved dev escarpment', () => {
     const roadWidths = new Map(world.baseCity!.roads.edges.map((edge) =>
       [edge.id, edge.width]))
     for (const profile of terrain.roadProfiles.filter((item) =>
-      item.edgeId !== DEV_UPPER_ROAD_EDGE_ID)) for (const point of profile.path) {
+      item.edgeId !== DEV_UPPER_ROAD_EDGE_ID &&
+      item.edgeId !== DEV_UPPER_CONTOUR_ROAD_EDGE_ID)) for (const point of profile.path) {
       for (const patch of terrain.nonWalkableEscarpment.patches) {
         if (point.x < patch.frontLine[0].x || point.x > patch.frontLine.at(-1)!.x) continue
         const { backZ, frontZ } = escarpmentZBoundsAtMm(patch, point.x)
@@ -71,6 +73,15 @@ describe('curved dev escarpment', () => {
     }
     const upper = terrain.roadProfiles.find((item) =>
       item.edgeId === DEV_UPPER_ROAD_EDGE_ID)!
+    const contour = terrain.roadProfiles.find((item) =>
+      item.edgeId === DEV_UPPER_CONTOUR_ROAD_EDGE_ID)!
+    expect(contour.bridge).toBe(false)
+    for (const point of contour.path) {
+      const { backZ, frontZ } = escarpmentZBoundsAtMm(
+        terrain.nonWalkableEscarpment.patches[0], point.x)
+      expect(point.z - backZ).toBeGreaterThan(2_000)
+      expect(frontZ - point.z).toBeGreaterThan(4_000)
+    }
     expect(upper.bridgeSpan).toEqual({ startIndex: 0,
       endIndex: upper.path.length - 1 })
     const clearance = upper.path.map((point) => point.y -
