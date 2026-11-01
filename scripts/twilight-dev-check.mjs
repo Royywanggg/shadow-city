@@ -11,7 +11,7 @@ const browser = await chromium.launch({ headless: true,
     (process.platform === 'darwin' && existsSync(chrome) ? chrome : undefined),
   args: ['--enable-webgl'] })
 const base = process.env.SHADOW_CITY_URL ?? 'http://127.0.0.1:5174/'
-const visualPreview = process.env.SHADOW_CITY_VISUAL_TIME ?? '18:00'
+const visualPreview = process.env.SHADOW_CITY_VISUAL_TIME ?? '20:00'
 const errors = []
 const captures = []
 const report = { browser: await browser.version(), viewport: '1440x900', dpr: 1,
