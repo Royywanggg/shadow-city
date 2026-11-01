@@ -7,6 +7,12 @@ const END_Z_M = 81
 const AMPLITUDE_M = 6
 const ROAD_COLUMNS = [0, 1] as const
 const ROAD_ROWS = [4, 5, 6] as const
+const WEST_BANK_SHIFT_M = -6
+
+function smoothstep(t: number): number {
+  const clamped = Math.max(0, Math.min(1, t))
+  return clamped * clamped * (3 - 2 * clamped)
+}
 
 export function valleyOffsetM(z: number): number {
   if (z <= START_Z_M || z >= END_Z_M) return 0
@@ -14,16 +20,24 @@ export function valleyOffsetM(z: number): number {
   return AMPLITUDE_M * Math.sin(Math.PI * t) ** 2
 }
 
+export function westBankOffsetM(z: number): number {
+  return WEST_BANK_SHIFT_M * smoothstep((z - START_Z_M) / 24) *
+    smoothstep((100 - z) / 24)
+}
+
 function roadPath(from: RoadNode, to: RoadNode): readonly CityPointXZ[] {
   const count = Math.max(2, Math.ceil((to.z - from.z) / 1.5))
-  const baseX = from.id.startsWith('node-0-') ? -100 :
-    // The eastern road already has a small global organic displacement.
-    from.x - valleyOffsetM(from.z)
+  const westBank = from.id.startsWith('node-0-')
+  const offsetAt = (z: number) => valleyOffsetM(z) +
+    (westBank ? westBankOffsetM(z) : 0)
+  const baseX = from.x - offsetAt(from.z)
+  const endBaseX = to.x - offsetAt(to.z)
   return Array.from({ length: count + 1 }, (_, index) => {
     if (index === 0) return { x: from.x, z: from.z }
     if (index === count) return { x: to.x, z: to.z }
     const z = from.z + (to.z - from.z) * index / count
-    return { x: baseX + valleyOffsetM(z), z }
+    const t = smoothstep((z - from.z) / (to.z - from.z))
+    return { x: baseX + (endBaseX - baseX) * t + offsetAt(z), z }
   })
 }
 
@@ -51,7 +65,8 @@ export function applyDevValleyPlan(city: CityModel): CityModel {
   const nodes = city.roads.nodes.map((node) =>
     ROAD_COLUMNS.some((column) => ROAD_ROWS.some((row) =>
       row !== 4 && node.id === `node-${column}-${row}`))
-      ? { ...node, x: node.x + valleyOffsetM(node.z) } : node)
+      ? { ...node, x: node.x + valleyOffsetM(node.z) +
+        (node.id.startsWith('node-0-') ? westBankOffsetM(node.z) : 0) } : node)
   const after = new Map(nodes.map((node) => [node.id, node]))
   const pathByEdgeId = new Map<string, readonly CityPointXZ[]>()
   for (const column of ROAD_COLUMNS) for (const row of ROAD_ROWS) {
@@ -89,25 +104,33 @@ const BASE_CHANNEL: readonly GroundPointMm[] = [
   { x: -62_000, z: 150_000 },
 ]
 
-function baseChannelX(zMm: number): number {
-  for (let index = 1; index < BASE_CHANNEL.length; index += 1) {
-    const from = BASE_CHANNEL[index - 1]
-    const to = BASE_CHANNEL[index]
-    if (zMm <= to.z) return Math.round(from.x +
-      (to.x - from.x) * (zMm - from.z) / (to.z - from.z))
-  }
-  return BASE_CHANNEL.at(-1)!.x
-}
-
-/** The channel shares the analytical offset of the two road centrelines. */
+/** The channel samples the midpoint of the two authoritative road centrelines. */
 export function createDevValleyChannel(city: CityModel): readonly GroundPointMm[] {
   const west = city.roads.edges.find((edge) => edge.id === 'edge-z-0-5')?.centerlineXZ
   const east = city.roads.edges.find((edge) => edge.id === 'edge-z-1-5')?.centerlineXZ
   if (!west && !east) return BASE_CHANNEL
   if (!west || !east) throw new Error('Valley roads must be planned together')
+  const roadXAt = (column: number, zMm: number): number => {
+    const path = ROAD_ROWS.flatMap((row) => {
+      const edge = city.roads.edges.find((item) => item.id === `edge-z-${column}-${row}`)
+      if (!edge?.centerlineXZ) throw new Error(`Missing valley road ${column}-${row}`)
+      return edge.centerlineXZ
+    })
+    const afterIndex = path.findIndex((point) => point.z * 1000 >= zMm)
+    if (afterIndex <= 0) return Math.round(path[0].x * 1000)
+    const before = path[afterIndex - 1]
+    const after = path[afterIndex]
+    const t = (zMm / 1000 - before.z) / (after.z - before.z)
+    return Math.round((before.x + (after.x - before.x) * t) * 1000)
+  }
+  const midpointXAt = (zMm: number) => Math.round((roadXAt(0, zMm) +
+    roadXAt(1, zMm)) / 2)
   const points: GroundPointMm[] = []
   for (let z = 33_000; z <= 81_000; z += 1_500) {
-    points.push({ x: baseChannelX(z) + Math.round(valleyOffsetM(z / 1000) * 1000), z })
+    points.push({ x: midpointXAt(z), z })
   }
-  return [...points, ...BASE_CHANNEL.slice(4)]
+  const outletCorrection = midpointXAt(100_000) - BASE_CHANNEL[6].x
+  return [...points, ...BASE_CHANNEL.slice(4).map((point) => ({ ...point,
+    x: point.z <= 100_000 ? midpointXAt(point.z) : point.x +
+      Math.round(outletCorrection * (1 - smoothstep((point.z - 100_000) / 50_000))) }))]
 }

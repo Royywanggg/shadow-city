@@ -396,7 +396,7 @@ export function placeDevCorridorParcels(city: CityModel): CityModel {
       x: (box.minX + box.maxX) / 2, z: (box.minZ + box.maxZ) / 2,
       width: box.maxX - box.minX, depth: box.maxZ - box.minZ })
     if (VALLEY_BLOCKS.has(block.id) &&
-      (block.column === 0 || block.id === 'block--1-6' || block.isPark)) continue
+      (block.column === 0 || block.isPark)) continue
     const groups = city.parcels.filter((parcel) => parcel.blockId === block.id)
       .sort((a, b) => a.x - b.x).map((parcel) => {
         const building = city.buildings.find((item) => item.parcelId === parcel.id)

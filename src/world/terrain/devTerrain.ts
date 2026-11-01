@@ -110,13 +110,13 @@ const STEP_MM = 2_000
 const ROAD_TOP_MM = 70
 const CHANNEL_HALF_WIDTH_MM = 3_800
 const CHANNEL_BANK_WIDTH_MM = 5_200
-const CHANNEL_DEPTH_MM = 8_000
+const CHANNEL_DEPTH_MM = 6_000
 const CHANNEL_FULL_DEPTH_Z_MM = 40_000
 const TERRACE_STAIR_X_MM = 30_000
 const TERRACE_STAIR_FRONT_RUN_MM = 17_000
-const BRIDGE_EDGE_IDS = new Set(['edge-x-0-5', 'edge-x-0-6'])
+const BRIDGE_EDGE_IDS = new Set(['edge-x-0-5', 'edge-x-0-6', 'edge-x-0-7'])
 const CULVERT_EDGE_IDS = new Set([
-  'edge-x-0-7', 'edge-x-1-8',
+  'edge-x-1-8',
 ])
 /** Deliberate contour bends; endpoints and tangents remain aligned with the original graph. */
 const ROAD_BENDS_MM = new Map<string, number>([
