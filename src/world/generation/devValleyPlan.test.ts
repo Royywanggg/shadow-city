@@ -3,7 +3,8 @@ import { generateCity, HERO_SEED } from '../../city/generation/generateCity'
 import { expandOriginalCity } from './expandOriginalCity'
 import { createDevOrganicLayout } from './devOrganicLayout'
 import { deriveDevRoadCorridor } from './devRoadCorridor'
-import { applyDevValleyPlan, createDevValleyChannel, valleyOffsetM } from './devValleyPlan'
+import { applyDevValleyPlan, createDevValleyChannel, valleyOffsetM,
+  westBankOffsetM } from './devValleyPlan'
 import { generateDevWorld } from './generateDevWorld'
 import { createNavigationIndexV2, findRouteV2 } from '../navigation/routeV2'
 
@@ -21,7 +22,8 @@ describe('shared dev valley plan', () => {
       const id = `node-${column}-${row}`
       const before = nodesBefore.get(id)!
       const after = nodesAfter.get(id)!
-      expect(after.x - before.x).toBeCloseTo(valleyOffsetM(before.z), 7)
+      expect(after.x - before.x).toBeCloseTo(valleyOffsetM(before.z) +
+        (column === 0 ? westBankOffsetM(before.z) : 0), 7)
       expect(after.z).toBe(before.z)
     }
     const byId = new Map(world.baseCity!.roads.edges.map((edge) => [edge.id, edge]))
@@ -43,8 +45,32 @@ describe('shared dev valley plan', () => {
     const channel = createDevValleyChannel(planned)
     expect(world.terrain!.channel.centerline).toEqual(channel)
     const peak = channel.find((point) => point.z === 54_000)!
-    expect(peak.x - channel[0].x).toBeGreaterThan(5_000)
-    expect(peak.x - channel[0].x).toBeLessThan(7_000)
+    expect(peak.x - channel[0].x).toBeGreaterThan(2_000)
+    expect(peak.x - channel[0].x).toBeLessThan(4_000)
+    const roadXAt = (column: number, z: number) => {
+      const path = [4, 5, 6].flatMap((row) =>
+        byId.get(`edge-z-${column}-${row}`)!.centerlineXZ!)
+      const afterIndex = path.findIndex((point) => point.z >= z)
+      const before = path[afterIndex - 1]
+      const after = path[afterIndex]
+      const t = (z - before.z) / (after.z - before.z)
+      return before.x + (after.x - before.x) * t
+    }
+    for (const z of [45, 54, 63, 72]) {
+      const center = channel.find((point) => point.z === z * 1000)!
+      expect(Math.abs(center.x / 1000 -
+        (roadXAt(0, z) + roadXAt(1, z)) / 2)).toBeLessThan(1_500 / 1000)
+    }
+    for (let index = 1; index < channel.length; index += 1) {
+      const before = channel[index - 1]
+      const after = channel[index]
+      expect(Math.abs(after.x - before.x) / (after.z - before.z))
+        .toBeLessThan(1.2)
+    }
+    const west = nodesAfter.get('node-0-5')!
+    const east = nodesAfter.get('node-1-5')!
+    expect(east.x - west.x).toBeGreaterThan(
+      nodesBefore.get('node-1-5')!.x - nodesBefore.get('node-0-5')!.x + 5.5)
     expect(channel.at(-1)).toEqual({ x: -62_000, z: 150_000 })
     for (const row of [5, 6]) {
       const bridge = byId.get(`edge-x-0-${row}`)!
@@ -52,7 +78,8 @@ describe('shared dev valley plan', () => {
       const west = nodesAfter.get(bridge.from)!
       const east = nodesAfter.get(bridge.to)!
       expect(east.x - west.x).toBeCloseTo(
-        nodesBefore.get(bridge.to)!.x - nodesBefore.get(bridge.from)!.x, 7)
+        nodesBefore.get(bridge.to)!.x - nodesBefore.get(bridge.from)!.x -
+        westBankOffsetM(west.z), 7)
       expect(west.z).toBe(east.z)
       expect(world.navEdges.filter((edge) =>
         edge.id.startsWith(`terrain-ped-bridge:${bridge.id}:`))).toHaveLength(2)

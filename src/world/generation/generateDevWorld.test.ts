@@ -63,7 +63,7 @@ describe('isolated Twilight terrain world', () => {
       }
     }
     expect(dev.baseCity?.buildings.length).toBeLessThan(mainBefore.baseCity!.buildings.length)
-    expect(dev.config.generatorVersion).toBe('twilight-dev-v19')
+    expect(dev.config.generatorVersion).toBe('twilight-dev-v20')
     expect(mainAfter.config.generatorVersion).toBe('heritage-extension-v6')
     expect(worldFingerprintV5(dev, DEFAULT_SIMULATION_CONFIG_V5))
       .not.toBe(worldFingerprintV5(mainAfter, DEFAULT_SIMULATION_CONFIG_V5))
@@ -360,7 +360,7 @@ describe('isolated Twilight terrain world', () => {
     expect(terrain.grid.heightsMm).toHaveLength(terrain.grid.width * terrain.grid.depth)
     expect(heightAtMm(terrain, 0, -130_000)).toBeGreaterThan(6_000)
     expect(heightAtMm(terrain, 0, 0)).toBe(0)
-    expect(heightAtMm(terrain, -87_000, 75_000)).toBeLessThan(-6_000)
+    expect(heightAtMm(terrain, -87_000, 75_000)).toBeLessThan(-5_500)
     expect(blockPadElevationMm(terrain, 'block-3-3')).toBe(0)
     expect(blockPadElevationMm(terrain, 'block-4-3')).toBe(0)
     expect(terrain.nonWalkableEscarpment.patches).toHaveLength(1)
@@ -383,7 +383,7 @@ describe('isolated Twilight terrain world', () => {
     const edges = new Map(world.roadEdges.map((edge) => [edge.id, edge]))
     expect(terrain.roadProfiles.filter((profile) => profile.bridge &&
       profile.edgeId !== DEV_UPPER_ROAD_EDGE_ID).map((profile) =>
-      profile.edgeId).sort()).toEqual(['edge-x-0-5', 'edge-x-0-6'])
+      profile.edgeId).sort()).toEqual(['edge-x-0-5', 'edge-x-0-6', 'edge-x-0-7'])
     for (const profile of terrain.roadProfiles) {
       const road = edges.get(profile.edgeId)!
       expect(profile.path[0].x).toBe(nodes.get(road.from)!.x)
@@ -566,7 +566,7 @@ describe('isolated Twilight terrain world', () => {
     const outlet = terrain.channel.centerline.at(-1)!
     expect(outlet.x).toBeGreaterThan(world.bounds.minX)
     expect(outlet.z).toBe(world.bounds.maxZ)
-    expect(heightAtMm(terrain, outlet.x, outlet.z)).toBeLessThan(-6_000)
+    expect(heightAtMm(terrain, outlet.x, outlet.z)).toBeLessThan(-5_500)
     const bank = world.baseCity!.blocks.find((block) => block.id === 'block-1-7')!
     expect(bank.footprintXZ?.length).toBeGreaterThan(10)
     const bankHomes = world.baseCity!.buildings.filter((building) =>
@@ -591,10 +591,10 @@ describe('isolated Twilight terrain world', () => {
       'ped-entrance-building-block--1-7-0-0')
     expect(route.status).toBe('ok')
     expect(terrain.roadProfiles.filter((profile) => profile.bridge &&
-      profile.edgeId !== DEV_UPPER_ROAD_EDGE_ID)).toHaveLength(2)
+      profile.edgeId !== DEV_UPPER_ROAD_EDGE_ID)).toHaveLength(3)
     const culverts = terrain.roadProfiles.filter((profile) => profile.culvertSpan)
     expect(culverts.map((profile) => profile.edgeId).sort())
-      .toEqual(['edge-x-0-7', 'edge-x-1-8'])
+      .toEqual(['edge-x-1-8'])
     const index = createNavigationIndexV2(world)
     for (const culvert of culverts) {
       expect(culvert.bridge).toBe(false)
