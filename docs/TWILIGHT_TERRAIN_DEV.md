@@ -103,6 +103,8 @@ The paired v18 populated Chrome 156 / Apple M4 Metal report is `.visual/twilight
 
 After the v18 low-rise and water changes, all 53 test files / 293 tests passed. TypeScript checking and the production Vite build passed. The fixed-seed tests include three city seeds, connected road and pedestrian graphs, legal building access, ground path clearance and bounded grades; they do not substitute for the open reference-level Hero review.
 
+An actual Chrome bearing study at 300°, 330° and 345° is in ignored `.visual/twilight-bearing-study/`. The three fixed 1440 × 900, 20:00 captures were opened against the 315° Hero. A 330° bearing moves the watercourse toward the lower-left of the frame, but flattens the diorama's diamond composition and still leaves the river small. No default camera change was accepted; the remaining composition problem is spatial rather than a camera-only adjustment.
+
 ## Acceptance status
 
 | Gate | Current result |
