@@ -6,7 +6,8 @@ import { hasClearSurfaceSegment } from '../../simulation/encounter/spatial'
 import { DEFAULT_SIMULATION_CONFIG_V5, type CitizenStateV5 } from '../../simulation/v5Types'
 import { moveCitizenOneTick } from '../../simulation/movementV5'
 import { createNavigationIndexV2, findRouteV2 } from '../navigation/routeV2'
-import { blockPadElevationMm, channelXAt, DEV_ESCARPMENT_BLOCK_IDS, DEV_OPEN_CHANNEL_BLOCK_IDS,
+import { blockPadElevationMm, channelXAt,
+  DEV_ESCARPMENT_BLOCK_IDS, DEV_OPEN_CHANNEL_BLOCK_IDS,
   heightAtMm, roadBendMm } from '../terrain/devTerrain'
 import { FOREGROUND_RIVER_CLOSED_ROAD_ID } from './devForegroundValley'
 import { HIGHLAND_CLOSED_ROAD_IDS } from './devHighlandPlan'
@@ -65,7 +66,7 @@ describe('isolated Twilight terrain world', () => {
       }
     }
     expect(dev.baseCity?.buildings.length).toBeLessThan(mainBefore.baseCity!.buildings.length)
-    expect(dev.config.generatorVersion).toBe('twilight-dev-v22')
+    expect(dev.config.generatorVersion).toBe('twilight-dev-v23')
     expect(mainAfter.config.generatorVersion).toBe('heritage-extension-v6')
     expect(worldFingerprintV5(dev, DEFAULT_SIMULATION_CONFIG_V5))
       .not.toBe(worldFingerprintV5(mainAfter, DEFAULT_SIMULATION_CONFIG_V5))
@@ -74,6 +75,12 @@ describe('isolated Twilight terrain world', () => {
         elevationMm: dev.terrain!.buildingPads[0].elevationMm + 1 },
       ...dev.terrain!.buildingPads.slice(1)] } }
     expect(worldFingerprintV5(changedPad, DEFAULT_SIMULATION_CONFIG_V5))
+      .not.toBe(worldFingerprintV5(dev, DEFAULT_SIMULATION_CONFIG_V5))
+    const changedValley = { ...dev, terrain: { ...dev.terrain!,
+      channel: { ...dev.terrain!.channel,
+        widthProfile: dev.terrain!.channel.widthProfile.map((sample, index) =>
+          index === 2 ? { ...sample, halfWidthMm: sample.halfWidthMm + 1 } : sample) } } }
+    expect(worldFingerprintV5(changedValley, DEFAULT_SIMULATION_CONFIG_V5))
       .not.toBe(worldFingerprintV5(dev, DEFAULT_SIMULATION_CONFIG_V5))
   })
 

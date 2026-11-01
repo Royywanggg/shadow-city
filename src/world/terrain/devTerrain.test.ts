@@ -4,13 +4,54 @@ import { HERO_SEED } from '../../city/generation/generateCity'
 import { generateDevWorld } from '../generation/generateDevWorld'
 import { DEV_UPPER_CONTOUR_ROAD_EDGE_ID, DEV_UPPER_ROAD_EDGE_ID } from
   '../generation/devUpperRoadPlan'
-import { channelCenterXAtMm, escarpmentZBoundsAtMm, heightAtMm } from './devTerrain'
+import { channelCenterXAtMm, channelWidthsAtMm,
+  escarpmentZBoundsAtMm, heightAtMm } from './devTerrain'
 
 function ridgeTerrain(seed = HERO_SEED) {
   return generateDevWorld(seed).terrain!
 }
 
 describe('curved dev escarpment', () => {
+  it('widens only the middle valley while keeping both road banks clear', () => {
+    for (const seed of [HERO_SEED, 'twilight-alt-01', 'twilight-alt-02']) {
+      const world = generateDevWorld(seed)
+      const terrain = world.terrain!
+      expect(terrain.channel.widthProfile.map((sample) => sample.zMm))
+        .toEqual([33_000, 50_000, 65_000, 76_000, 88_000,
+          96_000, 100_000, 108_000, 150_000])
+      expect(channelWidthsAtMm(terrain, 50_000))
+        .toEqual({ halfWidthMm: 3_800, bankWidthMm: 5_200 })
+      expect(channelWidthsAtMm(terrain, 70_000))
+        .toEqual({ halfWidthMm: 6_800, bankWidthMm: 7_200 })
+      expect(channelWidthsAtMm(terrain, 98_000))
+        .toEqual({ halfWidthMm: 3_800, bankWidthMm: 2_500 })
+      expect(channelWidthsAtMm(terrain, 108_000))
+        .toEqual({ halfWidthMm: 3_800, bankWidthMm: 5_200 })
+      const roadXAtZ = (column: 0 | 1, zMm: number): number => {
+        const path = terrain.roadProfiles.filter((profile) =>
+          ['4', '5', '6'].some((row) =>
+            profile.edgeId === `edge-z-${column}-${row}`))
+          .flatMap((profile) => profile.path)
+        const afterIndex = path.findIndex((point) => point.z >= zMm)
+        const before = path[afterIndex - 1]
+        const after = path[afterIndex]
+        const t = (zMm - before.z) / (after.z - before.z)
+        return before.x + (after.x - before.x) * t
+      }
+      for (let zMm = 50_000; zMm <= 100_000; zMm += 1_000) {
+        const centerX = channelCenterXAtMm(terrain, zMm)
+        const widths = channelWidthsAtMm(terrain, zMm)
+        const ravineEdgeMm = widths.halfWidthMm + widths.bankWidthMm
+        for (const column of [0, 1] as const) {
+          const bankRoadX = roadXAtZ(column, zMm)
+          const roadClearanceMm = Math.abs(bankRoadX - centerX) - ravineEdgeMm
+          expect(roadClearanceMm, `${seed}: bank ${column} at ${zMm} mm`)
+            .toBeGreaterThan(5_000)
+        }
+      }
+    }
+  })
+
   it('uses the same curved contour for terrain, blocked space and rock faces', () => {
     const terrain = ridgeTerrain()
     const patches = terrain.nonWalkableEscarpment.patches
