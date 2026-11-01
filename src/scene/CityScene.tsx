@@ -64,7 +64,13 @@ export function CityStaticScene({ city, quality = 'high', postprocessing = true,
   shadowMode?: ShadowMode
 }) {
   const half = city.size / 2
-  const shadowExtent = half + 10
+  const terrainGrid = terrain?.grid
+  const shadowExtent = terrainGrid ? Math.max(half,
+    Math.abs(terrainGrid.originXmm / 1000),
+    Math.abs((terrainGrid.originXmm + (terrainGrid.width - 1) * terrainGrid.stepMm) / 1000),
+    Math.abs(terrainGrid.originZmm / 1000),
+    Math.abs((terrainGrid.originZmm + (terrainGrid.depth - 1) * terrainGrid.stepMm) / 1000)) + 10 :
+    half + 10
   const clay = lookdev === 'clay'
   const day = !timeLighting && (lighting === 'day' || clay)
   const windowLights = timeLighting?.streetlightIntensity ?? (day ? 0 : 1)

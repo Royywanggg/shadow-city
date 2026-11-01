@@ -527,7 +527,7 @@ function V5Panel({ session, selectedId, onSelect, selectedEncounterId, onSelectE
     </aside>
     <div className="v06-topbar">
       <div><span className="eyebrow">SHADOW CITY / WORLD V2</span><h1>SHADOW <em>CITY</em></h1>
-        <p>{session.getWorld().config.extentMm / 1000} × {session.getWorld().config.extentMm / 1000} m · multi-level urban laboratory</p></div>
+        <p>{(session.getWorld().bounds.maxX - session.getWorld().bounds.minX) / 1000} × {(session.getWorld().bounds.maxZ - session.getWorld().bounds.minZ) / 1000} m · multi-level urban laboratory</p></div>
       <a href="?world=legacy">OPEN LEGACY CITY ↗</a>
     </div>
     <div className="v06-world-controls">
