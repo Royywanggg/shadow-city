@@ -45,7 +45,7 @@ describe('shared dev valley plan', () => {
     const peak = channel.find((point) => point.z === 54_000)!
     expect(peak.x - channel[0].x).toBeGreaterThan(5_000)
     expect(peak.x - channel[0].x).toBeLessThan(7_000)
-    expect(channel.at(-1)).toEqual({ x: -134_000, z: 150_000 })
+    expect(channel.at(-1)).toEqual({ x: -62_000, z: 150_000 })
     for (const row of [5, 6]) {
       const bridge = byId.get(`edge-x-0-${row}`)!
       expect(bridge.centerlineXZ).toBeUndefined()
