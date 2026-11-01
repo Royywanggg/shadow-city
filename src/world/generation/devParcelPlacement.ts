@@ -185,10 +185,14 @@ function curvedFootprint(block: CityBlock, city: CityModel,
     polygon = [westCurve[0], ...eastCurve, ...westCurve.slice(1).reverse()]
     validPlanes = [north, south]
   } else {
-    const curvedColumn = VALLEY_BLOCKS.has(block.id) ? block.column === -1 ? 0 : 1 :
-      block.column < 4 ? 3 : 7
-    const edge = edgeAt(curvedColumn)
-    if (!edge) throw new Error(`Missing curved road beside ${block.id}`)
+    const curvedSides = [block.column, block.column + 1]
+      .map((column) => ({ column, edge: edgeAt(column) }))
+      .filter((side): side is { column: number; edge: RoadEdge } =>
+        !!side.edge?.centerlineXZ)
+    if (curvedSides.length !== 1) {
+      throw new Error(`Expected one curved road beside ${block.id}`)
+    }
+    const { column: curvedColumn, edge } = curvedSides[0]
     const westOfCorridor = block.column === curvedColumn - 1
     const curve = curvedBoundary(edge, north, south, westOfCorridor ? 1 : -1)
     const opposite = westOfCorridor ? ring[2] : ring.at(-1)!
