@@ -61,30 +61,47 @@ function EscarpmentTrees({ terrain, city }: { terrain: DevTerrainV1; city: CityM
     const minX = patch.frontLine[0].x + 1_800
     const maxX = patch.frontLine.at(-1)!.x - 1_800
     if (minX >= maxX) return []
-    const count = Math.max(7, Math.round((maxX - minX) / 3_800))
-    return Array.from({ length: count }, (_, index): LandscapeTree => {
-      const jitter = Math.sin((patchIndex + 1) * 19 + index * 7.3) * 0.28
-      const tx = (index + 0.5 + jitter) / count
-      const tz = (Math.sin((patchIndex + 1) * 13 + index * 11.7) + 1) / 2
-      const xMm = Math.round(minX + (maxX - minX) * tx)
-      const { frontZ } = escarpmentZBoundsAtMm(patch, xMm)
-      const zMm = Math.round(frontZ - 4_000 - 2_500 * tz)
-      return { x: xMm / 1000, z: zMm / 1000,
-        y: heightAtMm(terrain, xMm, zMm) / 1000,
-        height: 2.1 + (index % 3) * 0.42,
-        color: index % 2 ? '#476359' : '#38564f' }
+    // Keep planting in two narrow, legal bands on either side of the trail.
+    // The former 4–6.5 m band overlapped the 8.5 m trail clearance zone.
+    const rows = [
+      { offsetMm: 3_900, spacingMm: 4_200, height: 2.4 },
+      { offsetMm: 13_500, spacingMm: 6_600, height: 3.0 },
+    ] as const
+    return rows.flatMap((row, rowIndex) => {
+      const count = Math.max(3, Math.round((maxX - minX) / row.spacingMm))
+      const sites = Array.from({ length: count }, (_, index) => index)
+        .filter((index) => Math.sin(index * 1.29 + rowIndex * 2.8) +
+          0.48 * Math.sin(index * 0.41 + patchIndex) >
+          (rowIndex === 0 ? -0.58 : -0.22))
+      return sites.map((index): LandscapeTree => {
+        const jitter = Math.sin((patchIndex + 1) * 19 + index * 7.3 +
+          rowIndex * 3.1) * 0.38
+        const tx = (index + 0.5 + jitter) / count
+        const xMm = Math.round(minX + (maxX - minX) * tx)
+        const { frontZ } = escarpmentZBoundsAtMm(patch, xMm)
+        const zMm = Math.round(frontZ - row.offsetMm +
+          320 * Math.sin(index * 3.7 + rowIndex))
+        return { x: xMm / 1000, z: zMm / 1000,
+          y: heightAtMm(terrain, xMm, zMm) / 1000,
+          height: row.height + (Math.sin(index * 2.71 + rowIndex) + 1) * 0.44,
+          color: index % 3 ? '#476359' : '#38564f' }
+      })
     }).filter((tree) => {
       const clearPath = !terrain.terraceAccess ||
-        [...terrain.terraceAccess.stair, ...terrain.terraceAccess.trail]
+        [...terrain.terraceAccess.stair, ...terrain.terraceAccess.trail,
+          ...terrain.terraceAccess.walkways.flatMap((walkway) => walkway.path)]
           .every((point) => Math.hypot(tree.x * 1000 - point.x,
             tree.z * 1000 - point.z) > 3_500)
       const clearBuildings = city.buildings.every((building) =>
         building.masses.filter((mass) => mass.baseY < 2).every((mass) =>
           Math.abs(tree.x - building.x - mass.offsetX) > mass.width / 2 + 1.8 ||
           Math.abs(tree.z - building.z - mass.offsetZ) > mass.depth / 2 + 1.8))
+      const clearParcels = city.parcels.every((parcel) =>
+        Math.abs(tree.x - parcel.x) > parcel.width / 2 + 1.2 ||
+        Math.abs(tree.z - parcel.z) > parcel.depth / 2 + 1.2)
       const clearRoad = !upperRoad || upperRoad.path.every((point) =>
         Math.hypot(tree.x * 1000 - point.x, tree.z * 1000 - point.z) > 6_000)
-      return clearPath && clearBuildings && clearRoad
+      return clearPath && clearBuildings && clearParcels && clearRoad
     })
     })
   }, [terrain, city])
