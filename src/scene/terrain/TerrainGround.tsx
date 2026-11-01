@@ -157,7 +157,7 @@ function makeChannel(terrain: DevTerrainV1): BufferGeometry {
   const positions: number[] = []
   const colors: number[] = []
   const indices: number[] = []
-  const width = terrain.channel.halfWidthMm / 1000 * 0.67
+  const width = terrain.channel.halfWidthMm / 1000 * 0.8
   const stream = new Color('#468a96')
   const mouth = new Color('#10262e')
   const tone = new Color()
