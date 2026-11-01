@@ -2,7 +2,8 @@ import { generateCity, HERO_SEED } from '../../city/generation/generateCity'
 import type { GroundPointMm, NavEdgeV2, NavNodeV2, WorldModelV2 } from '../model'
 import { createDevTerrainV1, DEV_OPEN_CHANNEL_BLOCK_IDS, heightAtMm,
   DEV_ESCARPMENT_BLOCK_IDS, buildingPadElevationMm,
-  roadBendMm, type DevRoadProfileV1, type DevTerrainV1 } from '../terrain/devTerrain'
+  channelWidthsAtMm, roadBendMm,
+  type DevRoadProfileV1, type DevTerrainV1 } from '../terrain/devTerrain'
 import { generateIntegratedWorld } from './generateIntegratedWorld'
 import { expandOriginalCity } from './expandOriginalCity'
 import { createDevOrganicLayout } from './devOrganicLayout'
@@ -44,13 +45,17 @@ function channelBlockedPolygons(terrain: DevTerrainV1): GroundPointMm[][] {
     const dx = end.x - start.x
     const dz = end.z - start.z
     const length = Math.hypot(dx, dz) || 1
-    const nx = -dz / length * (terrain.channel.halfWidthMm + 2_000)
-    const nz = dx / length * (terrain.channel.halfWidthMm + 2_000)
+    const startWidthMm = channelWidthsAtMm(terrain, start.z).halfWidthMm + 2_000
+    const endWidthMm = channelWidthsAtMm(terrain, end.z).halfWidthMm + 2_000
+    const startNx = -dz / length * startWidthMm
+    const startNz = dx / length * startWidthMm
+    const endNx = -dz / length * endWidthMm
+    const endNz = dx / length * endWidthMm
     return [
-      { x: Math.round(start.x + nx), z: Math.round(start.z + nz) },
-      { x: Math.round(end.x + nx), z: Math.round(end.z + nz) },
-      { x: Math.round(end.x - nx), z: Math.round(end.z - nz) },
-      { x: Math.round(start.x - nx), z: Math.round(start.z - nz) },
+      { x: Math.round(start.x + startNx), z: Math.round(start.z + startNz) },
+      { x: Math.round(end.x + endNx), z: Math.round(end.z + endNz) },
+      { x: Math.round(end.x - endNx), z: Math.round(end.z - endNz) },
+      { x: Math.round(start.x - startNx), z: Math.round(start.z - startNz) },
     ]
   })
 }
@@ -576,7 +581,7 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
           edge.id.startsWith('ped-access-') ? 1_200 : 900 })) } }
   return {
     ...integrated,
-    config: { ...integrated.config, generatorVersion: 'twilight-dev-v22' },
+    config: { ...integrated.config, generatorVersion: 'twilight-dev-v23' },
     baseCity: city,
     roadNodes: city.roads.nodes.map((node) => ({ id: node.id,
       position: { x: Math.round(node.x * 1000), z: Math.round(node.z * 1000) } })),

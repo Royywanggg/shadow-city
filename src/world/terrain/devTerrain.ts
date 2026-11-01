@@ -60,6 +60,12 @@ export interface DevRoadProfileV1 {
   readonly culvertSpan?: Readonly<{ startIndex: number; endIndex: number }>
 }
 
+export interface DevChannelWidthSampleV1 {
+  readonly zMm: number
+  readonly halfWidthMm: number
+  readonly bankWidthMm: number
+}
+
 export interface DevTerraceAccessV1 {
   readonly crossingNodeId: string
   readonly foot: WorldPointMm
@@ -95,6 +101,8 @@ export interface DevTerrainV1 {
     fullDepthZmm: number
     halfWidthMm: number
     bankWidthMm: number
+    /** Serialized cross sections shared by ground, banks, water, and navigation. */
+    widthProfile: readonly DevChannelWidthSampleV1[]
     depthMm: number
   }>
 }
@@ -113,6 +121,21 @@ const STEP_MM = 2_000
 const ROAD_TOP_MM = 70
 const CHANNEL_HALF_WIDTH_MM = 3_800
 const CHANNEL_BANK_WIDTH_MM = 5_200
+const CHANNEL_WIDTH_PROFILE: readonly DevChannelWidthSampleV1[] = [
+  { zMm: 33_000, halfWidthMm: CHANNEL_HALF_WIDTH_MM,
+    bankWidthMm: CHANNEL_BANK_WIDTH_MM },
+  { zMm: 50_000, halfWidthMm: CHANNEL_HALF_WIDTH_MM,
+    bankWidthMm: CHANNEL_BANK_WIDTH_MM },
+  { zMm: 65_000, halfWidthMm: 6_800, bankWidthMm: 7_200 },
+  { zMm: 76_000, halfWidthMm: 6_800, bankWidthMm: 7_200 },
+  { zMm: 88_000, halfWidthMm: 4_500, bankWidthMm: 4_500 },
+  { zMm: 96_000, halfWidthMm: CHANNEL_HALF_WIDTH_MM, bankWidthMm: 2_500 },
+  { zMm: 100_000, halfWidthMm: CHANNEL_HALF_WIDTH_MM, bankWidthMm: 2_500 },
+  { zMm: 108_000, halfWidthMm: CHANNEL_HALF_WIDTH_MM,
+    bankWidthMm: CHANNEL_BANK_WIDTH_MM },
+  { zMm: 150_000, halfWidthMm: CHANNEL_HALF_WIDTH_MM,
+    bankWidthMm: CHANNEL_BANK_WIDTH_MM },
+]
 const CHANNEL_DEPTH_MM = 6_000
 const CHANNEL_FULL_DEPTH_Z_MM = 40_000
 const TERRACE_STAIR_X_MM = 30_000
@@ -143,6 +166,30 @@ function clamp01(value: number): number {
 function smoothstep(value: number): number {
   const t = clamp01(value)
   return t * t * (3 - 2 * t)
+}
+
+function widthsAtProfile(profile: readonly DevChannelWidthSampleV1[],
+  zMm: number): Readonly<{ halfWidthMm: number; bankWidthMm: number }> {
+  if (zMm <= profile[0].zMm) return {
+    halfWidthMm: profile[0].halfWidthMm, bankWidthMm: profile[0].bankWidthMm }
+  for (let index = 1; index < profile.length; index += 1) {
+    const before = profile[index - 1]
+    const after = profile[index]
+    if (zMm > after.zMm) continue
+    const t = smoothstep((zMm - before.zMm) / (after.zMm - before.zMm))
+    return { halfWidthMm: Math.round(before.halfWidthMm +
+      (after.halfWidthMm - before.halfWidthMm) * t),
+    bankWidthMm: Math.round(before.bankWidthMm +
+      (after.bankWidthMm - before.bankWidthMm) * t) }
+  }
+  const last = profile.at(-1)!
+  return { halfWidthMm: last.halfWidthMm, bankWidthMm: last.bankWidthMm }
+}
+
+/** One static cross-section source for terrain, visible water/banks, and access. */
+export function channelWidthsAtMm(terrain: DevTerrainV1,
+  zMm: number): Readonly<{ halfWidthMm: number; bankWidthMm: number }> {
+  return widthsAtProfile(terrain.channel.widthProfile, zMm)
 }
 
 function terraceRamp(value: number): number {
@@ -225,15 +272,16 @@ function patchHeightMm(patches: readonly DevEscarpmentPatchV1[], xMm: number,
 }
 
 function rawHeightMm(xMm: number, zMm: number,
-  patches: readonly DevEscarpmentPatchV1[], channel: readonly GroundPointMm[]): number {
+  patches: readonly DevEscarpmentPatchV1[], channel: readonly GroundPointMm[],
+  widths: readonly DevChannelWidthSampleV1[]): number {
   const northRise = 10_000 * terraceRamp((-zMm - 22_000) / 128_000)
   const channelAlong = smoothstep((zMm - channel[0].z) /
     (CHANNEL_FULL_DEPTH_Z_MM - channel[0].z)) *
     (channel.at(-1)!.z >= 150_000 ? 1 :
       1 - smoothstep((zMm - channel.at(-1)!.z) / 7_000))
   const distance = Math.abs(xMm - channelXAt(channel, zMm))
-  const channelAcross = 1 - smoothstep((distance - CHANNEL_HALF_WIDTH_MM) /
-    CHANNEL_BANK_WIDTH_MM)
+  const { halfWidthMm, bankWidthMm } = widthsAtProfile(widths, zMm)
+  const channelAcross = 1 - smoothstep((distance - halfWidthMm) / bankWidthMm)
   return Math.round(northRise - CHANNEL_DEPTH_MM * channelAlong * channelAcross +
     patchHeightMm(patches, xMm, zMm))
 }
@@ -478,13 +526,15 @@ export function createDevTerrainV1(city: CityModel, seed: string): DevTerrainV1 
     stepMm: STEP_MM, width, depth,
     heightsMm: Array.from({ length: width * depth }, (_, index) =>
       rawHeightMm(-halfMm + index % width * STEP_MM,
-        -halfMm + Math.floor(index / width) * STEP_MM, patches, channelLine)) }
+        -halfMm + Math.floor(index / width) * STEP_MM,
+        patches, channelLine, CHANNEL_WIDTH_PROFILE)) }
   const sampler: DevTerrainV1 = { version: 'twilight-terrain-v1', seed, grid,
     blockPads: [], buildingPads: [], roadProfiles: [], openChannelBlockIds,
     nonWalkableEscarpment: { patches },
     channel: { centerline: channelLine, fullDepthZmm: CHANNEL_FULL_DEPTH_Z_MM,
       halfWidthMm: CHANNEL_HALF_WIDTH_MM,
-      bankWidthMm: CHANNEL_BANK_WIDTH_MM, depthMm: CHANNEL_DEPTH_MM } }
+      bankWidthMm: CHANNEL_BANK_WIDTH_MM,
+      widthProfile: CHANNEL_WIDTH_PROFILE, depthMm: CHANNEL_DEPTH_MM } }
   const blockPads = city.blocks.filter((block) => !open.has(block.id)).map((block) => {
     const centerXmm = Math.round(block.x * 1000)
     const centerZmm = Math.round(block.z * 1000)
