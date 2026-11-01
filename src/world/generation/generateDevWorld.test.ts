@@ -14,6 +14,7 @@ import { HIGHLAND_CLOSED_ROAD_IDS } from './devHighlandPlan'
 import { DEV_UPPER_CONTOUR_ROAD_EDGE_ID, DEV_UPPER_ROAD_EDGE_ID } from
   './devUpperRoadPlan'
 import { DEV_TERRACE_BUILDING_PREFIX, DEV_TERRACE_SITES } from './devTerraceNeighborhood'
+import { DEV_NORTH_ANNEX_BLOCK_PREFIX, DEV_NORTH_ANNEX_MIN_Z_M } from './devNorthAnnex'
 import { generateDevWorld } from './generateDevWorld'
 import { generateIntegratedWorld } from './generateIntegratedWorld'
 
@@ -35,7 +36,8 @@ describe('isolated Twilight terrain world', () => {
     const originalBuildings = new Map(devSource.baseCity!.buildings.map((building) =>
       [building.id, building]))
     const originalDevBuildings = dev.baseCity!.buildings.filter((building) =>
-      !building.id.startsWith(DEV_TERRACE_BUILDING_PREFIX))
+      !building.id.startsWith(DEV_TERRACE_BUILDING_PREFIX) &&
+      !building.parcelId.startsWith('parcel-dev-north-'))
     expect(originalDevBuildings.map((building) => building.id).sort()).toEqual(
       devSource.baseCity!.buildings.filter((building) =>
         building.id !== 'building-block-1-7-1-0')
@@ -65,8 +67,13 @@ describe('isolated Twilight terrain world', () => {
           original.entrance.z - original.z, 6)
       }
     }
-    expect(dev.baseCity?.buildings.length).toBeLessThan(mainBefore.baseCity!.buildings.length)
-    expect(dev.config.generatorVersion).toBe('twilight-dev-v23')
+    expect(originalDevBuildings.length).toBeLessThan(mainBefore.baseCity!.buildings.length)
+    expect(dev.baseCity?.blocks.filter((block) =>
+      block.id.startsWith(DEV_NORTH_ANNEX_BLOCK_PREFIX))).toHaveLength(5)
+    expect(dev.bounds.minZ).toBe(DEV_NORTH_ANNEX_MIN_Z_M * 1_000)
+    expect(dev.terrain?.grid.depth).toBe(171)
+    expect(dev.config.extentMm).toBe(340_000)
+    expect(dev.config.generatorVersion).toBe('twilight-dev-v25')
     expect(mainAfter.config.generatorVersion).toBe('heritage-extension-v6')
     expect(worldFingerprintV5(dev, DEFAULT_SIMULATION_CONFIG_V5))
       .not.toBe(worldFingerprintV5(mainAfter, DEFAULT_SIMULATION_CONFIG_V5))
