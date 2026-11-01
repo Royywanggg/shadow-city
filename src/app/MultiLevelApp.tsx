@@ -77,7 +77,7 @@ function WorldTimePreview({ session, previewMinute, setPreviewMinute, dynamicLig
       value={previewMinute ?? 'world'} onChange={(event) => setPreviewMinute(event.target.value ===
         'world' ? null : Number(event.target.value))}>
       <option value="world">FOLLOW WORLD TIME</option>
-      {['02:00', '05:00', '07:00', '12:00', '16:00', '18:30', '21:00', '23:00'].map((time) => {
+      {['02:00', '05:00', '07:00', '12:00', '16:00', '18:30', '20:00', '21:00', '23:00'].map((time) => {
         const [hour, minute] = time.split(':').map(Number)
         return <option key={time} value={hour * 60 + minute}>{time} · VISUAL ONLY</option>
       })}
