@@ -3,13 +3,18 @@ import { createBuilding } from '../../city/generation/buildings'
 import { createRandom } from '../../city/generation/random'
 import { rearHighlandFrontZmm } from '../terrain/devHighlandContour'
 
+const CONTOUR_CLEARANCE_SHIFTS_M: Readonly<Record<number, number>> = {
+  0: 0.4, 3: 1.5, 4: -1, 5: 1.6, 7: 3, 8: -1.5, 10: 0.8,
+}
+const HOUSE_SETBACK_M = 3
+
 export const DEV_TERRACE_BLOCK_PREFIX = 'block-dev-terrace-'
 export const DEV_TERRACE_BUILDING_PREFIX = 'building-parcel-dev-terrace-'
 export const DEV_TERRACE_SITES = [
   { x: -58, width: 12 }, { x: -40, width: 12 },
   { x: -23, width: 12 },
   { x: -4, width: 14 }, { x: 16, width: 14 },
-  { x: 40, width: 8 }, { x: 54, width: 12 },
+  { x: 42.5, width: 8 }, { x: 54, width: 12 },
   { x: 70, width: 12 },
   // Append western homes to retain the existing per-site identities.
   { x: -118, width: 12 }, { x: -98, width: 12 },
@@ -25,7 +30,8 @@ export function addDevTerraceNeighborhood(city: CityModel): CityModel {
     const { x, width } = site
     const west = x < -10
     const z = rearHighlandFrontZmm(x * 1000) / 1000 -
-      (west ? 15.5 : 16.5)
+      (west ? 15.5 : 16.5) - HOUSE_SETBACK_M -
+      (CONTOUR_CLEARANCE_SHIFTS_M[index] ?? 0)
     const depth = west ? 6.5 : 8.5
     const blockId = `${DEV_TERRACE_BLOCK_PREFIX}${index}`
     const parcelId = `parcel-dev-terrace-${index}`

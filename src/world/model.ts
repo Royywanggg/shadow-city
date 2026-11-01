@@ -12,7 +12,7 @@ export interface WorldConfigV2 {
   readonly version: 2
   readonly seed: string
   readonly extentMm: number
-  readonly generatorVersion: 'district-world-v1' | 'heritage-overlay-v1' | 'heritage-extension-v2' | 'heritage-extension-v3' | 'heritage-extension-v4' | 'heritage-extension-v5' | 'heritage-extension-v6' | 'twilight-dev-v1' | 'twilight-dev-v2' | 'twilight-dev-v3' | 'twilight-dev-v4' | 'twilight-dev-v5' | 'twilight-dev-v6' | 'twilight-dev-v7' | 'twilight-dev-v8' | 'twilight-dev-v9' | 'twilight-dev-v10' | 'twilight-dev-v11' | 'twilight-dev-v12' | 'twilight-dev-v13' | 'twilight-dev-v14' | 'twilight-dev-v15' | 'twilight-dev-v18' | 'twilight-dev-v19' | 'twilight-dev-v20' | 'twilight-dev-v21'
+  readonly generatorVersion: 'district-world-v1' | 'heritage-overlay-v1' | 'heritage-extension-v2' | 'heritage-extension-v3' | 'heritage-extension-v4' | 'heritage-extension-v5' | 'heritage-extension-v6' | 'twilight-dev-v1' | 'twilight-dev-v2' | 'twilight-dev-v3' | 'twilight-dev-v4' | 'twilight-dev-v5' | 'twilight-dev-v6' | 'twilight-dev-v7' | 'twilight-dev-v8' | 'twilight-dev-v9' | 'twilight-dev-v10' | 'twilight-dev-v11' | 'twilight-dev-v12' | 'twilight-dev-v13' | 'twilight-dev-v14' | 'twilight-dev-v15' | 'twilight-dev-v18' | 'twilight-dev-v19' | 'twilight-dev-v20' | 'twilight-dev-v21' | 'twilight-dev-v22'
 }
 
 export interface DistrictV2 {
@@ -129,7 +129,8 @@ export interface WorldModelV2 {
   readonly bounds: Readonly<{ minX: number; maxX: number; minZ: number; maxZ: number; maxY: number }>
   readonly districts: readonly DistrictV2[]
   readonly roadNodes: readonly Readonly<{ id: string; position: GroundPointMm }>[]
-  readonly roadEdges: readonly Readonly<{ id: string; from: string; to: string; widthMm: number }>[]
+  readonly roadEdges: readonly Readonly<{ id: string; from: string; to: string;
+    widthMm: number; taperAtStart?: Readonly<{ widthMm: number; lengthMm: number }> }>[]
   readonly surfaces: readonly WalkableSurface[]
   readonly navNodes: readonly NavNodeV2[]
   readonly navEdges: readonly NavEdgeV2[]

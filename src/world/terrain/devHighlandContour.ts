@@ -6,6 +6,13 @@ export function rearHighlandFrontZmm(xMm: number): number {
 }
 
 export function rearHighlandBackZmm(xMm: number): number {
-  return Math.round(-135_500 +
-    850 * Math.sin((xMm - 36_000) / 13_500 + 0.4))
+  const x = xMm / 1000
+  const smoothstep = (value: number) => {
+    const t = Math.max(0, Math.min(1, value))
+    return t * t * (3 - 2 * t)
+  }
+  const homeCorner = 2_500 * smoothstep((x - 58) / 10) *
+    smoothstep((86 - x) / 10)
+  return Math.round(-137_300 +
+    850 * Math.sin((xMm - 36_000) / 13_500 + 0.4) - homeCorner)
 }

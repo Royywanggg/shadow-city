@@ -13,10 +13,11 @@ import { applyDevForegroundValley } from './devForegroundValley'
 import { applyDevHighlandPlan } from './devHighlandPlan'
 import { applyDevRidgeFrontage } from './devRidgeFrontage'
 import { applyDevUpperRoadPlan } from './devUpperRoadPlan'
-import { DEV_UPPER_ROAD_EDGE_ID } from './devUpperRoadPlan'
+import { DEV_UPPER_CONTOUR_ROAD_EDGE_ID, DEV_UPPER_ROAD_EDGE_ID,
+  upperContourCenterZmm } from './devUpperRoadPlan'
 import { addDevTerraceNeighborhood, DEV_TERRACE_BLOCK_PREFIX,
   DEV_TERRACE_BUILDING_PREFIX, DEV_TERRACE_SITES } from './devTerraceNeighborhood'
-import { rearHighlandFrontZmm } from '../terrain/devHighlandContour'
+import { rearHighlandBackZmm, rearHighlandFrontZmm } from '../terrain/devHighlandContour'
 
 const GROUND_Y_MM = 250
 const BRIDGE_SIDEWALK_OFFSET_MM = 180
@@ -297,6 +298,99 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
       kind: 'walk', lengthMm: lengthMm(path), accessId: null,
       direction: 'both' }
   }))
+  const contourProfile = terrain.roadProfiles.find((profile) =>
+    profile.edgeId === DEV_UPPER_CONTOUR_ROAD_EDGE_ID)
+  if (!contourProfile || (contourProfile.path.length - 1) % 4 !== 0) {
+    throw new Error('Upper contour road needs aligned pedestrian samples')
+  }
+  const contourRoad = city.roads.edges.find((edge) =>
+    edge.id === DEV_UPPER_CONTOUR_ROAD_EDGE_ID)!
+  const sidewalkOffsetMm = Math.round((contourRoad.width / 2 + 0.95) * 1_000)
+  const sidewalkAt = (side: -1 | 1) => contourProfile.path.map((point, index, path) => {
+    const before = path[Math.max(0, index - 1)]
+    const after = path[Math.min(path.length - 1, index + 1)]
+    const dx = after.x - before.x
+    const dz = after.z - before.z
+    const span = Math.hypot(dx, dz) || 1
+    const offsetMm = (contourProfile.widthsMm?.[index] ??
+      Math.round(contourRoad.width * 1_000)) / 2 + 950
+    const x = Math.round(point.x - side * dz / span * offsetMm)
+    const z = Math.round(point.z + side * dx / span * offsetMm)
+    return { x, y: point.y + 180 + heightAtMm(terrain, x, z) -
+      heightAtMm(terrain, point.x, point.z), z }
+  })
+  const contourWalk = sidewalkAt(-1)
+  const contourNorthWalk = sidewalkAt(1)
+  const contourNodeId = (index: number) => `terrain:upper-contour-walk:${index}`
+  const contourNorthNodeId = (index: number) =>
+    `terrain:upper-contour-north-walk:${index}`
+  const contourEdgeCount = (contourWalk.length - 1) / 4
+  const contourNodes: NavNodeV2[] = Array.from({ length: contourEdgeCount + 1 },
+    (_, index) => ({ id: contourNodeId(index),
+      position: contourWalk[index * 4], surfaceId: terraceSurfaceId }))
+  const contourNorthNodes: NavNodeV2[] = Array.from({ length: contourEdgeCount + 1 },
+    (_, index) => ({ id: contourNorthNodeId(index),
+      position: contourNorthWalk[index * 4], surfaceId: terraceSurfaceId }))
+  for (let index = 0; index < contourEdgeCount; index += 1) {
+    for (const [side, nodes, path] of [
+      ['south', contourNodes, contourWalk],
+      ['north', contourNorthNodes, contourNorthWalk],
+    ] as const) {
+      const section = path.slice(index * 4, index * 4 + 5)
+      navEdges.push({ id: side === 'south'
+        ? `terrain:upper-contour-walk-edge:${index}`
+        : `terrain:upper-contour-north-walk-edge:${index}`,
+        fromNodeId: nodes[index].id, toNodeId: nodes[index + 1].id,
+        path: section, surfaceId: terraceSurfaceId, connectorId: null,
+        kind: 'walk', lengthMm: lengthMm(section), accessId: null,
+        direction: 'both' })
+    }
+  }
+  for (const index of [Math.round((86 - 30) / 4), contourEdgeCount]) {
+    const south = contourNodes[index]
+    const north = contourNorthNodes[index]
+    const middle = contourProfile.path[index * 4]
+    const path = [north.position, { x: middle.x,
+      y: GROUND_Y_MM + heightAtMm(terrain, middle.x, middle.z),
+      z: middle.z }, south.position]
+    navEdges.push({ id: `terrain:upper-contour-crossing:${index}`,
+      fromNodeId: north.id, toNodeId: south.id, path,
+      surfaceId: terraceSurfaceId, connectorId: null, kind: 'crossing',
+      lengthMm: lengthMm(path), accessId: null, direction: 'both' })
+  }
+  const trailEnd = terraceNodes.at(-1)!
+  const contourStart = contourNodes[5]
+  const transferSegments = Math.max(2, Math.ceil(Math.hypot(
+    trailEnd.position.x - contourStart.position.x,
+    trailEnd.position.z - contourStart.position.z) / 500))
+  const contourTransfer = Array.from({ length: transferSegments + 1 }, (_, index) => {
+    const t = index / transferSegments
+    const x = Math.round(trailEnd.position.x +
+      (contourStart.position.x - trailEnd.position.x) * t)
+    const z = Math.round(trailEnd.position.z +
+      (contourStart.position.z - trailEnd.position.z) * t)
+    return { x, y: GROUND_Y_MM + heightAtMm(terrain, x, z), z }
+  })
+  navEdges.push({ id: 'terrain:upper-contour-transfer',
+    fromNodeId: trailEnd.id, toNodeId: contourStart.id, path: contourTransfer,
+    surfaceId: terraceSurfaceId, connectorId: null, kind: 'walk',
+    lengthMm: lengthMm(contourTransfer), accessId: null, direction: 'both' })
+  const stairTrailNode = terraceNodes[access.stairTrailIndex / trailStep]
+  const contourLanding = [...contourNodes].sort((a, b) =>
+    Math.hypot(a.position.x - stairTrailNode.position.x,
+      a.position.z - stairTrailNode.position.z) -
+    Math.hypot(b.position.x - stairTrailNode.position.x,
+      b.position.z - stairTrailNode.position.z) || a.id.localeCompare(b.id))[0]
+  if (!contourLanding || Math.hypot(contourLanding.position.x - stairTrailNode.position.x,
+    contourLanding.position.z - stairTrailNode.position.z) > 3_000 ||
+    Math.abs(contourLanding.position.y - stairTrailNode.position.y) > 800) {
+    throw new Error('Upper contour sidewalk misses terrace stair landing')
+  }
+  const landingPath = [stairTrailNode.position, contourLanding.position]
+  navEdges.push({ id: 'terrain:upper-contour-stair-landing',
+    fromNodeId: stairTrailNode.id, toNodeId: contourLanding.id, path: landingPath,
+    surfaceId: terraceSurfaceId, connectorId: null, kind: 'walk',
+    lengthMm: lengthMm(landingPath), accessId: null, direction: 'both' })
   for (let index = 0; index < DEV_TERRACE_SITES.length; index += 1) {
     const blockId = `${DEV_TERRACE_BLOCK_PREFIX}${index}`
     const ring = navNodes.filter((node) =>
@@ -307,11 +401,11 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
       Math.abs(b.position.x - block.x * 1_000) ||
       b.position.z - a.position.z || a.id.localeCompare(b.id))[0]
     if (!source) throw new Error(`Missing terrace sidewalk for ${blockId}`)
-    const trailIndex = Math.max(0, Math.min(trailEdgeCount,
-      Math.round((block.x * 1_000 - access.trail[0].x) /
-        (trailStep * 1_000))))
-    const destination = terraceNodes.find((node) =>
-      node.id === trailNodeId(trailIndex))!
+    const destination = [...contourNorthNodes].sort((a, b) =>
+      Math.hypot(a.position.x - source.position.x,
+        a.position.z - source.position.z) -
+      Math.hypot(b.position.x - source.position.x,
+        b.position.z - source.position.z) || a.id.localeCompare(b.id))[0]
     const count = Math.max(1, Math.ceil(Math.hypot(
       source.position.x - destination.position.x,
       source.position.z - destination.position.z) / 1_000))
@@ -375,7 +469,7 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
     lengthMm: lengthMm(rampPath), accessId: null, direction: 'both' })
   const usedNodeIds = new Set(navEdges.flatMap((edge) => [edge.fromNodeId, edge.toNodeId]))
   const reachableNavNodes = [...navNodes, ...bridgeLinks.flatMap((link) => link.nodes),
-    ...terraceNodes]
+    ...terraceNodes, ...contourNodes, ...contourNorthNodes]
     .filter((node) => usedNodeIds.has(node.id))
   const surfaces = integrated.surfaces.map((surface) => surface.id === 'ground'
     ? { ...surface, elevationMode: 'terrain' as const,
@@ -435,7 +529,9 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
             ...Array.from({ length: terraceContourSteps + 1 }, (_, index) => {
               const x = Math.round(terraceEastXmm -
                 (terraceEastXmm - terraceWestXmm) * index / terraceContourSteps)
-              return { x, z: rearHighlandFrontZmm(x) - 23_500 }
+              return { x, z: Math.max(rearHighlandBackZmm(x) + 500,
+                Math.min(rearHighlandFrontZmm(x) - 23_500,
+                  upperContourCenterZmm(x) - sidewalkOffsetMm - 500)) }
             }),
           ], blockedPolygonsXZ: city.buildings
             .filter((building) => building.id.startsWith(DEV_TERRACE_BUILDING_PREFIX))
@@ -480,12 +576,15 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
           edge.id.startsWith('ped-access-') ? 1_200 : 900 })) } }
   return {
     ...integrated,
-    config: { ...integrated.config, generatorVersion: 'twilight-dev-v21' },
+    config: { ...integrated.config, generatorVersion: 'twilight-dev-v22' },
     baseCity: city,
     roadNodes: city.roads.nodes.map((node) => ({ id: node.id,
       position: { x: Math.round(node.x * 1000), z: Math.round(node.z * 1000) } })),
     roadEdges: city.roads.edges.map((edge) => ({ id: edge.id, from: edge.from,
-      to: edge.to, widthMm: Math.round(edge.width * 1000) })),
+      to: edge.to, widthMm: Math.round(edge.width * 1000),
+      ...(edge.taperAtStart ? { taperAtStart: {
+        widthMm: Math.round(edge.taperAtStart.width * 1_000),
+        lengthMm: Math.round(edge.taperAtStart.length * 1_000) } } : {}) })),
     terrain: terrainWithWalkways, surfaces, navNodes: reachableNavNodes,
     navEdges, resources,
     connectors: [...integrated.connectors, { id: terraceConnectorId,

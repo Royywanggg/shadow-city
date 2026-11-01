@@ -30,6 +30,8 @@ export interface RoadEdge {
   kind: RoadKind
   /** Optional authoritative centreline for curved dev roads, in world metres. */
   centerlineXZ?: readonly CityPointXZ[]
+  /** A junction approach may narrow to width over this centreline distance. */
+  taperAtStart?: Readonly<{ width: number; length: number }>
 }
 
 export interface RoadNetwork {

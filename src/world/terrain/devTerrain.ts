@@ -2,7 +2,8 @@ import type { CityModel } from '../../city/model'
 import type { GroundPointMm, WorldPointMm } from '../model'
 import { createDevValleyChannel } from '../generation/devValleyPlan'
 import { rearHighlandBackZmm, rearHighlandFrontZmm } from './devHighlandContour'
-import { DEV_UPPER_ROAD_EDGE_ID } from '../generation/devUpperRoadPlan'
+import { DEV_UPPER_CONTOUR_ROAD_EDGE_ID,
+  DEV_UPPER_ROAD_EDGE_ID } from '../generation/devUpperRoadPlan'
 
 export interface DevTerrainGridV1 {
   readonly originXmm: number
@@ -50,6 +51,8 @@ export interface DevRoadProfileV1 {
   readonly edgeId: string
   /** The y coordinate is the road top in authoritative world millimetres. */
   readonly path: readonly WorldPointMm[]
+  /** Sampled widths from the same graph edge as path, when the approach tapers. */
+  readonly widthsMm?: readonly number[]
   readonly bridge: boolean
   /** Both indices are inclusive and refer to points in path. */
   readonly bridgeSpan?: Readonly<{ startIndex: number; endIndex: number }>
@@ -113,7 +116,7 @@ const CHANNEL_BANK_WIDTH_MM = 5_200
 const CHANNEL_DEPTH_MM = 6_000
 const CHANNEL_FULL_DEPTH_Z_MM = 40_000
 const TERRACE_STAIR_X_MM = 30_000
-const TERRACE_STAIR_FRONT_RUN_MM = 17_000
+const TERRACE_STAIR_FRONT_RUN_MM = 9_000
 const BRIDGE_EDGE_IDS = new Set(['edge-x-0-5', 'edge-x-0-6', 'edge-x-0-7'])
 const CULVERT_EDGE_IDS = new Set([
   'edge-x-1-8',
@@ -124,7 +127,7 @@ const ROAD_BENDS_MM = new Map<string, number>([
   ['edge-x-0-6', 700],
   ['edge-x-0--1', 1_200],
   ['edge-x-1--1', 1_400],
-  ['edge-x-2--1', 1_250],
+  ['edge-x-2--1', -650],
   ['edge-x-5--1', 1_100],
   ['edge-x-6--1', 1_150],
 ])
@@ -212,8 +215,7 @@ function patchHeightMm(patches: readonly DevEscarpmentPatchV1[], xMm: number,
     const xBlend = smoothstep((xMm - minX) / 2_000) *
       smoothstep((maxX - xMm) / 2_000)
     const stairCut = 1 - smoothstep((Math.abs(xMm - TERRACE_STAIR_X_MM) - 2_400) / 3_200)
-    const frontRunMm = 9_000 + stairCut *
-      (TERRACE_STAIR_FRONT_RUN_MM - 9_000)
+    const frontRunMm = TERRACE_STAIR_FRONT_RUN_MM
     const zBlend = smoothstep((zMm - backZ) / 3_000) *
       ((1 - stairCut) * smoothstep((frontZ - zMm) / frontRunMm) +
         stairCut * terraceRamp((frontZ - zMm) / frontRunMm))
@@ -264,6 +266,7 @@ export function buildingPadElevationMm(terrain: DevTerrainV1, buildingId: string
 
 function buildRoadProfiles(city: CityModel, terrain: DevTerrainV1): DevRoadProfileV1[] {
   const nodes = new Map(city.roads.nodes.map((node) => [node.id, node]))
+  let upperRoadLandingY: number | null = null
   return city.roads.edges.map((edge) => {
     const from = nodes.get(edge.from)!
     const to = nodes.get(edge.to)!
@@ -331,8 +334,29 @@ function buildRoadProfiles(city: CityModel, terrain: DevTerrainV1): DevRoadProfi
         deckY[index] = Math.max(deckY[index], Math.ceil(deckY[index - 1] - step))
       }
       const deck = path.map((point, index) => ({ ...point, y: deckY[index] }))
+      upperRoadLandingY = deck.at(-1)!.y
       return { edgeId: edge.id, path: deck, bridge: true,
         bridgeSpan: { startIndex: 0, endIndex: deck.length - 1 } }
+    }
+    if (edge.id === DEV_UPPER_CONTOUR_ROAD_EDGE_ID) {
+      if (upperRoadLandingY === null) throw new Error('Missing upper bridge landing')
+      const liftMm = upperRoadLandingY - path[0].y
+      if (liftMm < 0 || liftMm > 600) {
+        throw new Error('Upper contour road cannot meet bridge deck')
+      }
+      let distanceMm = 0
+      const widthsMm: number[] = []
+      const landing = path.map((point, index) => {
+        if (index > 0) distanceMm += Math.hypot(
+          point.x - path[index - 1].x, point.z - path[index - 1].z)
+        const taper = edge.taperAtStart
+        widthsMm.push(taper ? Math.round((edge.width +
+          (taper.width - edge.width) * (1 - smoothstep(distanceMm /
+            (taper.length * 1_000)))) * 1_000) : Math.round(edge.width * 1_000))
+        return { ...point,
+          y: point.y + Math.round(liftMm * (1 - smoothstep(distanceMm / 20_000))) }
+      })
+      return { edgeId: edge.id, path: landing, widthsMm, bridge: false }
     }
     if (CULVERT_EDGE_IDS.has(edge.id)) {
       const flooded = path.map((point, index) => ({ point, index }))
@@ -404,8 +428,8 @@ function buildTerraceAccess(city: CityModel,
     return onGround(Math.round(crossingSouth.x + (foot.x - crossingSouth.x) * t),
       Math.round(crossingSouth.z + (foot.z - crossingSouth.z) * t))
   })
-  const topZmm = frontZmm - TERRACE_STAIR_FRONT_RUN_MM - 1_200
-  const count = Math.ceil((foot.z - topZmm) / 320)
+  const topZmm = frontZmm - 8_500
+  const count = Math.ceil((foot.z - topZmm) / 170)
   const stair = Array.from({ length: count + 1 }, (_, index) =>
     onGround(TERRACE_STAIR_X_MM,
       Math.round(foot.z + (topZmm - foot.z) * index / count)))
@@ -413,10 +437,8 @@ function buildTerraceAccess(city: CityModel,
   const stairTrailIndex = (TERRACE_STAIR_X_MM - trailStartXmm) / 1_000
   const trail = Array.from({ length: 217 }, (_, index) => {
     const x = trailStartXmm + index * 1_000
-    const stairCut = 1 - smoothstep((Math.abs(x - TERRACE_STAIR_X_MM) -
-      2_400) / 3_200)
     const z = Math.round(escarpmentZBoundsAtMm(patch, x).frontZ) -
-      Math.round(8_500 + stairCut * 9_700)
+      8_500
     return onGround(x, z)
   })
   stair[stair.length - 1] = trail[stairTrailIndex]
