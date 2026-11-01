@@ -84,7 +84,7 @@ function curvedPath(waypoints: readonly WorldPointMm[], samplesPerSegment = 5): 
 /** Adds multi-level places to the existing city's exact roads, blocks and pedestrian graph. */
 export function generateIntegratedWorld(seed = HERO_SEED,
   options: Readonly<{ openChannelBlockIds?: readonly string[];
-    baseCity?: CityModel }> = {}): WorldModelV2 {
+    baseCity?: CityModel; worldBounds?: WorldModelV2['bounds'] }> = {}): WorldModelV2 {
   if (options.baseCity && (options.baseCity.size !== EXPANDED_CITY_SIZE ||
     options.baseCity.seed !== seed)) {
     throw new Error('Injected baseCity must match the seed and expanded 300 m extent')
@@ -113,7 +113,17 @@ export function generateIntegratedWorld(seed = HERO_SEED,
   const config: WorldConfigV2 = { ...INTEGRATED_WORLD_CONFIG_V2, seed }
   const builder = new WorldBuilder()
   const half = original.size / 2
-  builder.surface(surface('ground', 'L0', null, rect(-half, half, -half, half), 250))
+  const bounds = options.worldBounds ?? {
+    minX: -mm(half), maxX: mm(half), minZ: -mm(half), maxZ: mm(half), maxY: 120_000,
+  }
+  if (bounds.minX > -mm(half) || bounds.maxX < mm(half) ||
+    bounds.minZ > -mm(half) || bounds.maxZ < mm(half) ||
+    bounds.minX >= bounds.maxX || bounds.minZ >= bounds.maxZ) {
+    throw new Error('World bounds must contain the original city extent')
+  }
+  builder.surface(surface('ground', 'L0', null,
+    rect(bounds.minX / 1_000, bounds.maxX / 1_000,
+      bounds.minZ / 1_000, bounds.maxZ / 1_000), 250))
   for (const block of original.blocks) builder.districts.push({ id: block.id,
     kind: block.district === 'civic' ? 'public' : block.district === 'core' ? 'mixedUse' :
       block.district === 'works' ? 'commercial' : 'residential',
@@ -467,8 +477,10 @@ export function generateIntegratedWorld(seed = HERO_SEED,
   }
   builder.surfaces[0] = { ...builder.surfaces[0], blockedPolygonsXZ: blockedGround }
   builder.buildValidation()
-  return { version: 2, config, baseCity: retainedCity,
-    bounds: { minX: -mm(half), maxX: mm(half), minZ: -mm(half), maxZ: mm(half), maxY: 120_000 },
+  return { version: 2, config: options.worldBounds ? { ...config,
+    extentMm: Math.max(bounds.maxX - bounds.minX,
+      bounds.maxZ - bounds.minZ) } : config, baseCity: retainedCity,
+    bounds,
     districts: builder.districts,
     roadNodes: original.roads.nodes.map((node) => ({ id: node.id,
       position: { x: mm(node.x), z: mm(node.z) } })),

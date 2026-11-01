@@ -69,6 +69,23 @@ describe('original-city v0.6 integration', () => {
       .toThrow('match the seed')
   })
 
+  it('derives an explicit rectangular ground footprint without changing the main world', () => {
+    const main = generateIntegratedWorld(HERO_SEED)
+    const worldBounds = { minX: -150_000, maxX: 150_000,
+      minZ: -190_000, maxZ: 150_000, maxY: 120_000 }
+    const extended = generateIntegratedWorld(HERO_SEED, { worldBounds })
+    expect(extended.bounds).toEqual(worldBounds)
+    expect(extended.surfaces.find((surface) => surface.id === 'ground')?.polygonXZ)
+      .toEqual([{ x: -150_000, z: -190_000 },
+        { x: 150_000, z: -190_000 }, { x: 150_000, z: 150_000 },
+        { x: -150_000, z: 150_000 }])
+    expect(extended.config.extentMm).toBe(340_000)
+    expect(extended.baseCity?.size).toBe(300)
+    expect(generateIntegratedWorld(HERO_SEED)).toEqual(main)
+    expect(() => generateIntegratedWorld(HERO_SEED, { worldBounds:
+      { ...worldBounds, minZ: -140_000 } })).toThrow('contain the original city')
+  })
+
   it('expands the original map while preserving its roads, plaza and buildings outside one Galleria block', () => {
     const city = generateCity(HERO_SEED)
     const world = generateIntegratedWorld(HERO_SEED)

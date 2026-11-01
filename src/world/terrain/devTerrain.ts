@@ -1,5 +1,5 @@
 import type { CityModel } from '../../city/model'
-import type { GroundPointMm, WorldPointMm } from '../model'
+import type { GroundPointMm, WorldModelV2, WorldPointMm } from '../model'
 import { createDevValleyChannel } from '../generation/devValleyPlan'
 import { rearHighlandBackZmm, rearHighlandFrontZmm } from './devHighlandContour'
 import { DEV_UPPER_CONTOUR_ROAD_EDGE_ID,
@@ -494,7 +494,8 @@ function buildTerraceAccess(city: CityModel,
     frontZmm, stair, stairTrailIndex, trail, walkways: [] }
 }
 
-export function createDevTerrainV1(city: CityModel, seed: string): DevTerrainV1 {
+export function createDevTerrainV1(city: CityModel, seed: string,
+  worldBounds?: WorldModelV2['bounds']): DevTerrainV1 {
   const channelLine = createDevValleyChannel(city)
   const openChannelBlockIds = [...DEV_OPEN_CHANNEL_BLOCK_IDS]
   const open = new Set<string>([...openChannelBlockIds, ...DEV_ESCARPMENT_BLOCK_IDS])
@@ -520,13 +521,22 @@ export function createDevTerrainV1(city: CityModel, seed: string): DevTerrainV1 
     ]
   })()
   const halfMm = Math.round(city.size * 500)
-  const width = Math.round(halfMm * 2 / STEP_MM) + 1
-  const depth = width
-  const grid: DevTerrainGridV1 = { originXmm: -halfMm, originZmm: -halfMm,
+  const minXmm = worldBounds?.minX ?? -halfMm
+  const maxXmm = worldBounds?.maxX ?? halfMm
+  const minZmm = worldBounds?.minZ ?? -halfMm
+  const maxZmm = worldBounds?.maxZ ?? halfMm
+  if ((maxXmm - minXmm) % STEP_MM !== 0 ||
+    (maxZmm - minZmm) % STEP_MM !== 0 ||
+    minXmm >= maxXmm || minZmm >= maxZmm) {
+    throw new Error('Dev terrain bounds must align to the terrain grid')
+  }
+  const width = (maxXmm - minXmm) / STEP_MM + 1
+  const depth = (maxZmm - minZmm) / STEP_MM + 1
+  const grid: DevTerrainGridV1 = { originXmm: minXmm, originZmm: minZmm,
     stepMm: STEP_MM, width, depth,
     heightsMm: Array.from({ length: width * depth }, (_, index) =>
-      rawHeightMm(-halfMm + index % width * STEP_MM,
-        -halfMm + Math.floor(index / width) * STEP_MM,
+      rawHeightMm(minXmm + index % width * STEP_MM,
+        minZmm + Math.floor(index / width) * STEP_MM,
         patches, channelLine, CHANNEL_WIDTH_PROFILE)) }
   const sampler: DevTerrainV1 = { version: 'twilight-terrain-v1', seed, grid,
     blockPads: [], buildingPads: [], roadProfiles: [], openChannelBlockIds,
