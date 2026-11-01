@@ -76,7 +76,7 @@ try {
     await dev.waitForTimeout(950)
     await capture(dev, name)
   }
-  for (const edgeId of ['edge-x-0-5', 'edge-x-0-6']) {
+  for (const edgeId of ['edge-x-0-5', 'edge-x-0-6', 'edge-x-0-7']) {
     await dev.evaluate((id) => {
       const profile = window.__shadowCityV06.getWorld().terrain.roadProfiles
         .find((item) => item.edgeId === id)
