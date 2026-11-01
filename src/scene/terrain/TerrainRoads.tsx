@@ -129,6 +129,90 @@ function spanSidePanels(profiles: readonly RoadProfile[], widths: ReadonlyMap<st
   return geometry
 }
 
+function bridgeSupports(profile: RoadProfile): number[] {
+  const span = profile.bridgeSpan
+  if (!span) return []
+  const { startIndex, endIndex } = span
+  if (profile.edgeId !== DEV_UPPER_ROAD_EDGE_ID) {
+    return [startIndex, Math.floor((startIndex + endIndex) / 2), endIndex]
+  }
+  const indices = [startIndex]
+  let nextSupportMm = 17_000
+  let distanceMm = 0
+  for (let index = startIndex + 1; index < endIndex; index += 1) {
+    const before = profile.path[index - 1]
+    const point = profile.path[index]
+    distanceMm += Math.hypot(point.x - before.x, point.z - before.z)
+    if (distanceMm < nextSupportMm) continue
+    indices.push(index)
+    nextSupportMm += 16_000
+  }
+  return [...indices, endIndex]
+}
+
+/** The arch fascia and its piers follow the same sampled bridge centreline. */
+export function createBridgeArchGeometry(profiles: readonly RoadProfile[],
+  widths: ReadonlyMap<string, number>, terrain: DevTerrainV1): BufferGeometry {
+  const positions: number[] = []
+  const indices: number[] = []
+  for (const profile of profiles) {
+    if (!profile.bridgeSpan) continue
+    const supports = bridgeSupports(profile)
+    const halfWidth = ((widths.get(profile.edgeId) ?? 5) + 3.3) / 2
+    const distances = [0]
+    for (let index = 1; index < profile.path.length; index += 1) {
+      const before = profile.path[index - 1]
+      const point = profile.path[index]
+      distances.push(distances[index - 1] + Math.hypot(point.x - before.x,
+        point.y - before.y, point.z - before.z))
+    }
+    for (let spanIndex = 1; spanIndex < supports.length; spanIndex += 1) {
+      const first = supports[spanIndex - 1]
+      const last = supports[spanIndex]
+      const spanLength = distances[last] - distances[first]
+      if (spanLength < 1_000) continue
+      for (const side of [-1, 1]) {
+        const start = positions.length / 3
+        const samples = Math.max(4, Math.ceil(spanLength / 500))
+        let segment = first
+        for (let step = 0; step <= samples; step += 1) {
+          const along = distances[first] + spanLength * step / samples
+          while (segment < last - 1 && distances[segment + 1] < along) segment += 1
+          const from = profile.path[segment]
+          const to = profile.path[segment + 1]
+          const part = (along - distances[segment]) /
+            (distances[segment + 1] - distances[segment])
+          const point = { x: from.x + (to.x - from.x) * part,
+            y: from.y + (to.y - from.y) * part,
+            z: from.z + (to.z - from.z) * part }
+          const [dx, dz] = tangent(profile.path, segment)
+          const x = point.x / 1000 - dz * side * halfWidth
+          const z = point.z / 1000 + dx * side * halfWidth
+          const t = step / samples
+          const arch = Math.sqrt(Math.max(0, 1 - (2 * t - 1) ** 2))
+          const depth = profile.edgeId === DEV_UPPER_ROAD_EDGE_ID
+            ? 3.2 - 2.4 * arch : 2.2 - 1.6 * arch
+          const top = point.y / 1000 - 0.48
+          const ground = heightAtMm(terrain, Math.round(x * 1000),
+            Math.round(z * 1000)) / 1000
+          const bottom = Math.min(top - 0.04, Math.max(ground + 0.08,
+            point.y / 1000 - depth))
+          positions.push(x, top, z, x, bottom, z)
+          if (step === 0) continue
+          const a = start + (step - 1) * 2
+          const b = a + 2
+          indices.push(a, b, a + 1, a + 1, b, b + 1)
+        }
+      }
+    }
+  }
+  const geometry = new BufferGeometry()
+  geometry.setAttribute('position', new Float32BufferAttribute(positions, 3))
+  geometry.setIndex(indices)
+  geometry.computeVertexNormals()
+  return geometry
+}
+
 function junctionPatches(city: CityModel, terrain: DevTerrainV1,
   widths: ReadonlyMap<string, number>, plan: JunctionPlan): BufferGeometry {
   const positions: number[] = []
@@ -271,16 +355,10 @@ export function TerrainRoads({ city, terrain }: { city: CityModel; terrain: DevT
         const { startIndex, endIndex } = profile.bridgeSpan
         underdecks.push({ path: profile.path.slice(startIndex, endIndex + 1),
           width: width + 3.3, sideOffset: 0, lift: -0.48 })
-        const point = profile.path[Math.floor((startIndex + endIndex) / 2)]
+        const supports = bridgeSupports(profile).slice(1, -1)
         if (profile.edgeId === DEV_UPPER_ROAD_EDGE_ID) {
-          let nextSupportMm = 17_000
-          let distanceMm = 0
-          for (let index = startIndex + 1; index < endIndex; index += 1) {
-            const before = profile.path[index - 1]
+          for (const index of supports) {
             const at = profile.path[index]
-            distanceMm += Math.hypot(at.x - before.x, at.z - before.z)
-            if (distanceMm < nextSupportMm) continue
-            nextSupportMm += 16_000
             const [dx, dz] = tangent(profile.path, index)
             for (const side of [-1, 1]) {
               const x = Math.round(at.x - dz * side * (width / 2 + 0.55) * 1_000)
@@ -293,7 +371,8 @@ export function TerrainRoads({ city, terrain }: { city: CityModel; terrain: DevT
               scale: [0.75, gap - 0.45, 0.75], color: '#536979' })
             }
           }
-        } else if (point) {
+        } else for (const index of supports) {
+          const point = profile.path[index]
           const ground = heightAtMm(terrain, point.x, point.z)
           const gap = (point.y - ground) / 1000
           if (gap > 1.7) piers.push({ position: [point.x / 1000,
@@ -345,6 +424,7 @@ export function TerrainRoads({ city, terrain }: { city: CityModel; terrain: DevT
       curb: ribbon(curb, curbQuads),
       underdecks: ribbon(underdecks),
       marks: ribbon(marks), bridgeWalls: spanSidePanels(terrain.roadProfiles, widths, 'bridge'),
+      bridgeArches: createBridgeArchGeometry(terrain.roadProfiles, widths, terrain),
       culvertWalls: spanSidePanels(terrain.roadProfiles, widths, 'culvert'),
       piers, junctions: junctionPatches(city, terrain, nodeWidths, plan) }
   }, [city, terrain])
@@ -355,6 +435,7 @@ export function TerrainRoads({ city, terrain }: { city: CityModel; terrain: DevT
     geometry.underdecks.dispose()
     geometry.marks.dispose()
     geometry.bridgeWalls.dispose()
+    geometry.bridgeArches.dispose()
     geometry.culvertWalls.dispose()
     geometry.junctions.dispose()
   }, [geometry])
@@ -382,6 +463,9 @@ export function TerrainRoads({ city, terrain }: { city: CityModel; terrain: DevT
     </mesh>
     <mesh geometry={geometry.bridgeWalls} castShadow receiveShadow>
       <meshStandardMaterial color="#74858a" roughness={0.7} metalness={0.14} side={2} />
+    </mesh>
+    <mesh geometry={geometry.bridgeArches} castShadow receiveShadow>
+      <meshStandardMaterial color="#66767d" roughness={0.91} metalness={0.04} side={2} />
     </mesh>
     <mesh geometry={geometry.underdecks} castShadow receiveShadow>
       <meshStandardMaterial color="#4e626d" roughness={0.88} side={2} />
