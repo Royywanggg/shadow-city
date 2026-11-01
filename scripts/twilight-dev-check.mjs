@@ -106,6 +106,21 @@ try {
   })
   await dev.waitForTimeout(950)
   await capture(dev, 'dev-foreground-valley-close-1440x900')
+  const westBank = await dev.evaluate(() => {
+    const world = window.__shadowCityV06.getWorld()
+    const profile = world.terrain.roadProfiles.find((item) =>
+      item.edgeId === 'edge-z-0-7')
+    if (!profile || !world.baseCity.roads.edges.find((edge) =>
+      edge.id === profile.edgeId)?.centerlineXZ) return false
+    const point = profile.path[Math.floor(profile.path.length * 0.55)]
+    window.__shadowCityV06.inspectAtWorld(point.x / 1000,
+      point.y / 1000, point.z / 1000)
+    return true
+  })
+  if (westBank) {
+    await dev.waitForTimeout(950)
+    await capture(dev, 'dev-west-bank-close-1440x900')
+  }
   await dev.evaluate(() => {
     const terrain = window.__shadowCityV06.getWorld().terrain
     const outlet = terrain.channel.centerline.at(-1)
