@@ -19,6 +19,7 @@ import { DEV_UPPER_CONTOUR_ROAD_EDGE_ID, DEV_UPPER_ROAD_EDGE_ID,
 import { addDevTerraceNeighborhood, DEV_TERRACE_BLOCK_PREFIX,
   DEV_TERRACE_BUILDING_PREFIX, DEV_TERRACE_SITES } from './devTerraceNeighborhood'
 import { applyDevNorthAnnex, DEV_NORTH_ANNEX_MIN_Z_M } from './devNorthAnnex'
+import { applyDevWestBankDistrict } from './devWestBankDistrict'
 import { rearHighlandBackZmm, rearHighlandFrontZmm } from '../terrain/devHighlandContour'
 
 const GROUND_Y_MM = 250
@@ -136,9 +137,9 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
   const expandedCity = expandOriginalCity(generateCity(seed))
   const organicCity = createDevOrganicLayout(expandedCity)
   const curvedCity = applyDevValleyPlan(deriveDevRoadCorridor(organicCity))
-  const baseCity = applyDevNorthAnnex(applyDevForegroundValley(addDevTerraceNeighborhood(applyDevUpperRoadPlan(
+  const baseCity = applyDevNorthAnnex(applyDevWestBankDistrict(applyDevForegroundValley(addDevTerraceNeighborhood(applyDevUpperRoadPlan(
     applyDevHighlandPlan(applyDevRidgeFrontage(
-      placeDevCorridorParcels(curvedCity)))))))
+      placeDevCorridorParcels(curvedCity))))))))
   const integrated = generateIntegratedWorld(seed, {
     baseCity,
     openChannelBlockIds: [...DEV_OPEN_CHANNEL_BLOCK_IDS, ...DEV_ESCARPMENT_BLOCK_IDS],
@@ -584,7 +585,7 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
           edge.id.startsWith('ped-access-') ? 1_200 : 900 })) } }
   return {
     ...integrated,
-    config: { ...integrated.config, generatorVersion: 'twilight-dev-v25' },
+    config: { ...integrated.config, generatorVersion: 'twilight-dev-v27' },
     baseCity: city,
     roadNodes: city.roads.nodes.map((node) => ({ id: node.id,
       position: { x: Math.round(node.x * 1000), z: Math.round(node.z * 1000) } })),

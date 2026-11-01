@@ -15,6 +15,7 @@ import { DEV_UPPER_CONTOUR_ROAD_EDGE_ID, DEV_UPPER_ROAD_EDGE_ID } from
   './devUpperRoadPlan'
 import { DEV_TERRACE_BUILDING_PREFIX, DEV_TERRACE_SITES } from './devTerraceNeighborhood'
 import { DEV_NORTH_ANNEX_BLOCK_PREFIX, DEV_NORTH_ANNEX_MIN_Z_M } from './devNorthAnnex'
+import { DEV_WEST_BANK_INFILL_PREFIX } from './devWestBankDistrict'
 import { generateDevWorld } from './generateDevWorld'
 import { generateIntegratedWorld } from './generateIntegratedWorld'
 
@@ -30,6 +31,11 @@ describe('isolated Twilight terrain world', () => {
     const mainAfter = generateIntegratedWorld(HERO_SEED)
     const devSource = generateIntegratedWorld(HERO_SEED, { openChannelBlockIds:
       [...DEV_OPEN_CHANNEL_BLOCK_IDS, ...DEV_ESCARPMENT_BLOCK_IDS] })
+    const westBankParcelIds = new Set(devSource.baseCity!.parcels.filter((parcel) =>
+      parcel.blockId === 'block--1-7').map((parcel) => parcel.id))
+    for (const building of devSource.baseCity!.buildings) {
+      if (westBankParcelIds.has(building.parcelId)) compactDevBuildings.add(building.id)
+    }
     expect(mainAfter).toEqual(mainBefore)
     expect(dev.baseCity?.roads).not.toEqual(mainBefore.baseCity?.roads)
     expect(dev.baseCity?.plaza).toEqual(mainBefore.baseCity?.plaza)
@@ -37,7 +43,8 @@ describe('isolated Twilight terrain world', () => {
       [building.id, building]))
     const originalDevBuildings = dev.baseCity!.buildings.filter((building) =>
       !building.id.startsWith(DEV_TERRACE_BUILDING_PREFIX) &&
-      !building.parcelId.startsWith('parcel-dev-north-'))
+      !building.parcelId.startsWith('parcel-dev-north-') &&
+      !building.parcelId.startsWith(DEV_WEST_BANK_INFILL_PREFIX))
     expect(originalDevBuildings.map((building) => building.id).sort()).toEqual(
       devSource.baseCity!.buildings.filter((building) =>
         building.id !== 'building-block-1-7-1-0')
@@ -73,7 +80,7 @@ describe('isolated Twilight terrain world', () => {
     expect(dev.bounds.minZ).toBe(DEV_NORTH_ANNEX_MIN_Z_M * 1_000)
     expect(dev.terrain?.grid.depth).toBe(171)
     expect(dev.config.extentMm).toBe(340_000)
-    expect(dev.config.generatorVersion).toBe('twilight-dev-v25')
+    expect(dev.config.generatorVersion).toBe('twilight-dev-v27')
     expect(mainAfter.config.generatorVersion).toBe('heritage-extension-v6')
     expect(worldFingerprintV5(dev, DEFAULT_SIMULATION_CONFIG_V5))
       .not.toBe(worldFingerprintV5(mainAfter, DEFAULT_SIMULATION_CONFIG_V5))
@@ -559,7 +566,8 @@ describe('isolated Twilight terrain world', () => {
         expect(Math.abs(center.y - roadPoint.y - 180)).toBeLessThan(100)
         expect(center.y - heightAtMm(terrain, center.x, center.z)).toBeGreaterThan(4_000)
         for (const point of sidewalk.path) {
-          expect(hasClearSurfaceSegment(world, surfaceId, point, point)).toBe(true)
+          expect(hasClearSurfaceSegment(world, surfaceId, point, point),
+            `${surfaceId} ${sidewalk.id} ${JSON.stringify(point)}`).toBe(true)
         }
       }
     }
@@ -678,6 +686,7 @@ describe('isolated Twilight terrain world', () => {
       edge.surfaceId?.startsWith('terrain-bridge:'))
       .flatMap((edge) => edge.path.slice(1).map((point, index) => ({
         id: edge.id, grade: grade(edge.path[index], point),
+        from: edge.path[index], to: point,
       })).filter((item) => item.grade > 0.12))
       .sort((a, b) => b.grade - a.grade)
     expect(roadOffenders.slice(0, 8)).toEqual([])
