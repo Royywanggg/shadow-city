@@ -98,6 +98,16 @@ try {
   await capture(dev, 'dev-valley-close-1440x900')
   await dev.evaluate(() => {
     const terrain = window.__shadowCityV06.getWorld().terrain
+    const foreground = terrain.channel.centerline.reduce((nearest, point) =>
+      Math.abs(point.z - 126_000) < Math.abs(nearest.z - 126_000)
+        ? point : nearest)
+    window.__shadowCityV06.inspectAtWorld(foreground.x / 1000, 0,
+      foreground.z / 1000)
+  })
+  await dev.waitForTimeout(950)
+  await capture(dev, 'dev-foreground-valley-close-1440x900')
+  await dev.evaluate(() => {
+    const terrain = window.__shadowCityV06.getWorld().terrain
     const outlet = terrain.channel.centerline.at(-1)
     window.__shadowCityV06.inspectAtWorld(outlet.x / 1000, 0, outlet.z / 1000)
   })
