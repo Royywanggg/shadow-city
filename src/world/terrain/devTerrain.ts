@@ -97,7 +97,8 @@ export interface DevTerrainV1 {
 }
 
 export const DEV_OPEN_CHANNEL_BLOCK_IDS = [
-  'block-0-4', 'block-0-5', 'block-0-6', 'block--1-6',
+  'block-0-4', 'block-0-5', 'block-0-6',
+  'block-0-7',
 ] as const
 export const DEV_ESCARPMENT_BLOCK_IDS = [
   'block--1--1', 'block-0--1',
@@ -115,7 +116,7 @@ const TERRACE_STAIR_X_MM = 30_000
 const TERRACE_STAIR_FRONT_RUN_MM = 17_000
 const BRIDGE_EDGE_IDS = new Set(['edge-x-0-5', 'edge-x-0-6'])
 const CULVERT_EDGE_IDS = new Set([
-  'edge-z-0-6', 'edge-x--1-7', 'edge-x--1-8',
+  'edge-x-0-7', 'edge-x-1-8',
 ])
 /** Deliberate contour bends; endpoints and tangents remain aligned with the original graph. */
 const ROAD_BENDS_MM = new Map<string, number>([
