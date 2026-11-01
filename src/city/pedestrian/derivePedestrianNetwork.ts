@@ -636,9 +636,13 @@ export function derivePedestrianNetwork(city: SpatialCity,
         const candidates = anchors.filter((anchor) => anchor.blockId === blockId &&
           anchor.kind === 'street').map((anchor) => ({
           id: anchor.nodeId, node: nodeById.get(anchor.nodeId)!,
-        })).sort((a, b) => Math.hypot(a.node.x - midpoint.x,
-          a.node.z - midpoint.z) - Math.hypot(b.node.x - midpoint.x,
-          b.node.z - midpoint.z) || a.id.localeCompare(b.id))
+        })).sort((a, b) =>
+          // A curved frontage can make the closest anchor cut through a house.
+          Number(crossesBuilding(a.node, midpoint, city.buildings)) -
+          Number(crossesBuilding(b.node, midpoint, city.buildings)) ||
+          Math.hypot(a.node.x - midpoint.x,
+            a.node.z - midpoint.z) - Math.hypot(b.node.x - midpoint.x,
+            b.node.z - midpoint.z) || a.id.localeCompare(b.id))
         if (!candidates[0]) throw new Error(`No pedestrian frontage for ${blockId}`)
         return candidates[0].id
       }

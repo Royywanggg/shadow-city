@@ -4,10 +4,11 @@ import { reprojectRoadFeature } from './devRoadCorridor'
 
 const START_Z_M = 27
 const END_Z_M = 81
-const AMPLITUDE_M = 6
+const AMPLITUDE_M = 8
 const ROAD_COLUMNS = [0, 1] as const
 const ROAD_ROWS = [4, 5, 6] as const
-const WEST_BANK_SHIFT_M = -6
+const WEST_BANK_SHIFT_M = -14
+const EAST_BANK_SHIFT_M = 4
 
 function smoothstep(t: number): number {
   const clamped = Math.max(0, Math.min(1, t))
@@ -25,11 +26,16 @@ export function westBankOffsetM(z: number): number {
     smoothstep((100 - z) / 24)
 }
 
+export function eastBankOffsetM(z: number): number {
+  return EAST_BANK_SHIFT_M * smoothstep((z - START_Z_M) / 24) *
+    smoothstep((100 - z) / 24)
+}
+
 function roadPath(from: RoadNode, to: RoadNode): readonly CityPointXZ[] {
   const count = Math.max(2, Math.ceil((to.z - from.z) / 1.5))
   const westBank = from.id.startsWith('node-0-')
   const offsetAt = (z: number) => valleyOffsetM(z) +
-    (westBank ? westBankOffsetM(z) : 0)
+    (westBank ? westBankOffsetM(z) : eastBankOffsetM(z))
   const baseX = from.x - offsetAt(from.z)
   const endBaseX = to.x - offsetAt(to.z)
   return Array.from({ length: count + 1 }, (_, index) => {
@@ -66,7 +72,8 @@ export function applyDevValleyPlan(city: CityModel): CityModel {
     ROAD_COLUMNS.some((column) => ROAD_ROWS.some((row) =>
       row !== 4 && node.id === `node-${column}-${row}`))
       ? { ...node, x: node.x + valleyOffsetM(node.z) +
-        (node.id.startsWith('node-0-') ? westBankOffsetM(node.z) : 0) } : node)
+        (node.id.startsWith('node-0-') ? westBankOffsetM(node.z) :
+          eastBankOffsetM(node.z)) } : node)
   const after = new Map(nodes.map((node) => [node.id, node]))
   const pathByEdgeId = new Map<string, readonly CityPointXZ[]>()
   for (const column of ROAD_COLUMNS) for (const row of ROAD_ROWS) {
