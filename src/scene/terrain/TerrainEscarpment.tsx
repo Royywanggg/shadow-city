@@ -3,7 +3,8 @@ import { BufferGeometry, Color, Float32BufferAttribute, Object3D, type Instanced
 import type { DevTerrainV1 } from '../../world/terrain/devTerrain'
 import type { CityModel } from '../../city/model'
 import { escarpmentZBoundsAtMm, heightAtMm } from '../../world/terrain/devTerrain'
-import { DEV_UPPER_ROAD_EDGE_ID } from '../../world/generation/devUpperRoadPlan'
+import { DEV_UPPER_CONTOUR_ROAD_EDGE_ID,
+  DEV_UPPER_ROAD_EDGE_ID } from '../../world/generation/devUpperRoadPlan'
 import { InstancedBoxes, type BoxInstance } from '../InstancedBoxes'
 
 export function createEscarpmentFaceGeometry(terrain: DevTerrainV1): BufferGeometry {
@@ -14,8 +15,8 @@ export function createEscarpmentFaceGeometry(terrain: DevTerrainV1): BufferGeome
   const middle = new Color('#596b6d')
   const upper = new Color('#7c8983')
   const crest = new Color('#536c60')
-  const bands = [[0, lower], [3_000, middle], [6_500, upper],
-    [9_000, crest]] as const
+  const bands = [[0, lower], [3_000, middle], [5_500, upper],
+    [7_100, crest]] as const
   for (const patch of terrain.nonWalkableEscarpment.patches) {
     // The ground sampler, blocked polygon and visible rock all use the same
     // front contour. The continuous terrace is kept clear of through roads.
@@ -55,8 +56,10 @@ interface LandscapeTree {
 function EscarpmentTrees({ terrain, city }: { terrain: DevTerrainV1; city: CityModel }) {
   const canopyRef = useRef<InstancedMesh>(null)
   const trees = useMemo(() => {
-    const upperRoad = terrain.roadProfiles.find((profile) =>
-      profile.edgeId === DEV_UPPER_ROAD_EDGE_ID)
+    const roadWidths = new Map(city.roads.edges.map((edge) => [edge.id, edge.width]))
+    const highlandRoads = terrain.roadProfiles.filter((profile) =>
+      profile.edgeId === DEV_UPPER_ROAD_EDGE_ID ||
+      profile.edgeId === DEV_UPPER_CONTOUR_ROAD_EDGE_ID)
     return terrain.nonWalkableEscarpment.patches.flatMap((patch, patchIndex) => {
     const minX = patch.frontLine[0].x + 1_800
     const maxX = patch.frontLine.at(-1)!.x - 1_800
@@ -99,8 +102,15 @@ function EscarpmentTrees({ terrain, city }: { terrain: DevTerrainV1; city: CityM
       const clearParcels = city.parcels.every((parcel) =>
         Math.abs(tree.x - parcel.x) > parcel.width / 2 + 1.2 ||
         Math.abs(tree.z - parcel.z) > parcel.depth / 2 + 1.2)
-      const clearRoad = !upperRoad || upperRoad.path.every((point) =>
-        Math.hypot(tree.x * 1000 - point.x, tree.z * 1000 - point.z) > 6_000)
+      const clearRoad = highlandRoads.every((profile) => {
+        return profile.path.every((point, index) => {
+          const widthMm = profile.widthsMm?.[index] ??
+            (roadWidths.get(profile.edgeId) ?? 0) * 1_000
+          const clearanceMm = widthMm / 2 + 3_100
+          return Math.hypot(tree.x * 1000 - point.x,
+            tree.z * 1000 - point.z) > clearanceMm
+        })
+      })
       return clearPath && clearBuildings && clearParcels && clearRoad
     })
     })

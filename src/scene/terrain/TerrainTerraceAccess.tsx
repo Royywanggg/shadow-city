@@ -3,6 +3,7 @@ import { BufferGeometry, CatmullRomCurve3, Float32BufferAttribute, TubeGeometry,
   Vector3 } from 'three'
 import type { DevTerrainV1 } from '../../world/terrain/devTerrain'
 import type { WorldPointMm } from '../../world/model'
+import { DEV_UPPER_CONTOUR_ROAD_EDGE_ID } from '../../world/generation/devUpperRoadPlan'
 import { InstancedBoxes, type BoxInstance } from '../InstancedBoxes'
 
 function pathRibbon(path: readonly WorldPointMm[], widthM: number): BufferGeometry {
@@ -36,8 +37,11 @@ function pathRibbon(path: readonly WorldPointMm[], widthM: number): BufferGeomet
 
 export function TerrainTerraceAccess({ terrain }: { terrain: DevTerrainV1 }) {
   const access = terrain.terraceAccess
-  const trail = useMemo(() => access ? pathRibbon(access.trail, 2.4) : null,
-    [access])
+  const roadHasSouthSidewalk = terrain.roadProfiles.some((profile) =>
+    profile.edgeId === DEV_UPPER_CONTOUR_ROAD_EDGE_ID)
+  const trail = useMemo(() => access && !roadHasSouthSidewalk
+    ? pathRibbon(access.trail, 2.4) : null,
+  [access, roadHasSouthSidewalk])
   const walkways = useMemo(() => {
     if (!access || access.walkways.length === 0) return null
     const paths = access.walkways.map((walkway) =>

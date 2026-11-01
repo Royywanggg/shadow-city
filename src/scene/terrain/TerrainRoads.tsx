@@ -8,7 +8,8 @@ import { InstancedBoxes, type BoxInstance } from '../InstancedBoxes'
 import { surfaceTextures } from '../SurfaceTextures'
 import { junctionTrimKey, planCurvedJunctions, trimRoadPath,
   type JunctionPlan } from './roadJunctions'
-import { DEV_UPPER_ROAD_EDGE_ID } from '../../world/generation/devUpperRoadPlan'
+import { DEV_UPPER_CONTOUR_ROAD_EDGE_ID,
+  DEV_UPPER_ROAD_EDGE_ID } from '../../world/generation/devUpperRoadPlan'
 
 type RoadProfile = DevTerrainV1['roadProfiles'][number]
 
@@ -32,7 +33,10 @@ function tangent(path: readonly WorldPointMm[], index: number): readonly [number
 interface RibbonInput {
   path: readonly WorldPointMm[]
   width: number
+  widthByIndex?: readonly number[]
+  liftByIndex?: readonly number[]
   sideOffset: number
+  sideOffsetByIndex?: readonly number[]
   lift: number
   terrain?: DevTerrainV1
   deckSpan?: Readonly<{ startIndex: number; endIndex: number }>
@@ -42,7 +46,8 @@ function ribbon(inputs: readonly RibbonInput[], quads: readonly SurfaceQuad[] = 
   const positions: number[] = []
   const uvs: number[] = []
   const indices: number[] = []
-  for (const { path, width, sideOffset, lift, terrain, deckSpan } of inputs) {
+  for (const { path, width, widthByIndex, liftByIndex, sideOffset, sideOffsetByIndex,
+    lift, terrain, deckSpan } of inputs) {
     if (path.length < 2) continue
     const start = positions.length / 3
     let distance = 0
@@ -53,16 +58,18 @@ function ribbon(inputs: readonly RibbonInput[], quads: readonly SurfaceQuad[] = 
       const [dx, dz] = tangent(path, index)
       const nx = -dz
       const nz = dx
+      const localWidth = widthByIndex?.[index] ?? width
+      const localOffset = sideOffsetByIndex?.[index] ?? sideOffset
       for (const side of [1, -1]) {
-        const offset = sideOffset + side * width / 2
+        const offset = localOffset + side * localWidth / 2
         const x = point.x / 1000 + nx * offset
         const z = point.z / 1000 + nz * offset
         const isDeck = deckSpan && index >= deckSpan.startIndex && index <= deckSpan.endIndex
         const crossfall = terrain && !isDeck ? (heightAtMm(terrain,
           Math.round(x * 1000), Math.round(z * 1000)) -
           heightAtMm(terrain, point.x, point.z)) / 1000 : 0
-        positions.push(x, point.y / 1000 + lift + crossfall, z)
-        uvs.push(side === 1 ? 0 : width / 5, distance / 5)
+        positions.push(x, point.y / 1000 + (liftByIndex?.[index] ?? lift) + crossfall, z)
+        uvs.push(side === 1 ? 0 : localWidth / 5, distance / 5)
       }
       if (index === 0) continue
       const a = start + (index - 1) * 2
@@ -298,8 +305,19 @@ export function TerrainRoads({ city, terrain }: { city: CityModel; terrain: DevT
     for (const profile of terrain.roadProfiles) {
       const width = widths.get(profile.edgeId)
       if (!width) continue
+      const profileWidths = profile.widthsMm?.map((value) => value / 1_000)
       const deckSpan = profile.bridgeSpan ?? profile.culvertSpan
-      road.push({ path: profile.path, width, sideOffset: 0, lift: 0.02,
+      let contourDistanceMm = 0
+      const contourLift = profile.edgeId === DEV_UPPER_CONTOUR_ROAD_EDGE_ID
+        ? profile.path.map((point, index) => {
+          if (index > 0) contourDistanceMm += Math.hypot(
+            point.x - profile.path[index - 1].x,
+            point.z - profile.path[index - 1].z)
+          const t = Math.min(1, contourDistanceMm / 8_000)
+          return 0.02 + 0.07 * t * t * (3 - 2 * t)
+        }) : undefined
+      road.push({ path: profile.path, width, widthByIndex: profileWidths,
+        liftByIndex: contourLift, sideOffset: 0, lift: 0.02,
         terrain, deckSpan })
       const section = (path: readonly WorldPointMm[], side: number,
         atStart: boolean, inner: number, outer: number,
@@ -308,8 +326,9 @@ export function TerrainRoads({ city, terrain }: { city: CityModel; terrain: DevT
         const point = path[index]
         const [dx, dz] = tangent(path, index)
         const vertex = (distance: number): SurfaceVertex => {
-          const x = point.x / 1000 - dz * side * (width / 2 + distance)
-          const z = point.z / 1000 + dx * side * (width / 2 + distance)
+          const localWidth = profileWidths?.[index] ?? width
+          const x = point.x / 1000 - dz * side * (localWidth / 2 + distance)
+          const z = point.z / 1000 + dx * side * (localWidth / 2 + distance)
           return { x, y: heightAtMm(terrain, Math.round(x * 1000),
             Math.round(z * 1000)) / 1000 + 0.07 + lift, z }
         }
@@ -320,9 +339,13 @@ export function TerrainRoads({ city, terrain }: { city: CityModel; terrain: DevT
         const endTrim = plan.trimsMm.get(junctionTrimKey(profile.edgeId, false, side)) ?? 0
         const path = deckSpan ? profile.path : trimRoadPath(profile.path, startTrim, endTrim)
         sidewalk.push({ path, width: 1.45,
-          sideOffset: side * (width / 2 + 0.95), lift: 0.19, terrain, deckSpan })
+          sideOffset: side * (width / 2 + 0.95),
+          sideOffsetByIndex: profileWidths?.map((value) =>
+            side * (value / 2 + 0.95)), lift: 0.19, terrain, deckSpan })
         curb.push({ path, width: 0.19,
-          sideOffset: side * (width / 2 + 0.1), lift: 0.12, terrain, deckSpan })
+          sideOffset: side * (width / 2 + 0.1),
+          sideOffsetByIndex: profileWidths?.map((value) =>
+            side * (value / 2 + 0.1)), lift: 0.12, terrain, deckSpan })
         for (const [atStart, trim] of [[true, startTrim], [false, endTrim]] as const) {
           if (!trim) continue
           sections.set(junctionTrimKey(profile.edgeId, atStart, side), {
@@ -411,6 +434,44 @@ export function TerrainRoads({ city, terrain }: { city: CityModel; terrain: DevT
         second.sidewalk[1], second.sidewalk[0]])
       curbQuads.push([first.curb[0], first.curb[1],
         second.curb[1], second.curb[0]])
+    }
+    const upperBridge = terrain.roadProfiles.find((profile) =>
+      profile.edgeId === DEV_UPPER_ROAD_EDGE_ID)
+    const upperContour = terrain.roadProfiles.find((profile) =>
+      profile.edgeId === DEV_UPPER_CONTOUR_ROAD_EDGE_ID)
+    if (upperBridge && upperContour) {
+      const joinSection = (profile: RoadProfile, atStart: boolean, side: number,
+        inner: number, outer: number, lift: number):
+        readonly [SurfaceVertex, SurfaceVertex] => {
+        const index = atStart ? 0 : profile.path.length - 1
+        const point = profile.path[index]
+        const [dx, dz] = tangent(profile.path, index)
+        const width = profile.widthsMm?.[index] !== undefined
+          ? profile.widthsMm[index] / 1_000 : widths.get(profile.edgeId)!
+        const vertex = (distance: number): SurfaceVertex => {
+          const x = point.x / 1000 - dz * side * (width / 2 + distance)
+          const z = point.z / 1000 + dx * side * (width / 2 + distance)
+          const crossfall = profile.bridge ? 0 :
+            (heightAtMm(terrain, Math.round(x * 1000), Math.round(z * 1000)) -
+              heightAtMm(terrain, point.x, point.z)) / 1000
+          return { x, y: point.y / 1000 + lift + crossfall, z }
+        }
+        return [vertex(inner), vertex(outer)]
+      }
+      for (const side of [-1, 1]) {
+        const bridgeWalk = joinSection(upperBridge, false, side,
+          0.225, 1.675, 0.19)
+        const contourWalk = joinSection(upperContour, true, side,
+          0.225, 1.675, 0.19)
+        sidewalkQuads.push([bridgeWalk[0], bridgeWalk[1],
+          contourWalk[1], contourWalk[0]])
+        const bridgeCurb = joinSection(upperBridge, false, side,
+          0.005, 0.195, 0.12)
+        const contourCurb = joinSection(upperContour, true, side,
+          0.005, 0.195, 0.12)
+        curbQuads.push([bridgeCurb[0], bridgeCurb[1],
+          contourCurb[1], contourCurb[0]])
+      }
     }
     const profileById = new Map(terrain.roadProfiles.map((profile) => [profile.edgeId, profile]))
     const nodeWidths = new Map<string, number>()
