@@ -3,10 +3,11 @@ import { generateCity, HERO_SEED } from '../../city/generation/generateCity'
 import { expandOriginalCity } from './expandOriginalCity'
 import { createDevOrganicLayout } from './devOrganicLayout'
 import { deriveDevRoadCorridor } from './devRoadCorridor'
-import { applyDevValleyPlan, createDevValleyChannel, valleyOffsetM,
-  westBankOffsetM } from './devValleyPlan'
+import { applyDevValleyPlan, createDevValleyChannel, eastBankOffsetM,
+  valleyOffsetM, westBankOffsetM } from './devValleyPlan'
 import { generateDevWorld } from './generateDevWorld'
 import { createNavigationIndexV2, findRouteV2 } from '../navigation/routeV2'
+import { hasClearSurfaceSegment } from '../../simulation/encounter/spatial'
 
 const seeds = [HERO_SEED, 'twilight-alt-01', 'twilight-alt-02']
 
@@ -23,7 +24,7 @@ describe('shared dev valley plan', () => {
       const before = nodesBefore.get(id)!
       const after = nodesAfter.get(id)!
       expect(after.x - before.x).toBeCloseTo(valleyOffsetM(before.z) +
-        (column === 0 ? westBankOffsetM(before.z) : 0), 7)
+        (column === 0 ? westBankOffsetM(before.z) : eastBankOffsetM(before.z)), 7)
       expect(after.z).toBe(before.z)
     }
     const byId = new Map(world.baseCity!.roads.edges.map((edge) => [edge.id, edge]))
@@ -69,8 +70,10 @@ describe('shared dev valley plan', () => {
     }
     const west = nodesAfter.get('node-0-5')!
     const east = nodesAfter.get('node-1-5')!
-    expect(east.x - west.x).toBeGreaterThan(
-      nodesBefore.get('node-1-5')!.x - nodesBefore.get('node-0-5')!.x + 5.5)
+    expect(east.x - west.x -
+      (nodesBefore.get('node-1-5')!.x - nodesBefore.get('node-0-5')!.x))
+      .toBeCloseTo(eastBankOffsetM(east.z) - westBankOffsetM(west.z), 7)
+    expect(east.x - west.x).toBeGreaterThan(40)
     expect(channel.at(-1)).toEqual({ x: -62_000, z: 150_000 })
     for (const row of [5, 6]) {
       const bridge = byId.get(`edge-x-0-${row}`)!
@@ -79,7 +82,7 @@ describe('shared dev valley plan', () => {
       const east = nodesAfter.get(bridge.to)!
       expect(east.x - west.x).toBeCloseTo(
         nodesBefore.get(bridge.to)!.x - nodesBefore.get(bridge.from)!.x -
-        westBankOffsetM(west.z), 7)
+        westBankOffsetM(west.z) + eastBankOffsetM(east.z), 7)
       expect(west.z).toBe(east.z)
       expect(world.navEdges.filter((edge) =>
         edge.id.startsWith(`terrain-ped-bridge:${bridge.id}:`))).toHaveLength(2)
@@ -88,14 +91,26 @@ describe('shared dev valley plan', () => {
     const cross = world.navEdges.find((edge) =>
       edge.id === 'terrain-ped-bridge:edge-x-0-5:north')!
     expect(findRouteV2(index, cross.fromNodeId, cross.toNodeId).status).toBe('ok')
+    for (const edge of world.navEdges.filter((item) => item.surfaceId === 'ground')) {
+      for (let segment = 1; segment < edge.path.length; segment += 1) {
+        const from = edge.path[segment - 1]
+        const to = edge.path[segment]
+        if (Math.min(from.z, to.z) > 100_000 ||
+          Math.max(from.z, to.z) < 30_000 ||
+          Math.min(from.x, to.x) > -50_000 ||
+          Math.max(from.x, to.x) < -130_000) continue
+        expect(hasClearSurfaceSegment(world, 'ground', from, to),
+          `${seed}: ${edge.id} segment ${segment}`).toBe(true)
+      }
+    }
   })
 
-  it('keeps the 6 m bend gentler than the 9 m riverbank width', () => {
+  it('keeps the 8 m bend gentler than the 9 m riverbank width', () => {
     // For x=A sin²(pi*z/L), |x''| <= 2*A*pi²/L². Curvature is at most |x''|.
-    const maxCurvature = 2 * 6 * Math.PI ** 2 / 54 ** 2
+    const maxCurvature = 2 * 8 * Math.PI ** 2 / 54 ** 2
     expect(1 / maxCurvature).toBeGreaterThan(9)
     expect(valleyOffsetM(27)).toBe(0)
-    expect(valleyOffsetM(54)).toBe(6)
+    expect(valleyOffsetM(54)).toBe(8)
     expect(valleyOffsetM(81)).toBe(0)
   })
 })

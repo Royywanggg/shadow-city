@@ -19,7 +19,8 @@ describe('isolated Twilight terrain world', () => {
   it('keeps the original city core and main generator unchanged', () => {
     const compactDevBuildings = new Set([
       'building-block-3-4-0-0', 'building-block-3-5-1-0',
-      'building-block-1-7-0-0',
+      'building-block-1-7-0-0', 'building-block-1-4-0-0',
+      'building-block--1-6-1-0',
     ])
     const mainBefore = generateIntegratedWorld(HERO_SEED)
     const dev = generateDevWorld(HERO_SEED)
@@ -63,7 +64,7 @@ describe('isolated Twilight terrain world', () => {
       }
     }
     expect(dev.baseCity?.buildings.length).toBeLessThan(mainBefore.baseCity!.buildings.length)
-    expect(dev.config.generatorVersion).toBe('twilight-dev-v20')
+    expect(dev.config.generatorVersion).toBe('twilight-dev-v21')
     expect(mainAfter.config.generatorVersion).toBe('heritage-extension-v6')
     expect(worldFingerprintV5(dev, DEFAULT_SIMULATION_CONFIG_V5))
       .not.toBe(worldFingerprintV5(mainAfter, DEFAULT_SIMULATION_CONFIG_V5))
@@ -360,7 +361,8 @@ describe('isolated Twilight terrain world', () => {
     expect(terrain.grid.heightsMm).toHaveLength(terrain.grid.width * terrain.grid.depth)
     expect(heightAtMm(terrain, 0, -130_000)).toBeGreaterThan(6_000)
     expect(heightAtMm(terrain, 0, 0)).toBe(0)
-    expect(heightAtMm(terrain, -87_000, 75_000)).toBeLessThan(-5_500)
+    expect(heightAtMm(terrain,
+      channelXAt(terrain.channel.centerline, 75_000), 75_000)).toBeLessThan(-5_500)
     expect(blockPadElevationMm(terrain, 'block-3-3')).toBe(0)
     expect(blockPadElevationMm(terrain, 'block-4-3')).toBe(0)
     expect(terrain.nonWalkableEscarpment.patches).toHaveLength(1)
