@@ -11,6 +11,9 @@ export const DEV_TERRACE_SITES = [
   { x: -4, width: 14 }, { x: 16, width: 14 },
   { x: 40, width: 8 }, { x: 54, width: 12 },
   { x: 70, width: 12 },
+  // Append western homes to retain the existing per-site identities.
+  { x: -118, width: 12 }, { x: -98, width: 12 },
+  { x: -78, width: 12 },
 ] as const
 
 /** Small real parcels on the upper shelf, generated with the existing building language. */

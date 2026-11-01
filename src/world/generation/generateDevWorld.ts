@@ -252,6 +252,9 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
   navEdges.push(...bridgeLinks.flatMap((link) => link.edges))
   const access = terrain.terraceAccess
   if (!access) throw new Error('Dev terrace access was not generated')
+  const terraceWestXmm = access.trail[0].x - 4_000
+  const terraceEastXmm = access.trail.at(-1)!.x + 4_000
+  const terraceContourSteps = Math.ceil((terraceEastXmm - terraceWestXmm) / 2_000)
   const terracePlaceId = 'public:dev-north-terrace'
   const terraceConnectorId = 'terrain:terrace-stair'
   const footId = 'terrain:terrace-foot'
@@ -419,12 +422,14 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
           interactionZoneId: terraceSurfaceId, elevationMm: GROUND_Y_MM,
           elevationMode: 'terrain' as const,
           polygonXZ: [
-            ...Array.from({ length: 81 }, (_, index) => {
-              const x = access.trail[0].x - 4_000 + index * 2_000
+            ...Array.from({ length: terraceContourSteps + 1 }, (_, index) => {
+              const x = Math.round(terraceWestXmm +
+                (terraceEastXmm - terraceWestXmm) * index / terraceContourSteps)
               return { x, z: rearHighlandFrontZmm(x) - 6_500 }
             }),
-            ...Array.from({ length: 81 }, (_, index) => {
-              const x = access.trail.at(-1)!.x + 4_000 - index * 2_000
+            ...Array.from({ length: terraceContourSteps + 1 }, (_, index) => {
+              const x = Math.round(terraceEastXmm -
+                (terraceEastXmm - terraceWestXmm) * index / terraceContourSteps)
               return { x, z: rearHighlandFrontZmm(x) - 23_500 }
             }),
           ], blockedPolygonsXZ: city.buildings
@@ -470,7 +475,7 @@ export function generateDevWorld(seed = HERO_SEED): WorldModelV2 {
           edge.id.startsWith('ped-access-') ? 1_200 : 900 })) } }
   return {
     ...integrated,
-    config: { ...integrated.config, generatorVersion: 'twilight-dev-v14' },
+    config: { ...integrated.config, generatorVersion: 'twilight-dev-v15' },
     baseCity: city,
     roadNodes: city.roads.nodes.map((node) => ({ id: node.id,
       position: { x: Math.round(node.x * 1000), z: Math.round(node.z * 1000) } })),

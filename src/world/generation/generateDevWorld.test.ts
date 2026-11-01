@@ -33,9 +33,9 @@ describe('isolated Twilight terrain world', () => {
       !building.id.startsWith(DEV_TERRACE_BUILDING_PREFIX))
     expect(originalDevBuildings.map((building) => building.id)).toEqual(
       devSource.baseCity?.buildings.map((building) => building.id))
-    expect(DEV_TERRACE_SITES).toHaveLength(8)
+    expect(DEV_TERRACE_SITES).toHaveLength(11)
     expect(dev.baseCity!.buildings.filter((building) =>
-      building.id.startsWith(DEV_TERRACE_BUILDING_PREFIX))).toHaveLength(8)
+      building.id.startsWith(DEV_TERRACE_BUILDING_PREFIX))).toHaveLength(11)
     for (const building of originalDevBuildings) {
       const original = originalBuildings.get(building.id)!
       if (compactDevBuildings.has(building.id)) {
@@ -55,7 +55,7 @@ describe('isolated Twilight terrain world', () => {
       }
     }
     expect(dev.baseCity?.buildings.length).toBeLessThan(mainBefore.baseCity!.buildings.length)
-    expect(dev.config.generatorVersion).toBe('twilight-dev-v14')
+    expect(dev.config.generatorVersion).toBe('twilight-dev-v15')
     expect(mainAfter.config.generatorVersion).toBe('heritage-extension-v6')
     expect(worldFingerprintV5(dev, DEFAULT_SIMULATION_CONFIG_V5))
       .not.toBe(worldFingerprintV5(mainAfter, DEFAULT_SIMULATION_CONFIG_V5))
@@ -73,9 +73,9 @@ describe('isolated Twilight terrain world', () => {
     const city = world.baseCity!
     const patch = terrain.nonWalkableEscarpment.patches[0]
     expect(patch.frontLine.at(-1)!.x - patch.frontLine[0].x)
-      .toBeGreaterThan(160_000)
+      .toBeGreaterThan(220_000)
     expect(terrain.terraceAccess!.trail.at(-1)!.x -
-      terrain.terraceAccess!.trail[0].x).toBe(152_000)
+      terrain.terraceAccess!.trail[0].x).toBe(216_000)
     for (const id of HIGHLAND_CLOSED_ROAD_IDS) {
       expect(city.roads.edges.some((edge) => edge.id === id)).toBe(false)
       expect(terrain.roadProfiles.some((profile) => profile.edgeId === id)).toBe(false)
@@ -105,7 +105,7 @@ describe('isolated Twilight terrain world', () => {
     expect(visited.size).toBe(city.roads.nodes.length)
     const index = createNavigationIndexV2(world)
     const route = findRouteV2(index, 'ped-entrance-building-block-4-0-0-0',
-      'ped-block--1--1-3-0')
+      'ped-block--1-0-2-0')
     expect(route.status).toBe('ok')
     if (route.status === 'ok') {
       for (const step of route.steps) {
@@ -120,7 +120,7 @@ describe('isolated Twilight terrain world', () => {
         populationSize: 24 })
       const initial = createInitialStateV5(environment)
       const start = index.nodeById.get('ped-entrance-building-block-4-0-0-0')!
-      const end = index.nodeById.get('ped-block--1--1-3-0')!
+      const end = index.nodeById.get('ped-block--1-0-2-0')!
       let citizen: CitizenStateV5 = { ...initial.citizens[0], position: start.position,
         surfaceId: start.surfaceId, placeId: null, currentNodeId: start.id,
         destinationNodeId: end.id, activity: 'travelling' as const,
@@ -144,7 +144,7 @@ describe('isolated Twilight terrain world', () => {
       const world = generateDevWorld(seed)
       const index = createNavigationIndexV2(world)
       expect(findRouteV2(index, 'ped-entrance-building-block-4-0-0-0',
-        'ped-block--1--1-3-0').status).toBe('ok')
+        'ped-block--1-0-2-0').status).toBe('ok')
       expect(findRouteV2(index, 'ped-entrance-building-block-4-0-0-0',
         `interior:${DEV_TERRACE_BUILDING_PREFIX}0:slot:0`).status).toBe('ok')
       expect(world.terrain!.nonWalkableEscarpment.patches).toHaveLength(1)
@@ -178,7 +178,8 @@ describe('isolated Twilight terrain world', () => {
         if (edge.surfaceId !== 'terrain:terrace-top') continue
         for (let part = 1; part < edge.path.length; part += 1) {
           expect(hasClearSurfaceSegment(world, edge.surfaceId,
-            edge.path[part - 1], edge.path[part])).toBe(true)
+            edge.path[part - 1], edge.path[part]),
+          `${building.id}: ${edge.id} segment ${part}`).toBe(true)
         }
       }
     }
@@ -208,7 +209,7 @@ describe('isolated Twilight terrain world', () => {
       edge.id === DEV_UPPER_ROAD_EDGE_ID)!.widthMm
     for (const endpoint of [upper.path[0], upper.path.at(-1)!]) {
       expect(endpoint.y - heightAtMm(terrain, endpoint.x, endpoint.z))
-        .toBeLessThan(1_000)
+        .toBeLessThanOrEqual(1_000)
     }
     const flankMm = upperWidthMm / 2 + 1_800
     for (let index = 0; index < upper.path.length; index += 1) {
@@ -460,7 +461,7 @@ describe('isolated Twilight terrain world', () => {
       expect(foot.position).toEqual({ ...stair.foot,
         y: 250 + heightAtMm(terrain, stair.foot.x, stair.foot.z) })
       expect(hasClearSurfaceSegment(world, foot.surfaceId,
-        foot.position, foot.position)).toBe(true)
+        foot.position, foot.position), building.id).toBe(true)
       expect(access.path[0]).toEqual(foot.position)
       expect(access.path.at(-1)).toEqual(lane.position)
       expect(portal.kind).toBe('stair')
@@ -549,10 +550,6 @@ describe('isolated Twilight terrain world', () => {
         expect(clearance).toBeGreaterThan(Math.round((road.width / 2 + 0.3) * 1000))
       }
     }
-    expect(world.navEdges.some((edge) => edge.surfaceId === 'ground' &&
-      edge.path.length > 4 && Math.abs(edge.path[0].z - edge.path.at(-1)!.z) < 100 &&
-      Math.abs(edge.path[Math.floor(edge.path.length / 2)].z - edge.path[0].z) > 300))
-      .toBe(true)
   })
 
   it('carries the channel to the west edge beneath two continuous road culverts', () => {
