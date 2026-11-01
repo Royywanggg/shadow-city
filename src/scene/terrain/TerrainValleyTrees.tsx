@@ -2,7 +2,8 @@ import { useLayoutEffect, useMemo, useRef } from 'react'
 import { Color, Object3D, type InstancedMesh } from 'three'
 import type { CityModel } from '../../city/model'
 import type { DevTerrainV1 } from '../../world/terrain/devTerrain'
-import { channelCenterXAtMm, heightAtMm } from '../../world/terrain/devTerrain'
+import { channelCenterXAtMm, channelWidthsAtMm,
+  heightAtMm } from '../../world/terrain/devTerrain'
 import { InstancedBoxes, type BoxInstance } from '../InstancedBoxes'
 
 interface ValleyTree {
@@ -38,8 +39,9 @@ export function TerrainValleyTrees({ terrain, city }: { terrain: DevTerrainV1;
     for (let z = first; z <= last; z += 2_400) {
       for (const side of [-1, 1]) for (let row = 0; row < 2; row += 1) {
         const variation = Math.sin(z * 0.00073 + side * 19 + row * 11)
+        const { halfWidthMm, bankWidthMm } = channelWidthsAtMm(terrain, z)
         const x = Math.round(channelCenterXAtMm(terrain, z) +
-          side * (9_800 + row * 2_000 + variation * 550))
+          side * (halfWidthMm + bankWidthMm + 800 + row * 2_000 + variation * 550))
         const displacedZ = Math.round(z + Math.sin(z * 0.0011 + row * 5) * 650)
         if (overlapsRoad(terrain, x, displacedZ)) continue
         const height = 2.4 + (variation + 1) * 0.65
@@ -58,7 +60,9 @@ export function TerrainValleyTrees({ terrain, city }: { terrain: DevTerrainV1;
         const z = Math.round((block.z + (row - 2) * block.depth / 5 +
           Math.cos(variation * 11) * 0.55) * 1000)
         const riverDistance = Math.abs(x - channelCenterXAtMm(terrain, z))
-        if (riverDistance < 6_000 || riverDistance > 16_000 ||
+        const { halfWidthMm, bankWidthMm } = channelWidthsAtMm(terrain, z)
+        if (riverDistance < halfWidthMm + bankWidthMm * 0.42 ||
+          riverDistance > halfWidthMm + bankWidthMm + 7_000 ||
           overlapsRoad(terrain, x, z)) continue
         const height = 2.5 + (variation + 1) * 0.85
         result.push({ x: x / 1000, z: z / 1000,
