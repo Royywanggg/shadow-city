@@ -206,6 +206,20 @@ try {
   })
   await dev.waitForTimeout(950)
   await capture(dev, 'dev-west-foothill-road-close-1440x900')
+  const northAnnex = await dev.evaluate(() => {
+    const world = window.__shadowCityV06.getWorld()
+    const profile = world.terrain.roadProfiles.find((item) =>
+      item.edgeId === 'edge-x-3--2')
+    if (!profile) return false
+    const middle = profile.path[Math.floor(profile.path.length / 2)]
+    window.__shadowCityV06.inspectAtWorld(middle.x / 1000,
+      middle.y / 1000, middle.z / 1000)
+    return true
+  })
+  if (northAnnex) {
+    await dev.waitForTimeout(950)
+    await capture(dev, 'dev-north-annex-road-close-1440x900')
+  }
   await dev.getByRole('button', { name: 'RESET VIEW' }).click()
   await dev.waitForTimeout(450)
   for (const bearing of [0, 90, 180, 270]) {
